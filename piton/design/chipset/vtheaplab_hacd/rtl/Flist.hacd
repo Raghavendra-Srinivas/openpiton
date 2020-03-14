@@ -1,0 +1,10 @@
+hacd_pkg.sv
+hawk_pgwr_mngr.sv
+hacd_interfaces.sv
+hawk_ctrl_unit.sv
+hacd_axi_master.sv
+axi_size_conv_DOWNSIZE.sv
+hawk_axi_xbar_wrapper.sv
+hacd_core.sv
+hacd.sv
+hacd_top.sv
