@@ -35,6 +35,7 @@ always_comb begin
   resp_o.error = '0;
   //regs enables
   low_wm_wen = '0;
+  hacd_ctrl_wen = '0;
  if (req_i.valid) begin
     if (req_i.write) begin
       unique case(req_i.addr)

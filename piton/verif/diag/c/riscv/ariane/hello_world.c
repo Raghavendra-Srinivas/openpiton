@@ -28,6 +28,7 @@ int main(int argc, char ** argv) {
 
   //Generating Interrupt
 
+      printf("HACD: Accessing HAWK \n");
       uint64_t *addr;
       
       addr = (uint64_t*)(HACD_BASE);

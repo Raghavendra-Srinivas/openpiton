@@ -42,7 +42,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
   /////////////////////////////
   // HACD
   /////////////////////////////
-/*
+
   AXI_BUS #(
     .AXI_ID_WIDTH   ( AxiIdWidth   ),
     .AXI_ADDR_WIDTH ( AxiAddrWidth ),
@@ -237,17 +237,17 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
     endcase
   end
 
-*/
 
 
-hacd hacd_core(
+
+hacd u_hacd(
   .clk_i (clk_i),
   .rst_ni (rst_ni),
   .infl_interrupt (infl_interrupt),
   .defl_interrupt (defl_interrupt),
 
-  .req_i ('d0), //hacd_req),
-  .resp_o (), //hacd_resp),
+  .req_i (hacd_req), //('d0),
+  .resp_o (hacd_resp),  //()
 
   .cpu_axi_wr_bus(cpu_axi_wr_bus),
   .cpu_axi_rd_bus(cpu_axi_rd_bus),
