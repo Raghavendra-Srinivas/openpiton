@@ -71,6 +71,7 @@ reg [`MSG_LENGTH_WIDTH-1:0] remaining_flits;
 assign flit_out_val = (state == SEND_HEADER) || (state == SEND_DATA);
 assign in_rdy = (state == ACCEPT);
 
+reg [`NOC_DATA_WIDTH-1:0] resp_header;
 
 always @(posedge clk) begin
   if(~rst_n) begin
@@ -118,7 +119,6 @@ always @(posedge clk) begin
   end
 end
 
-reg [`NOC_DATA_WIDTH-1:0] resp_header;
 always @(posedge clk) begin
   if (~rst_n) begin
     resp_header <= `NOC_DATA_WIDTH'b0;

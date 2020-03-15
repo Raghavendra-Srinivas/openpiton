@@ -69,4 +69,16 @@ Description: Peripheral address map for OpenPiton+Ariane configurations.
         <length>0x4000000</length>
     </port>
     <!-- end ariane specific periphs -->
+    <!-- raghavs adding new block- heap lab-hacd (hardware accelerated compressor decompressor) -->
+    <port>
+        <name>hacd</name>
+        <base>0xfff5100000</base>
+        <length>0x1000</length>
+        <stream_accessible/>
+    </port>
+    <port>
+        <name>hawk_axi4mem</name>
+        <base>0xfff6100000</base>
+        <length>0x40000000</length>
+    </port>
 </devices>

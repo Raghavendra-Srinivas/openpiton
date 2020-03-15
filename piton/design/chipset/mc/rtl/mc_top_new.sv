@@ -714,8 +714,8 @@ mig_7series_axi4 u_mig_7series_axi4 (
   fake_axi4_mem u_fake_aximem (
     .clk                (ui_clk                    ),  
     .rst_n              (~noc_axi4_bridge_rst      ), 
-    .wr_bus(mc_axi_wr_bus.mstr),
-    .rd_bus(mc_axi_rd_bus.mstr)
+    .wr_bus(mc_axi_wr_bus.slv),
+    .rd_bus(mc_axi_rd_bus.slv)
   );
 
 
@@ -760,59 +760,59 @@ mig_7series_axi4 u_mig_7series_axi4 (
 //wire hacd_infl_interrupt,hacd_defl_interrupt;
 //connect NOC signals to hawk
 //AW
-assign cpu_axi_wr_bus.mstr.axi_awid = m_axi_awid; //'d0;
-assign cpu_axi_wr_bus.mstr.axi_awaddr =m_axi_awaddr; //'d0;
-assign cpu_axi_wr_bus.mstr.axi_awlen = m_axi_awlen;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awsize =m_axi_awsize;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awburst =m_axi_awburst;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awlock=m_axi_awlock;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awcache=m_axi_awcache;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awprot=m_axi_awprot;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awqos=m_axi_awqos;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awregion=m_axi_awregion;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awuser=m_axi_awuser;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_awvalid=m_axi_awvalid;//'d0;
-assign m_axi_awready = cpu_axi_wr_bus.mstr.axi_awready;
+assign cpu_axi_wr_bus.axi_awid = m_axi_awid; //'d0;
+assign cpu_axi_wr_bus.axi_awaddr =m_axi_awaddr; //'d0;
+assign cpu_axi_wr_bus.axi_awlen = m_axi_awlen;//'d0;
+assign cpu_axi_wr_bus.axi_awsize =m_axi_awsize;//'d0;
+assign cpu_axi_wr_bus.axi_awburst =m_axi_awburst;//'d0;
+assign cpu_axi_wr_bus.axi_awlock=m_axi_awlock;//'d0;
+assign cpu_axi_wr_bus.axi_awcache=m_axi_awcache;//'d0;
+assign cpu_axi_wr_bus.axi_awprot=m_axi_awprot;//'d0;
+assign cpu_axi_wr_bus.axi_awqos=m_axi_awqos;//'d0;
+assign cpu_axi_wr_bus.axi_awregion=m_axi_awregion;//'d0;
+assign cpu_axi_wr_bus.axi_awuser=m_axi_awuser;//'d0;
+assign cpu_axi_wr_bus.axi_awvalid=m_axi_awvalid;//'d0;
+assign m_axi_awready = cpu_axi_wr_bus.axi_awready;
 //W
-assign cpu_axi_wr_bus.mstr.axi_wid=m_axi_wid;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_wdata=m_axi_wdata;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_wstrb=m_axi_wstrb;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_wlast=m_axi_wlast;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_wuser=m_axi_wuser;//'d0;
-assign cpu_axi_wr_bus.mstr.axi_wvalid=m_axi_wvalid;//'d0;
-assign m_axi_wready = cpu_axi_wr_bus.mstr.axi_wready;
+assign cpu_axi_wr_bus.axi_wid=m_axi_wid;//'d0;
+assign cpu_axi_wr_bus.axi_wdata=m_axi_wdata;//'d0;
+assign cpu_axi_wr_bus.axi_wstrb=m_axi_wstrb;//'d0;
+assign cpu_axi_wr_bus.axi_wlast=m_axi_wlast;//'d0;
+assign cpu_axi_wr_bus.axi_wuser=m_axi_wuser;//'d0;
+assign cpu_axi_wr_bus.axi_wvalid=m_axi_wvalid;//'d0;
+assign m_axi_wready = cpu_axi_wr_bus.axi_wready;
 
 //BRESP
-assign m_axi_bid=cpu_axi_wr_bus.mstr.axi_bid;
-assign m_axi_bresp=cpu_axi_wr_bus.mstr.axi_bresp;
-assign m_axi_buser=cpu_axi_wr_bus.mstr.axi_buser;
-assign m_axi_bvalid=cpu_axi_wr_bus.mstr.axi_bvalid;
-assign cpu_axi_wr_bus.mstr.axi_bready = m_axi_bready ; //'d0;
+assign m_axi_bid=cpu_axi_wr_bus.axi_bid;
+assign m_axi_bresp=cpu_axi_wr_bus.axi_bresp;
+assign m_axi_buser=cpu_axi_wr_bus.axi_buser;
+assign m_axi_bvalid=cpu_axi_wr_bus.axi_bvalid;
+assign cpu_axi_wr_bus.axi_bready = m_axi_bready ; //'d0;
 
 //AR
-assign cpu_axi_rd_bus.mstr.axi_arid = m_axi_arid; //'d0;
-assign cpu_axi_rd_bus.mstr.axi_araddr =m_axi_araddr; //'d0;
-assign cpu_axi_rd_bus.mstr.axi_arlen = m_axi_arlen;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arsize =m_axi_arsize;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arburst =m_axi_arburst;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arlock=m_axi_arlock;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arcache=m_axi_arcache;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arprot=m_axi_arprot;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arqos=m_axi_arqos;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arregion=m_axi_arregion;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_aruser=m_axi_aruser;//'d0;
-assign cpu_axi_rd_bus.mstr.axi_arvalid=m_axi_arvalid;//'d0;
-assign m_axi_arready = cpu_axi_rd_bus.mstr.axi_arready;
+assign cpu_axi_rd_bus.axi_arid = m_axi_arid; //'d0;
+assign cpu_axi_rd_bus.axi_araddr =m_axi_araddr; //'d0;
+assign cpu_axi_rd_bus.axi_arlen = m_axi_arlen;//'d0;
+assign cpu_axi_rd_bus.axi_arsize =m_axi_arsize;//'d0;
+assign cpu_axi_rd_bus.axi_arburst =m_axi_arburst;//'d0;
+assign cpu_axi_rd_bus.axi_arlock=m_axi_arlock;//'d0;
+assign cpu_axi_rd_bus.axi_arcache=m_axi_arcache;//'d0;
+assign cpu_axi_rd_bus.axi_arprot=m_axi_arprot;//'d0;
+assign cpu_axi_rd_bus.axi_arqos=m_axi_arqos;//'d0;
+assign cpu_axi_rd_bus.axi_arregion=m_axi_arregion;//'d0;
+assign cpu_axi_rd_bus.axi_aruser=m_axi_aruser;//'d0;
+assign cpu_axi_rd_bus.axi_arvalid=m_axi_arvalid;//'d0;
+assign m_axi_arready = cpu_axi_rd_bus.axi_arready;
 
 
 //RD RESP
-assign m_axi_rid = cpu_axi_rd_bus.mstr.axi_rid;
-assign m_axi_rdata= cpu_axi_rd_bus.mstr.axi_rdata;
-assign m_axi_rresp= cpu_axi_rd_bus.mstr.axi_rresp;
-assign m_axi_rlast= cpu_axi_rd_bus.mstr.axi_rlast;
-assign m_axi_ruser= cpu_axi_rd_bus.mstr.axi_ruser;
-assign m_axi_rvalid= cpu_axi_rd_bus.mstr.axi_rvalid;
-assign cpu_axi_rd_bus.mstr.axi_rready =m_axi_rready;
+assign m_axi_rid = cpu_axi_rd_bus.axi_rid;
+assign m_axi_rdata= cpu_axi_rd_bus.axi_rdata;
+assign m_axi_rresp= cpu_axi_rd_bus.axi_rresp;
+assign m_axi_rlast= cpu_axi_rd_bus.axi_rlast;
+assign m_axi_ruser= cpu_axi_rd_bus.axi_ruser;
+assign m_axi_rvalid= cpu_axi_rd_bus.axi_rvalid;
+assign cpu_axi_rd_bus.axi_rready =m_axi_rready;
 
 hacd_top  #(
 	.NOC_DWIDTH(`DATA_WIDTH),
@@ -832,8 +832,8 @@ u_hacd_top (
         .buf_hacd_noc3_ready_i    ( buf_hacd_noc3_ready    ),
 
 	//AXI
-        .cpu_axi_wr_bus(cpu_axi_wr_bus.mstr),
-        .cpu_axi_rd_bus(cpu_axi_rd_bus.mstr),
+        .cpu_axi_wr_bus(cpu_axi_wr_bus.slv),
+        .cpu_axi_rd_bus(cpu_axi_rd_bus.slv),
 
         .mc_axi_wr_bus(mc_axi_wr_bus.mstr),
         .mc_axi_rd_bus(mc_axi_rd_bus.mstr)

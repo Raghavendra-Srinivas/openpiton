@@ -201,7 +201,7 @@ def gen_riscv_dts(devices, nCpus, cpuFreq, timeBaseFreq, periphFreq, dtsPath, ti
     # TODO: this needs to be extended
     # get the number of interrupt sources
     numIrqs = 0
-    devWithIrq = ["uart", "net"];
+    devWithIrq = ["uart", "net", "hacd"];
     for i in range(len(devices)):
         if devices[i]["name"] in devWithIrq:
             numIrqs += 1
@@ -308,6 +308,23 @@ def gen_riscv_dts(devices, nCpus, cpuFreq, timeBaseFreq, periphFreq, dtsPath, ti
             };
         };
             ''' % (addrBase, _reg_fmt(addrBase, addrLen, 2, 2), ioDeviceNr)
+            ioDeviceNr+=1
+
+        # VTHEAPLAB : HACD
+        if devices[i]["name"] == "hacd":
+            addrBase = devices[i]["base"]
+            addrLen  = devices[i]["length"]
+            tmpStr += '''
+        hacd@%08x {
+            compatible = "custom";
+            reg = <%s>;
+            clock-frequency = <%d>;
+            current-speed = <115200>;
+            interrupt-parent = <&PLIC0>;
+            interrupts = <%d>;
+            reg-shift = <2>; // regs are spaced on 32 bit boundary
+        };
+            ''' % (addrBase, _reg_fmt(addrBase, addrLen, 2, 2), periphFreq, ioDeviceNr)
             ioDeviceNr+=1
 
         # eth: lowrisc-eth@%08x {

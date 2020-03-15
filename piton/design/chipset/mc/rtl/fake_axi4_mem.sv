@@ -1,4 +1,3 @@
-/*
 module  fake_axi4_mem (
     input clk                ,  
     input rst_n              , 
@@ -8,11 +7,10 @@ module  fake_axi4_mem (
 
 typedef bit [63:0] ADDR;
 logic [`HACD_MC_AXI4_DATA_WIDTH-1:0] MEM[ADDR]; 
-
 //For Phase one of Hawk, we do not require read and write at same time.
 ////and also no outstading is supported
 //Write
-int wr_beat_cnt,rd_beat_cnt;
+int wr_beat_cnt,rd_beat_cnt,i;
 int temp_beat_cnt=0;
 initial
 begin
@@ -34,8 +32,8 @@ begin
 					wr_beat_cnt=wr_bus.axi_awlen;
 					for(int i=0;i<=wr_beat_cnt;i=i+1) begin
 						@(posedge clk); //add timeput if required later
-						if (wr_bus.axi_wvalid && (wr_bus.axi_wstrb!=0) begin
-							MEM[wr_bus.axi_awddr+i*64'd32]=wr_bus.axi_wdata & wr_bus.axi_wstrb;
+						if (wr_bus.axi_wvalid && (wr_bus.axi_wstrb!=0)) begin
+							MEM[wr_bus.axi_awaddr+i*64'd32]=wr_bus.axi_wdata & wr_bus.axi_wstrb;
 						end
 					end
 				end
@@ -69,7 +67,7 @@ begin
 						if(rd_bus.axi_rready==1'b1) begin
 							rd_bus.axi_rvalid<=1; 
 			  				rd_bus.axi_rresp<=0;
-							rd_bus.axi_rdata<=MEM[rd_bus.axi_arddr+i*64'd32];
+							rd_bus.axi_rdata<=MEM[rd_bus.axi_araddr+i*64'd32];
 							temp_beat_cnt = temp_beat_cnt +1;
 							rd_bus.axi_rlast<=temp_beat_cnt==rd_beat_cnt;
 							
@@ -90,8 +88,7 @@ end
 //function dump_mem();
 //endfunction
 endmodule
-*/
-
+/*
 module  fake_axi4_mem (
     input clk                ,  
     input rst_n              , 
@@ -108,4 +105,4 @@ module  fake_axi4_mem (
 	assign rd_bus.axi_rlast=0;
 
 endmodule
-
+*/

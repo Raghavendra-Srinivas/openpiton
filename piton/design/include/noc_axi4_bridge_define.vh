@@ -1,3 +1,4 @@
+
 // ========== Copyright Header Begin ============================================
 // Copyright (c) 2019 Princeton University
 // All rights reserved.
@@ -24,12 +25,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ========== Copyright Header End ============================================
-noc_axi4_bridge_sram_data.v
-noc_axi4_bridge_sram_req.v
-noc_axi4_bridge.v
-noc_axi4_bridge_buffer.v
-noc_axi4_bridge_ser.v
-noc_axi4_bridge_deser.v
-noc_axi4_bridge_read.v
-noc_axi4_bridge_write.v
 
+`define NOC_AXI4_BRIDGE_IN_FLIGHT_LIMIT 2
+`define NOC_AXI4_BRIDGE_BUFFER_ADDR_SIZE 1 //log(NOC_AXI4_BRIDGE_IN_FLIGHT_LIMIT)
+
+
+`define AXI4_DATA_WIDTH  512
+`define AXI4_ID_WIDTH    6
+`define AXI4_ADDR_WIDTH  64
+`define AXI4_LEN_WIDTH   8
+`define AXI4_SIZE_WIDTH  3
+`define AXI4_STRB_WIDTH  64
+`define AXI4_BURST_WIDTH 2
+`define AXI4_RESP_WIDTH  2
+`define AXI4_CACHE_WIDTH 4
+`define AXI4_PROT_WIDTH 3
+`define AXI4_QOS_WIDTH 4
+`define AXI4_REGION_WIDTH 4
+`define AXI4_USER_WIDTH 11

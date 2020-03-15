@@ -78,19 +78,19 @@ endmodule
 module hacd #
 (parameter MODE=0
 ) (
-	clk_i,
-	rst_ni,
-	infl_interrupt,
-	defl_interrupt,
 
-	//Reg Bus Interface
-	req_i,
-	resp_o,
+       input logic clk_i,
+       input logic rst_ni,
+       output infl_interrupt,
+       output defl_interrupt,
+       // Bus Interface
+       input  hacd_pkg::reg_intf_req_a32_d32 req_i,
+       output hacd_pkg::reg_intf_resp_d32    resp_o,
 
 	//CPU<->HACD
         //hacd will observe these for request signals from cpu
-        HACD_AXI_WR_BUS.mstr cpu_axi_wr_bus,  
-        HACD_AXI_RD_BUS.mstr cpu_axi_rd_bus,  
+        HACD_AXI_WR_BUS.slv cpu_axi_wr_bus,  
+        HACD_AXI_RD_BUS.slv cpu_axi_rd_bus,  
         
         //HACD<->MC
         //hacd will act as request master on request singslas to mc 
@@ -98,13 +98,6 @@ module hacd #
         HACD_MC_AXI_RD_BUS mc_axi_rd_bus
 
 );
-  input logic clk_i;
-  input logic rst_ni;
-  output infl_interrupt;
-  output defl_interrupt;
-  // Bus Interface
-  input  hacd_pkg::reg_intf_req_a32_d32 req_i;
-  output hacd_pkg::reg_intf_resp_d32    resp_o;
 
   //Local wires
   wire [31:0] w_hacd_ctrl;

@@ -44,13 +44,13 @@ localparam IDLE		='d0,
 
 
 //helper functions
-function get_axi_wr_pkt;
+function axi_wr_pld_t get_axi_wr_pkt;
 	input [clogb2(ATT_ENTRY_CNT)-1:0] etry_cnt;
 	input state_t p_state;
 	input [63:0] addr;
 	input [47:0] ppa; //if applicable , useful for LISt initiliazation
 	integer i;
-	axi_wr_pld_t get_axi_wr_pkt;
+	//axi_wr_pld_t get_axi_wr_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
 

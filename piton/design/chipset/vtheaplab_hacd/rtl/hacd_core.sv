@@ -50,31 +50,30 @@ module hacd_core (
 	.s_axi_awvalid(wr_reqpkt.awvalid),    //wr_blk_addr_vld), //from hk_pgwr_manager
 	.s_axi_awready(wr_rdypkt.awready),    //wr_addr_fifo_ready),
 	
-        .m_axi_awid(hawk_axi_wr_bus.mstr.axi_awid),
-        .m_axi_awaddr(hawk_axi_wr_bus.mstr.axi_awaddr),
-        .m_axi_awlen(hawk_axi_wr_bus.mstr.axi_awlen),
-        .m_axi_awsize(hawk_axi_wr_bus.mstr.axi_awsize),
-        .m_axi_awburst(hawk_axi_wr_bus.mstr.axi_awburst),
-        .m_axi_awlock(hawk_axi_wr_bus.mstr.axi_awlock),
-        .m_axi_awcache(hawk_axi_wr_bus.mstr.axi_awcache),
-        .m_axi_awprot(hawk_axi_wr_bus.mstr.axi_awprot),
-        .m_axi_awqos(hawk_axi_wr_bus.mstr.axi_awqos),
-        .m_axi_awregion(hawk_axi_wr_bus.mstr.axi_awregion),
-        .m_axi_awuser(hawk_axi_wr_bus.mstr.axi_awuser),
-        .m_axi_awvalid(hawk_axi_wr_bus.mstr.axi_awvalid),
-        .m_axi_awready(hawk_axi_wr_bus.mstr.axi_awready),
-        .m_axi_wdata(hawk_axi_wr_bus.mstr.axi_wdata),
-        .m_axi_wstrb(hawk_axi_wr_bus.mstr.axi_wstrb),
-        .m_axi_wlast(hawk_axi_wr_bus.mstr.axi_wlast),
-        .m_axi_wuser(hawk_axi_wr_bus.mstr.axi_wuser),
-        .m_axi_wvalid(hawk_axi_wr_bus.mstr.axi_wvalid),
-        .m_axi_wready(hawk_axi_wr_bus.mstr.axi_wready),
-        .m_axi_bid(hawk_axi_wr_bus.mstr.axi_bid),
-        .m_axi_bresp(hawk_axi_wr_bus.mstr.axi_bresp),
-        .m_axi_buser(hawk_axi_wr_bus.mstr.axi_buser),
-        .m_axi_bvalid(hawk_axi_wr_bus.mstr.axi_bvalid),
-        .m_axi_bready(hawk_axi_wr_bus.mstr.axi_bready)
-	
+        .m_axi_awid(hawk_axi_wr_bus.axi_awid),
+        .m_axi_awaddr(hawk_axi_wr_bus.axi_awaddr),
+        .m_axi_awlen(hawk_axi_wr_bus.axi_awlen),
+        .m_axi_awsize(hawk_axi_wr_bus.axi_awsize),
+        .m_axi_awburst(hawk_axi_wr_bus.axi_awburst),
+        .m_axi_awlock(hawk_axi_wr_bus.axi_awlock),
+        .m_axi_awcache(hawk_axi_wr_bus.axi_awcache),
+        .m_axi_awprot(hawk_axi_wr_bus.axi_awprot),
+        .m_axi_awqos(hawk_axi_wr_bus.axi_awqos),
+        .m_axi_awregion(hawk_axi_wr_bus.axi_awregion),
+        .m_axi_awuser(hawk_axi_wr_bus.axi_awuser),
+        .m_axi_awvalid(hawk_axi_wr_bus.axi_awvalid),
+        .m_axi_awready(hawk_axi_wr_bus.axi_awready),
+        .m_axi_wdata(hawk_axi_wr_bus.axi_wdata),
+        .m_axi_wstrb(hawk_axi_wr_bus.axi_wstrb),
+        .m_axi_wlast(hawk_axi_wr_bus.axi_wlast),
+        .m_axi_wuser(hawk_axi_wr_bus.axi_wuser),
+        .m_axi_wvalid(hawk_axi_wr_bus.axi_wvalid),
+        .m_axi_wready(hawk_axi_wr_bus.axi_wready),
+        .m_axi_bid(hawk_axi_wr_bus.axi_bid),
+        .m_axi_bresp(hawk_axi_wr_bus.axi_bresp),
+        .m_axi_buser(hawk_axi_wr_bus.axi_buser),
+        .m_axi_bvalid(hawk_axi_wr_bus.axi_bvalid),
+        .m_axi_bready(hawk_axi_wr_bus.axi_bready)
      );
 
      assign mc_axi_wr_bus.axi_wid='d0;
@@ -138,8 +137,8 @@ module hacd_core (
 	.mstr_sel,
 
 	//From Hawk
- 	.mstr0_axi_wr_bus_slv(hawk_axi_wr_bus.mstr),
- 	.mstr0_axi_rd_bus_slv(hawk_axi_rd_bus.mstr),
+ 	.mstr0_axi_wr_bus_slv(hawk_axi_wr_bus.slv),
+ 	.mstr0_axi_rd_bus_slv(hawk_axi_rd_bus.slv),
 
 	//From CPU
 	.mstr1_axi_wr_bus_slv(cpu_axi_wr_bus),

@@ -63,7 +63,7 @@ package hacd_pkg;
  //independnt channels for axi.
  typedef struct packed {
  	logic [63:0]  addr;
-	logic [512:0] data;
+	logic [511:0] data;
 	logic [63:0]  strb;
 	logic awvalid;
 	logic wvalid;
@@ -71,7 +71,7 @@ package hacd_pkg;
 
   typedef struct packed {
  	logic [63:0]  addr;
-	logic [512:0] data;
+	logic [511:0] data;
 	logic [63:0]  strb;
 	//Below are extra othre fields
 	logic [47:0] ppa;
