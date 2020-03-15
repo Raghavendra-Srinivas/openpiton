@@ -18,7 +18,7 @@ package hacd_pkg;
 
     //default values for page tables start and end
     parameter bit [63:0] HAWK_ATT_START=64'hFFF6100000-64'h40; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000-64'h16; //64'h80000000;
+    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000-64'h40; //64'h80000000;
     parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000-64'h40;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
@@ -88,16 +88,11 @@ package hacd_pkg;
 
  parameter int BLK_SIZE=64;
  parameter int ATT_ENTRY_SIZE=8;
- parameter int ATT_ENTRY_PER_BLK=BLK_SIZE/ATT_ENTRY_SIZE;
  parameter int LIST_ENTRY_SIZE=16;
- parameter int LST_ENTRY_PER_BLK=BLK_SIZE/LIST_ENTRY_SIZE;
  parameter int BYTE=8;
 
- parameter int DRAM_SIZE=1<<30; ////1GB
- parameter int PAGE_SIZE=1<<12; //4KB 
- parameter int ATT_ENTRY_MAX=DRAM_SIZE/PAGE_SIZE;
- parameter int ATT_ENTRY_CNT=16; // lower count for verification //update later
- parameter int LIST_ENTRY_CNT=16; // update later
+ parameter int ATT_ENTRY_CNT=16; // update later
+ parameter int LIST_ENTRY_CNT=8; // update later
 
 endpackage
 

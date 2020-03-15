@@ -52,6 +52,7 @@ module hacd_axi_master #
     input  wire                     s_axi_wvalid,
     output wire                     s_axi_wready,
     input  wire [DATA_WIDTH-1:0]    s_axi_wdata,
+    input wire [STRB_WIDTH-1:0]    s_axi_wstrb,
 
     //AWaddr 
     input  wire [ADDR_WIDTH-1:0]    s_axi_awaddr,
@@ -112,7 +113,6 @@ parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
     wire [AWUSER_WIDTH-1:0]  s_axi_awuser;
 
     //wdata
-    wire [STRB_WIDTH-1:0]    s_axi_wstrb;
     wire                     s_axi_wlast;
     wire [WUSER_WIDTH-1:0]   s_axi_wuser;
 
@@ -139,7 +139,7 @@ parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
     assign  s_axi_awuser='d0;
 
 //wdata channel 
-    assign s_axi_wstrb={STRB_WIDTH{1'b1}};
+    //assign s_axi_wstrb={STRB_WIDTH{1'b1}};
     assign s_axi_wlast = 1'b1; //as we have only one beat
     assign s_axi_wuser='d0;
 

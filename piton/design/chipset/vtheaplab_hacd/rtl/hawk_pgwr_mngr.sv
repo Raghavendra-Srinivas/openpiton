@@ -29,7 +29,7 @@ module hawk_pgwr_mngr (
 );
 
 //fsm variables  
-logic [clogb2(ATT_ENTRY_CNT):0] p_etry_cnt,n_etry_cnt;
+logic [clogb2(ATT_ENTRY_MAX):0] p_etry_cnt,n_etry_cnt;  //serves as entry id
 logic p_req_awvalid,p_req_wvalid,n_req_awvalid,n_req_wvalid;
 logic n_init_att_done,n_init_list_done;
 typedef logic [`FSM_WID-1:0] state_t;
@@ -45,7 +45,7 @@ localparam IDLE		='d0,
 
 //helper functions
 function axi_wr_pld_t get_axi_wr_pkt;
-	input [clogb2(ATT_ENTRY_CNT)-1:0] etry_cnt;
+	input [clogb2(ATT_ENTRY_MAX)-1:0] etry_cnt;
 	input state_t p_state;
 	input [63:0] addr;
 	input [47:0] ppa; //if applicable , useful for LISt initiliazation
@@ -53,6 +53,9 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	//axi_wr_pld_t get_axi_wr_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
+	get_axi_wr_pkt.strb ='d0;
+	get_axi_wr_pkt.data ='d0;
+	lst_entry.rsvd = 'd0;
 
 	//optimization, 
 	//if we are in Init mode, we can send entire wstrb once, as we know
@@ -65,17 +68,35 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	           end
 		   get_axi_wr_pkt.strb = {64{1'b1}};
         end
-	else if (p_state == INIT_LIST) begin
-		   get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+	else if (p_state == INIT_LIST ) begin
+		   if (etry_cnt[1:0] == 2'b01) begin
+		   	get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+		   end else begin
+		   	get_axi_wr_pkt.addr = addr; //;get_att_addr()
+		   end
+		   
 		   //lst entry
-		   for (i=0;i<(BLK_SIZE/LIST_ENTRY_SIZE);i++) begin
-		    lst_entry.way = ppa + i; //this actually is 4KB aligned, so we incremnt sequentially here
-		    lst_entry.prev = etry_cnt - i; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
-		    lst_entry.next = etry_cnt + i;
-		    get_axi_wr_pkt.data[(i*LIST_ENTRY_SIZE*BYTE)+:LIST_ENTRY_SIZE*BYTE] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-	           end
-		   get_axi_wr_pkt.ppa = lst_entry.way;
-		   get_axi_wr_pkt.strb = {64{1'b1}};
+		    lst_entry.way = ppa + 1; //this actually is 4KB aligned, so we incremnt sequentially here
+		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
+		    lst_entry.next = etry_cnt + 1;
+		    if (etry_cnt[1:0] == 2'b01) begin
+		    	get_axi_wr_pkt.data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		        get_axi_wr_pkt.strb[15:0] ={16{1'b1}};
+		    end
+		    else if  (etry_cnt[1:0] == 2'b10) begin
+		    	get_axi_wr_pkt.data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		        get_axi_wr_pkt.strb[31:16] ={16{1'b1}};
+		    end	
+		    else if  (etry_cnt[1:0] == 2'b11) begin
+		    	get_axi_wr_pkt.data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		        get_axi_wr_pkt.strb[47:32] ={16{1'b1}};
+		    end	
+		    else if  (etry_cnt[1:0] == 2'b00) begin
+		    	get_axi_wr_pkt.data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		        get_axi_wr_pkt.strb[63:48] ={16{1'b1}};
+		    end	
+
+		    get_axi_wr_pkt.ppa = ppa + 1;
 	end
 endfunction
 
@@ -116,7 +137,7 @@ always_comb begin
 				n_state=INIT_LIST;
 				n_axireq.ppa=HAWK_PPA_START;
 				n_axireq.addr = HAWK_LIST_START; //We can change this to any address if list tbael does not follow att immediately
-				n_etry_cnt = 'd0;
+				n_etry_cnt = 'd1;
 			end
 			//handle other modes below
 
@@ -124,7 +145,7 @@ always_comb begin
 		INIT_ATT:begin
 			  if(awready && !awvalid) begin
 				  //handle ATT initialization 
-				  if(p_etry_cnt < ATT_ENTRY_CNT) begin
+				  if(p_etry_cnt < (ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)) begin //8 becuase 8 entry
 				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr,p_axireq.ppa); //prepare next packet
 				     n_req_awvalid = 1'b1;
 			  	     n_etry_cnt = p_etry_cnt + 1;
@@ -146,7 +167,7 @@ always_comb begin
 		INIT_LIST:begin
 			  if(awready && !awvalid) begin
 				  //handle LIST initialization
-				  if (p_etry_cnt < LIST_ENTRY_CNT) begin
+				  if (p_etry_cnt <= LIST_ENTRY_CNT) begin
 				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr,p_axireq.ppa); //prepare next packet
 				     
 				     n_req_awvalid = 1'b1;

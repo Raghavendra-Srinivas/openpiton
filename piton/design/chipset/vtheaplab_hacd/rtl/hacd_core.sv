@@ -44,6 +44,7 @@ module hacd_core (
 	.clk(clk_i),
 	.rst(!rst_ni),
 	.s_axi_wdata(wr_reqpkt.data), 	      //wr_blk_data), 	 //from hk_pgwr_manager
+        .s_axi_wstrb(wr_reqpkt.strb),
 	.s_axi_wvalid(wr_reqpkt.wvalid),      //wr_blk_vld), 	 //from hk_pgwr_manager
 	.s_axi_wready(wr_rdypkt.wready),      //wr_data_fifo_ready),
 	.s_axi_awaddr(wr_reqpkt.addr),        //wr_blk_adrr), 	 //from hk_pgwr_manager
