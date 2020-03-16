@@ -50,7 +50,7 @@ begin
 					bt_cnt_wr=0;
 					while(bt_cnt_wr<wr_beat_cnt) begin
 			  		@(posedge clk);
-					  if(wr_bus.axi_wvalid==1'b1) begin
+					  if(wr_bus.axi_wvalid==1'b1) begin //change below simple logic using mask to supprot byte level wdata control 
 					  	if(wr_bus.axi_wstrb==32'h0000FFFF) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
 					  		MEM[capt_addr][bt_cnt_wr]= {MEM[capt_addr][bt_cnt_wr][255:128] , wr_bus.axi_wdata[127:0]}; 
 					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
@@ -123,7 +123,7 @@ function dump_mem();
 bit [256:0] cacheline;
 AttEntry attentry[4];
 ListEntry lstentry[2];
-int att_cnt=0,lst_cnt=0;
+int att_cnt=0,lst_enry_id=1;
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
@@ -161,8 +161,8 @@ foreach(MEM[addr]) begin
        lstentry[1].prev=cacheline[`LSTSIZE1+53:`LSTSIZE1+28];
        lstentry[1].next=cacheline[`LSTSIZE1+27:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
-       $display("CACHE/DRAM ADDR: %h LST_%d || way:%h || prev:%d || next:%d", addr,lst_cnt,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
-	lst_cnt = lst_cnt + 1;
+       $display("CACHE/DRAM ADDR: %h LST_%d || way:%h || prev:%d || next:%d", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+	lst_enry_id = lst_enry_id + 1;
      end //for
    end //for 
   end //if

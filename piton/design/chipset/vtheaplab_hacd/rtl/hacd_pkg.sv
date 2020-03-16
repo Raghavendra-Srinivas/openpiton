@@ -58,8 +58,8 @@ package hacd_pkg;
  } ListEntry;
 
 
- //Below packet is between hawk_axi_wr_master and hawk_pgwr_mngr
- //For simplicity , we do nt treat addr and data as separate, though they are
+ //Below packet is between hawk_axiwr_master and hawk_pgwr_mngr
+ //For simplicity , we dont treat addr and data as separate, though they are
  //independnt channels for axi.
  typedef struct packed {
  	logic [63:0]  addr;
@@ -78,13 +78,37 @@ package hacd_pkg;
  } axi_wr_pld_t;
 
  typedef struct packed {
- 	bit awready;
-	bit wready;
+ 	logic awready;
+	logic wready;
  } axi_wr_rdypkt_t;
 
  typedef struct packed {
- 	bit bresp;
+ 	logic bresp;
  } axi_wr_resppkt_t;
+
+ //Axi Read Packets betwenn hawk_axird_master and hawk_pgrd_mngr
+  typedef struct packed {
+ 	logic [63:0]  addr;
+	logic arvalid;
+ } axi_rd_reqpkt_t;
+
+/*
+  typedef struct packed {
+ 	logic [63:0]  addr;
+ } axi_rd_pld_t; */
+
+ typedef struct packed {
+ 	logic arready;
+	logic rready;
+ } axi_rd_rdypkt_t;
+
+ typedef struct packed {
+ 	logic rresp;
+ 	logic rdata;
+ 	logic rvalid;
+	logic rlast;
+ } axi_rd_resppkt_t;
+
 
  parameter int BLK_SIZE=64;
  parameter int ATT_ENTRY_SIZE=8;

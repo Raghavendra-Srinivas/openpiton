@@ -63,6 +63,9 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	if      (p_state == INIT_ATT) begin
 		   //increment address by 64 (8 entries)
 		   get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+		   att_entry.zpd_cnt='d0;
+		   att_entry.way='d0;
+		   att_entry.sts=1'b0;	
 		   for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
 		    get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
 	           end

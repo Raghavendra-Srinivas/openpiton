@@ -2,7 +2,8 @@ hacd_pkg.sv
 hawk_pgwr_mngr.sv
 hacd_interfaces.sv
 hawk_ctrl_unit.sv
-hacd_axi_master.sv
+hawk_axiwr_master.sv
+hawk_axird_master.sv
 axi_size_conv_DOWNSIZE.sv
 hawk_axi_xbar_wrapper.sv
 hacd_core.sv
