@@ -79,7 +79,7 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		   end
 		   
 		   //lst entry
-		    lst_entry.way = ppa + 1; //this actually is 4KB aligned, so we incremnt sequentially here
+		    lst_entry.way = (ppa>>12) + 1; //this actually is 4KB aligned, so we incremnt sequentially here
 		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
 		    lst_entry.next = etry_cnt + 1;
 		    if (etry_cnt[1:0] == 2'b01) begin
@@ -138,8 +138,8 @@ always_comb begin
 			end
 			else if (init_list & !init_list_done) begin
 				n_state=INIT_LIST;
-				n_axireq.ppa=HAWK_PPA_START;
-				n_axireq.addr = HAWK_LIST_START; //We can change this to any address if list tbael does not follow att immediately
+				n_axireq.ppa=HAWK_PPA_START-64'h40;
+				n_axireq.addr = HAWK_LIST_START-64'h40; //We can change this to any address if list tbael does not follow att immediately
 				n_etry_cnt = 'd1;
 			end
 			//handle other modes below
@@ -199,10 +199,10 @@ begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
 		p_etry_cnt <= 'd0;
-		p_axireq.ppa <= HAWK_PPA_START;
+		p_axireq.ppa <= HAWK_PPA_START-64'h40;
 
 		//Axi signals
-		p_axireq.addr <= HAWK_ATT_START; //'d0;
+		p_axireq.addr <= HAWK_ATT_START-64'h40; //'d0;
 		p_axireq.data <= 'd0;
 		p_axireq.strb <= 'd0;
 		p_req_awvalid <= 1'b0;

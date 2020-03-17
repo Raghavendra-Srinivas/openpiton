@@ -3,109 +3,83 @@
 //
 `include "hacd_define.vh"
 import hacd_pkg::*;
-`define FSM_WID 4
+`define FSM_WID_PGRD 4
 module hawk_pgrd_mngr (
 
   input clk_i,
   input rst_ni,
 
   input lookup_att,
+  input [47:0] hppa_i,//this physical page address
+
+  input [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead,	
+  input [clogb2(LST_ENTRY_MAX)-1:0] freeLstTail,	
   //AXI packets
   input hacd_pkg::axi_rd_rdypkt_t rd_rdypkt,
   output hacd_pkg::axi_rd_reqpkt_t rd_reqpkt,
 
-  output lookup_att_done;
+  output lookup_att_done
 );
 
 //fsm variables  
-logic p_req_arvalid,n_req_arvalid;
-typedef logic [`FSM_WID-1:0] state_t;
+logic p_req_arvalid,n_req_arvalid,p_rready,n_rready;
+typedef logic [`FSM_WID_PGRD-1:0] state_t;
 state_t n_state;
 state_t p_state;
 //states
-localparam IDLE		='d0,
-	   LOOKUP_ATT	='d1,
-	   POP_FREE_LST ='d2;
+localparam IDLE			='d0,
+	   LOOKUP_ATT	  	='d1,
+	   WAIT_ATT_ENTRY 	='d2,
+	   CHECK_ATT_ENTRY 	='d3,
+	   DECODE_ATT_ENTRY	='d4,
+	   POP_FREE_LST 	='d5,
+	   ALLOCATE_PPA 	='d6;
 
 
 //helper functions
 function axi_rd_pld_t get_axi_rd_pkt;
-	input [clogb2(ATT_ENTRY_MAX)-1:0] etry_cnt;
+	input [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;
 	input state_t p_state;
-	input [63:0] addr;
-	input [47:0] ppa; //if applicable , useful for LISt initiliazation
+	input [47:0] hppa;
 	integer i;
-	//axi_rd_pld_t get_axi_rd_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
-	get_axi_rd_pkt.strb ='d0;
-	get_axi_rd_pkt.data ='d0;
-	lst_entry.rsvd = 'd0;
 
-	//optimization, 
-	//if we are in Init mode, we can send entire wstrb once, as we know
-	//data for entire cache line 
-	if      (p_state == INIT_ATT) begin
-		   //increment address by 64 (8 entries)
-		   get_axi_rd_pkt.addr = addr + 64'd64; //;get_att_addr()
-		   att_entry.zpd_cnt='d0;
-		   att_entry.way='d0;
-		   att_entry.sts=1'b0;	
-		   for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
-		    get_axi_rd_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
-	           end
-		   get_axi_rd_pkt.strb = {64{1'b1}};
+	if      (p_state == LOOKUP_ATT) begin
+		   //It is hppa adderss minus hppa_base gives offset from
+		   //zero. divide by (>>3) as 8 entries can fit in one cache,
+		   //we get incremnt of 1 for every 8 incrments of hppa.
+		   //and we need to multiply that quantity by 64(<<6) (as cacheline
+		   //size is 64bytes
+		 get_axi_rd_pkt.addr = HAWK_ATT_START + (((hppa-HPPA_BASE_ADDR) >> 3) << 6);//map hppa to att cache line address
         end
-	else if (p_state == INIT_LIST ) begin
-		   if (etry_cnt[1:0] == 2'b01) begin
-		   	get_axi_rd_pkt.addr = addr + 64'd64; //;get_att_addr()
-		   end else begin
-		   	get_axi_rd_pkt.addr = addr; //;get_att_addr()
-		   end
-		   
-		   //lst entry
-		    lst_entry.way = ppa + 1; //this actually is 4KB aligned, so we incremnt sequentially here
-		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
-		    lst_entry.next = etry_cnt + 1;
-		    if (etry_cnt[1:0] == 2'b01) begin
-		    	get_axi_rd_pkt.data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_rd_pkt.strb[15:0] ={16{1'b1}};
-		    end
-		    else if  (etry_cnt[1:0] == 2'b10) begin
-		    	get_axi_rd_pkt.data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_rd_pkt.strb[31:16] ={16{1'b1}};
-		    end	
-		    else if  (etry_cnt[1:0] == 2'b11) begin
-		    	get_axi_rd_pkt.data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_rd_pkt.strb[47:32] ={16{1'b1}};
-		    end	
-		    else if  (etry_cnt[1:0] == 2'b00) begin
-		    	get_axi_rd_pkt.data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_rd_pkt.strb[63:48] ={16{1'b1}};
-		    end	
-
-		    get_axi_rd_pkt.ppa = ppa + 1;
+	else if (p_state == POP_FREE_LST ) begin
+		 //generate address which does pop from free list referenced
+		 //from free list head
+		 get_axi_rd_pkt.addr = HAWK_LIST_START + (((freeLstHead-1) >> 2) << 6);
 	end
+	//handle other modes later
 endfunction
 
+//function  check_AttEntry
 
 wire arready,rready;
 wire arvalid,rvalid;
 assign arready = rd_rdypkt.arready; 
 
-assign rready = rd_rdypkt.rready;
 assign rvalid = rd_resppkt.rvalid;
 assign rdata = rd_resppkt.rdata;
 
-//axi_rd_pld_t p_axireq,n_axireq;
-
+axi_rd_pld_t p_axireq,n_axireq;
 //logic to handle different modes
 always_comb begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_axireq= p_axireq;
-	n_req_arvalid = 1'b0; 	       //reset->fsm decides when to send packet
-
+	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
+        n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
+	n_rdata=p_rdata;
+	n_att_hit=1'b0; //p_att_hit;   
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -126,26 +100,55 @@ always_comb begin
 			  end 
 		end
 		WAIT_ATT_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
-			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this 
-				     n_resp_rdata = rdata;
+			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
+				     n_rdata=rdata; 
 				     n_state = CHECK_ATT_ENTRY;
 			  end
 		end
-		CHECK_ATT_ENTRY:begin
-			  if(att_hit) begin
-			  	//unhold cpu access (wr/rd)
+		DECODE_ATT_ENTRY:begin
+			  n_att_hit=check_AttEntry(hppa_i,p_rdata);
+			  n_state = CHECK_ATT_ENTRY; 
+	        end
+		CHECK_ATT_ENTRY: begin  
+			  if(p_att_hit) begin
+				n_lookupatt_done=1'b1;
+				n_unhold_cpu = 1'b1; 
+				//this should be assured by cu(control unit), we can let pgrd mngr handles this, 
+				//but once we move to set-associative based internal cache, it makes cu handle cache access and halde this 
+				if(cpu_active)
+				   n_state = IDLE;	
 			  end
 			  else begin
 				//lookup freelist
 				n_state = POP_FREE_LIST;
 			  end
-				
 		end	
-		FREE_LIST: begin 
-			  if() begin 
-				     n_state = INIT_LIST;
+		POP_FREE_LST: begin 
+			  if(freeLstHead!=freeLstTail) begin 
+			             n_axireq=get_axi_rd_pkt(p_state,freeLstHead);		
+				     n_req_arvalid = 1'b1;
+				     n_state = ALLOCATE_PPA;
+			  end
+			  else begin
+				    //Add here to look for victim of
+				    //uncompressed list , moving to idle for
+				    //now
+				    n_state = IDLE;
+			  end
+		WAIT_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
+			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
+				     n_rdata=rdata; 
+				     n_state = ALLOCATE_PPA;
 			  end
 		end
+		ALLOCATE_PPA: begin
+			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this 
+				     n_tbl_update_reqpkt.ppa=get_ppa(freeLstHead,p_rdata);;
+				     n_tbl_update_reqpkt.update=1'b1;
+				     n_state = IDLE;
+			  end
+		end
+		default: n_state=IDLE;
 	endcase
 end
 
@@ -156,26 +159,25 @@ begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
 		p_etry_cnt <= 'd0;
-		p_axireq.ppa <= HAWK_PPA_START;
-
-		//Axi signals
-		p_axireq.addr <= HAWK_ATT_START; //'d0;
+		
+		p_axireq.addr <= HAWK_ATT_START; 
 		p_axireq.data <= 'd0;
 		p_axireq.strb <= 'd0;
 		p_req_arvalid <= 1'b0;
 		p_req_wvalid <= 1'b0;
+		
+		p_rready <= 1'b0;
 	end
 	else begin
  		p_state <= n_state;	
 		p_etry_cnt <= n_etry_cnt;
-		p_axireq.ppa <= n_axireq.ppa;
 
 		//Axi signals
 		p_axireq.addr <= n_axireq.addr;
 		p_axireq.data <= n_axireq.data;
-		p_axireq.strb <= n_axireq.strb;
 		p_req_arvalid <= n_req_arvalid ;
-		p_req_wvalid <= n_req_wvalid;
+
+		p_rready <= n_rready;
 	end
 end
 
@@ -188,26 +190,14 @@ always @(posedge clk_i or negedge rst_ni)
 	else begin 
 	if(n_lookup_att_done)
 	  lookup_att_done <= 1'b1;
+
+	if(n_unhold_cpu)
 	end
 
 //Output combo signals
 assign rd_reqpkt.addr = p_axireq.addr;
 assign rd_reqpkt.data = p_axireq.data;
-assign rd_reqpkt.strb = p_axireq.strb;
 assign rd_reqpkt.arvalid = p_req_arvalid;
-assign rd_reqpkt.wvalid =  p_req_wvalid;
 
-
-
-//generic helper functions
-function integer clogb2;
-    input [31:0] value;
-    begin
-        value = value - 1;
-        for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
-            value = value >> 1;
-        end
-    end
-endfunction
-
+assign rd_rdypkt.rready =p_rready;
 endmodule

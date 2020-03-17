@@ -17,9 +17,9 @@ package hacd_pkg;
   
 
     //default values for page tables start and end
-    parameter bit [63:0] HAWK_ATT_START=64'hFFF6100000-64'h40; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000-64'h16; //64'h80000000;
-    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000-64'h40;
+    parameter bit [63:0] HAWK_ATT_START=64'hFFF6100000; //64'h80000000;
+    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000; 
+    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
 
@@ -92,10 +92,10 @@ package hacd_pkg;
 	logic arvalid;
  } axi_rd_reqpkt_t;
 
-/*
+
   typedef struct packed {
  	logic [63:0]  addr;
- } axi_rd_pld_t; */
+ } axi_rd_pld_t; 
 
  typedef struct packed {
  	logic arready;
@@ -117,11 +117,28 @@ package hacd_pkg;
  parameter int LST_ENTRY_PER_BLK=BLK_SIZE/LIST_ENTRY_SIZE;
  parameter int BYTE=8;
 
+ parameter int COMPRESSION_RATIO=4;
  parameter int DRAM_SIZE=1<<30; ////1GB
  parameter int PAGE_SIZE=1<<12; //4KB 
- parameter int ATT_ENTRY_MAX=DRAM_SIZE/PAGE_SIZE;
+ parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
+ parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
  parameter int ATT_ENTRY_CNT=16; // lower count for verification //update later
  parameter int LIST_ENTRY_CNT=16; // update later
+
+
+
+  //helkper fucntins
+  //generic helper functions
+  function integer clogb2;
+      input [31:0] value;
+      begin
+          value = value - 1;
+          for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
+              value = value >> 1;
+          end
+      end
+  endfunction
+
 
 endpackage
 
