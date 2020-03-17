@@ -31,16 +31,16 @@ module hawk_ctrl_unit #()
     input init_list_done,
     
     //cpu master handshake
-    input cpu_vld_access,
-    
+    output hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt, 
+    output hacd_pkg::cpu_wr_reqpkt_t cpu_wr_reqpkt, 
+     
     //to control with hawk_pg_writer
     output logic init_att,
     output logic init_list,
-    output logic hold_hwk_wr,
-    output logic hold_hwk_rd,
     
     //to control cpu interface
-    output logic hold_cpu
+    output logic allow_cpu_rd_access,
+    output logic allow_cpu_wr_access
 );
 
 
@@ -66,8 +66,6 @@ begin
 		p_state<=IDLE;
 
 		//output regs
-		hold_hwk_wr<=1'b0;
-		hold_cpu<=1'b1; //by default, we don't allow cpu to boot/make access to dram
 		init_att<=1'b1; //init_att is enabled upon reset
 		init_list<=1'b1; //init_att is enabled upon reset
 	end
@@ -75,8 +73,6 @@ begin
 		p_state<=n_state;
 
 		//output regs
-		hold_hwk_wr<=n_hold_hwk_wr;
-		hold_cpu<=n_hold_cpu;
 		init_att<=n_init_att;
 		init_list<=n_init_list;
 	end
@@ -103,11 +99,11 @@ begin
 			end
 		end
 		CHK_RD_ACTIVE:begin
-			if(cpu_rd_pkt.valid) begin //this can be optimized , if we treat rd and write as separate as 
+			if(cpu_rd_reqpkt.valid) begin //this can be optimized , if we treat rd and write as separate as 
 						 //also, later once we have interncal cache, cu unit itlsef into it, if not
 						 //found then only sends to look up att.
 				n_lkup_reqpkt.lookup=1'b1;
-				n_lkup_reqpkt.hppa=cpu_rd_pkt.hppa;	 
+				n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
 			  	n_state=RD_LOOKUP_ALLOCATE;
 			end
 			else n_state = CHK_WR_ACTIVE;
@@ -118,9 +114,9 @@ begin
 			//should be handled at system level /one cache before memory
 			//controller
 		CHK_WR_ACTIVE: begin
-			 if (cpu_wr_pkt.valid) begin
+			 if (cpu_wr_reqpkt.valid) begin
 				n_lkup_reqpkt.lookup=1'b1;
-				n_lkup_reqpkt.hppa=cpu_wr_pkt.hppa;	 
+				n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
 			  	n_state=WR_LOOKUP_ALLOCATE;
 		  	 end
 			else n_state = CHK_RD_ACTIVE;
@@ -155,13 +151,13 @@ begin
 		TBL_UPDATE_RD:begin
 				if(tbl_update_done) begin
 					n_allow_cpu_rd_access<=1'b1;
-					n_state<=ACTIVE;
+					n_state<=CHK_WR_ACTIVE;
 				end
 		end
 		TBL_UPDATE_WR:begin
 				if(tbl_update_done) begin
 					n_allow_cpu_wr_access<=1'b1;
-					n_state<=ACTIVE;
+					n_state<=CHK_RD_ACTIVE;
 				end
 		end
 	endcase

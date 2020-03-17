@@ -127,6 +127,11 @@ package hacd_pkg;
 	logic allow_cpu_access;
  } transltn_reqpkt_t;
 
+ typedef struct packed {
+	logic [47:0] hppa;
+	logic valid;
+ } cpu_rd_reqpkt_t;
+
  parameter int BLK_SIZE=64;
  parameter int ATT_ENTRY_SIZE=8;
  parameter int ATT_ENTRY_PER_BLK=BLK_SIZE/ATT_ENTRY_SIZE;

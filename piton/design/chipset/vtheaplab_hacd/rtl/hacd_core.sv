@@ -131,15 +131,11 @@ module hacd_core (
      assign mc_axi_wr_bus.axi_wid='d0;
       
   
-   //CPU Master  
+   //CPU Master 
+
    //controls from cu to cpu master
-   wire hold_cpu;  
-
-   wire cpu_vld_access;
-   assign cpu_vld_access = 1'b0; // cpu_rd_vld | cpu_wr_vld;
-
-   //pg_writer contrls from cu
-   wire hold_hwk_wr;
+    hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt; 
+    hacd_pkg::cpu_wr_reqpkt_t cpu_wr_reqpkt; 
    //hawk main control unit
    hawk_ctrl_unit #() u_hawk_cu 
    (
@@ -149,7 +145,8 @@ module hacd_core (
 	.init_att_done,
 	.init_list_done,
 
-	.cpu_vld_access,
+	.cpu_rd_reqpkt,
+	.cpu_wr_reqpkt,
 
 	//controls
 	.init_att,
@@ -160,33 +157,26 @@ module hacd_core (
 
 
 
-
-   //CPU master
-
-
-
-
-
-
-
-
    //Arbiter between Hawk Master and CPU master
 	
    //For phase-1 birngup, I consider to implemtn just Mux, so either one of
    //them is active at any given time. Later we may be need crossbar/arbiter
-   //and should supporot out-order transactions from DDR controller
+   //and should support out-order transactions from DDR controller
    //to enhance performance of whole system
-   //This also includes downsizer to be compatible with DDR controller data
-   //width of geensys2 board (256 bits). But we work on cachelines (512 bits)
+   //below module also includes downsizer to be compatible with DDR controller data
+   //width of geensys2 board (256 bits). But HAWK always work on cachelines (512 bits)
    
-   wire mstr_sel;
-   assign mstr_sel= !hold_cpu && hold_hwk_wr; //cpu can become master only it is not on hold and hawk is on hold 
+   //wire rd_mstr_sel;
+   //wire wr_mstr_sel;
+   //assign rd_mstr_sel= allow_cpu_rd_access; 
+   //assign wr_mstr_sel= allow_cpu_wr_access; 
 
    hawk_axi_xbar_wrapper#() u_axi_xbar_wrpr (
 
 	.clk_i,
 	.rst_ni,
 	.mstr_sel,
+	//.wr_mstr_sel,
 
 	//From Hawk
  	.mstr0_axi_wr_bus_slv(hawk_axi_wr_bus.slv),
