@@ -33,7 +33,8 @@ localparam IDLE			='d0,
 	   CHECK_ATT_ENTRY 	='d3,
 	   DECODE_ATT_ENTRY	='d4,
 	   POP_FREE_LST 	='d5,
-	   ALLOCATE_PPA 	='d6;
+	   WAIT_LST_ENTRY	='d6,
+	   ALLOCATE_PPA 	='d7;
 
 
 //helper functions
@@ -71,6 +72,7 @@ assign rvalid = rd_resppkt.rvalid;
 assign rdata = rd_resppkt.rdata;
 
 axi_rd_pld_t p_axireq,n_axireq;
+tblUpdt_reqpkt_t n_tbl_updt_reqpkt,p_tbl_updt_reqpkt;
 //logic to handle different modes
 always_comb begin
 //default
@@ -79,14 +81,14 @@ always_comb begin
 	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
 	n_rdata=p_rdata;
-	n_att_hit=1'b0; //p_att_hit;   
+	n_tbl_updt_reqpkt='d0;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
 			//initial values on required variables as
 			//needed
-			if      (lookup_att & !lookup_att_done) begin //wait in same state till table initialiation is done
-				n_state=LOOUP_ATT;
+			if      (lookup_att) begin //wait in same state till table initialiation is done
+				n_state=LOOKUP_ATT;
 			end
 			//handle other modes below
 
@@ -106,13 +108,12 @@ always_comb begin
 			  end
 		end
 		DECODE_ATT_ENTRY:begin
-			  n_att_hit=check_AttEntry(hppa_i,p_rdata);
+			  n_transltn_reqpkt=decode_AttEntry(hppa_i,p_rdata);
 			  n_state = CHECK_ATT_ENTRY; 
 	        end
 		CHECK_ATT_ENTRY: begin  
-			  if(p_att_hit) begin
-				n_lookupatt_done=1'b1;
-				n_unhold_cpu = 1'b1; 
+			  if(p_transltn_reqpkt.att_hit) begin
+				n_transltn_reqpkt.allow_cpu_access = 1'b1;
 				//this should be assured by cu(control unit), we can let pgrd mngr handles this, 
 				//but once we move to set-associative based internal cache, it makes cu handle cache access and halde this 
 				if(cpu_active)
@@ -127,7 +128,7 @@ always_comb begin
 			  if(freeLstHead!=freeLstTail) begin 
 			             n_axireq=get_axi_rd_pkt(p_state,freeLstHead);		
 				     n_req_arvalid = 1'b1;
-				     n_state = ALLOCATE_PPA;
+				     n_state = WAIT_LST_ENTRY;
 			  end
 			  else begin
 				    //Add here to look for victim of
@@ -143,11 +144,13 @@ always_comb begin
 		end
 		ALLOCATE_PPA: begin
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this 
-				     n_tbl_update_reqpkt.ppa=get_ppa(freeLstHead,p_rdata);;
-				     n_tbl_update_reqpkt.update=1'b1;
+				     n_tbl_updt_reqpkt.ppa=get_ppa(freeLstHead,p_rdata);;
+				     n_tbl_updt_reqpkt.update=1'b1;
 				     n_state = IDLE;
 			  end
 		end
+		TBL_UPDATE_DONE:
+
 		default: n_state=IDLE;
 	endcase
 end
@@ -178,22 +181,28 @@ begin
 		p_req_arvalid <= n_req_arvalid ;
 
 		p_rready <= n_rready;
+		
+		//Table Update Request
+		p_tbl_updt_reqpkt<=n_tbl_updt_reqpkt;
+		//Tranalstion Request 
+		p_transltn_reqpkt<=n_transltn_reqpkt;
 	end
 end
 
 //done statuses
+/*
 //later useful to map it to status register if needed
 always @(posedge clk_i or negedge rst_ni)
 	if(!rst_ni) begin
-	  lookup_att_done <= 1'b0;
+	   allow_cpu_access<=1'b0;
   	end
 	else begin 
-	if(n_lookup_att_done)
-	  lookup_att_done <= 1'b1;
-
-	if(n_unhold_cpu)
+	if(lookup_att)
+	   p_transltn_reqpkt.allow_cpu_access<=1'b0;
+	else if(n_tbl_updt_reqpkt.allow_cpu_access)
+	   p_transltn_reqpkt<=n_transltn_reqpkt;
 	end
-
+*/
 //Output combo signals
 assign rd_reqpkt.addr = p_axireq.addr;
 assign rd_reqpkt.data = p_axireq.data;

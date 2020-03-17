@@ -43,10 +43,10 @@ package hacd_pkg;
 	bit is_free;
  	} PTT_ENTRY;
     */
-
+ //align fields to byte, wherever possible
  typedef struct packed {
-	bit [63:57] zpd_cnt; //zero page detection count
-	bit [/*49*/56:2]  way;      //technically it is start address of physical page
+	bit [63:56] zpd_cnt; //zero page detection count
+	bit [/*49*/55:2]  way;      //technically it is start address of physical page
 	bit [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  	} AttEntry;
 	
@@ -109,6 +109,23 @@ package hacd_pkg;
 	logic rlast;
  } axi_rd_resppkt_t;
 
+ //packets for interaction between cu, rd and write managers
+
+ typedef struct packed {
+ 	logic [47:0] hppa;
+	logic lookup;
+ } att_lkup_reqpkt_t;
+ 
+ typedef struct packed {
+	logic [47:0] ppa;
+	logic [1:0] sts;
+	logic update;
+ } tblUpdt_reqpkt_t;
+
+ typedef struct packed {
+	logic [47:0] ppa;
+	logic allow_cpu_access;
+ } transltn_reqpkt_t;
 
  parameter int BLK_SIZE=64;
  parameter int ATT_ENTRY_SIZE=8;
