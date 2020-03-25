@@ -21,6 +21,8 @@ package hacd_pkg;
     parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000; 
     parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000;
 
+    parameter bit [63:0] DDR_START_ADDR= 64'h80000000;
+
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
 
     //One memory block init data for ATT
@@ -131,6 +133,12 @@ package hacd_pkg;
 	logic [47:0] hppa;
 	logic valid;
  } cpu_rd_reqpkt_t;
+
+ typedef struct packed {
+	logic [47:0] hppa;
+	logic valid;
+ } cpu_wr_reqpkt_t;
+
 
  parameter int BLK_SIZE=64;
  parameter int ATT_ENTRY_SIZE=8;

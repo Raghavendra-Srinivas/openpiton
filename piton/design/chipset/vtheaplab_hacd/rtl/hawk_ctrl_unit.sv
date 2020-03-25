@@ -29,6 +29,12 @@ module hawk_ctrl_unit #()
     //pg_writer handshake
     input init_att_done,
     input init_list_done,
+    input tbl_update_done,
+
+    //pg_rdmanager
+    input pgrd_mngr_ready,
+    input allow_cpu_access,
+    input tbl_update,
     
     //cpu master handshake
     output hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt, 
@@ -46,7 +52,8 @@ module hawk_ctrl_unit #()
 
 
 //local variables
-logic n_hold_hwk_wr, n_hold_cpu;
+att_lkup_reqpkt_t lkup_reqpkt,n_lkup_reqpkt;
+logic n_allow_cpu_wr_access, n_allow_cpu_rd_access;
 logic n_init_att,n_init_list;
 logic [`FSM_WID-1:0] n_state;
 logic [`FSM_WID-1:0] p_state;
@@ -56,8 +63,8 @@ localparam IDLE			='d0,
 	   CHK_WR_ACTIVE 	='d2,
 	   RD_LOOKUP_ALLOCATE	='d3,
 	   WR_LOOKUP_ALLOCATE	='d4,
-	   TBL_UPDATE_RD	='d5,
-	   TBL_UPDATE_WR	='d6;
+	   RD_TBL_UPDATE	='d5,
+	   WR_TBL_UPDATE	='d6;
 
 //state & output register
 always_ff@(posedge clk_i or negedge rst_ni) 
@@ -78,7 +85,6 @@ begin
 	end
 end
 
-att_lkup_reqpkt_t lkup_reqpkt;
 //fsm combo
 always_comb
 begin
@@ -87,7 +93,7 @@ begin
 	n_init_list=init_list;
 	n_allow_cpu_wr_access=0;
 	n_allow_cpu_rd_access=0;
-	n_lkup_reqpkt='d0
+	n_lkup_reqpkt='d0;
 	case(p_state)
 		IDLE: begin
 			if(init_att_done) begin //wait in same state till table initialiation is done
@@ -95,66 +101,76 @@ begin
 			end
 			else if (init_list_done) begin
 				n_init_list=1'b0;
-				n_state=ACTIVE;
+				n_state=CHK_RD_ACTIVE;
 			end
 		end
 		CHK_RD_ACTIVE:begin
-			if(cpu_rd_reqpkt.valid) begin //this can be optimized , if we treat rd and write as separate as 
-						 //also, later once we have interncal cache, cu unit itlsef into it, if not
-						 //found then only sends to look up att.
-				n_lkup_reqpkt.lookup=1'b1;
-				n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
-			  	n_state=RD_LOOKUP_ALLOCATE;
-			end
-			else n_state = CHK_WR_ACTIVE;
+			if(pgrd_mngr_ready && !allow_cpu_rd_access) begin
+				if      (cpu_rd_reqpkt.valid) begin 
+					n_lkup_reqpkt.lookup=1'b1;
+					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
+				  	n_state=RD_LOOKUP_ALLOCATE;
+				end
+				else if (cpu_wr_reqpkt.valid) begin
+					n_lkup_reqpkt.lookup=1'b1;
+					n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
+				  	n_state=WR_LOOKUP_ALLOCATE;
+		  		end
+			end 
 			//chk if we need fairness among wries and read later
 			//however even if we priotise reads over
 			//writes, coherecny should not be breoken, even if read
 			//comes on same line as write, which is not yet written. It
 			//should be handled at system level /one cache before memory
 			//controller
+		end
 		CHK_WR_ACTIVE: begin
-			 if (cpu_wr_reqpkt.valid) begin
-				n_lkup_reqpkt.lookup=1'b1;
-				n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
-			  	n_state=WR_LOOKUP_ALLOCATE;
-		  	 end
-			else n_state = CHK_RD_ACTIVE;
+			if(pgrd_mngr_ready && !allow_cpu_wr_access) begin
+			       if 	(cpu_wr_reqpkt.valid) begin
+			              n_lkup_reqpkt.lookup=1'b1;
+			              n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
+			              n_state=WR_LOOKUP_ALLOCATE;
+		  	       end
+			       else if (cpu_rd_reqpkt.valid) begin 
+			              n_lkup_reqpkt.lookup=1'b1;
+			              n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
+			              n_state=RD_LOOKUP_ALLOCATE;
+			       end
+			end
 		end
 		RD_LOOKUP_ALLOCATE: begin
 				if(allow_cpu_access) begin 
-					n_allow_cpu_rd_access<=1'b1;
-					n_state<=ACTIVE;
+				      n_allow_cpu_rd_access<=1'b1;
+				      n_state<=CHK_WR_ACTIVE;
 				end
 				else if (tbl_update) begin
-					n_state=RD_TBL_UPDATE;
+				      n_state=RD_TBL_UPDATE;
 				end
 				//handle inflation later
 				//else if (infl)
-			end
 		end
 		WR_LOOKUP_ALLOCATE: begin
 				if(allow_cpu_access) begin 
-					n_allow_cpu_wr_access<=1'b1;
-					n_state<=ACTIVE;
+				     n_allow_cpu_wr_access<=1'b1;
+				     n_state<=CHK_RD_ACTIVE;
 				end
 				else if (tbl_update) begin
-					n_state=WR_TBL_UPDATE;
+				     n_state=WR_TBL_UPDATE;
 				end
 				//handle inflation later
 				//else if (infl)
-			end
 		end
-		//THe below can be moved hawk_pgrd_manager, but later it helps
-		//to pipeline look up for pending operations while update
-		//table for pendign 
-		TBL_UPDATE_RD:begin
+		//The below can be moved to hawk_pgrd_manager, but later it helps
+		//to pipeline : look up for pending transactions can be
+		//carried out while update table action is pending, move below to other tiny state machine
+		//to pipeline 
+		RD_TBL_UPDATE:begin
 				if(tbl_update_done) begin
 					n_allow_cpu_rd_access<=1'b1;
 					n_state<=CHK_WR_ACTIVE;
 				end
 		end
-		TBL_UPDATE_WR:begin
+		WR_TBL_UPDATE:begin
 				if(tbl_update_done) begin
 					n_allow_cpu_wr_access<=1'b1;
 					n_state<=CHK_RD_ACTIVE;

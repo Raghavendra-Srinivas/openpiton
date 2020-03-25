@@ -23,6 +23,7 @@ module hawk_pgrd_mngr (
 
 //fsm variables  
 logic p_req_arvalid,n_req_arvalid,p_rready,n_rready;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] p_rdata,n_rdata;
 typedef logic [`FSM_WID_PGRD-1:0] state_t;
 state_t n_state;
 state_t p_state;
@@ -68,8 +69,11 @@ wire arready,rready;
 wire arvalid,rvalid;
 assign arready = rd_rdypkt.arready; 
 
+logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 assign rvalid = rd_resppkt.rvalid;
 assign rdata = rd_resppkt.rdata;
+assign rresp =  rd_resppkt.rresp;
 
 axi_rd_pld_t p_axireq,n_axireq;
 tblUpdt_reqpkt_t n_tbl_updt_reqpkt,p_tbl_updt_reqpkt;
@@ -103,13 +107,20 @@ always_comb begin
 		end
 		WAIT_ATT_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
+				if(rresp =='d0) begin
 				     n_rdata=rdata; 
-				     n_state = CHECK_ATT_ENTRY;
+				     n_state = DECODE_ATT_ENTRY;
+				end
+				else n_state = BUS_ERROR;
 			  end
 		end
 		DECODE_ATT_ENTRY:begin
 			  n_transltn_reqpkt=decode_AttEntry(hppa_i,p_rdata);
 			  n_state = CHECK_ATT_ENTRY; 
+		BUS_ERROR: begin
+			   //assert trigger, connect it to spare LED.
+			   //Stay here forever unless, user resets
+		end
 	        end
 		CHECK_ATT_ENTRY: begin  
 			  if(p_transltn_reqpkt.att_hit) begin
@@ -209,4 +220,17 @@ assign rd_reqpkt.data = p_axireq.data;
 assign rd_reqpkt.arvalid = p_req_arvalid;
 
 assign rd_rdypkt.rready =p_rready;
+
+wire bus_error;
+assign bus_error = p_state == BUS_ERROR;
+
+
+`ifdef HAWK_SIMS
+initial begin
+ 	if(bus_error) begin
+		$display("Bus error observed on AXI read response at %0t",$time);
+	end
+end
+`endif 
+
 endmodule

@@ -142,17 +142,26 @@ module hacd_core (
 	//Inputs
 	.clk_i,
 	.rst_ni,
+
+    	//pg_writer handshake
 	.init_att_done,
 	.init_list_done,
+	.tbl_update_done,
 
+        //pg_rdmanager
+    	.pgrd_mngr_ready,
+    	.allow_cpu_access,
+    	.tbl_update,
+
+    	//cpu master handshake
 	.cpu_rd_reqpkt,
 	.cpu_wr_reqpkt,
 
 	//controls
 	.init_att,
 	.init_list,
-	.hold_hwk_wr,
-	.hold_cpu
+	.allow_cpu_rd_access,
+	.allow_cpu_wr_access
    );
 
 
@@ -175,8 +184,7 @@ module hacd_core (
 
 	.clk_i,
 	.rst_ni,
-	.mstr_sel,
-	//.wr_mstr_sel,
+	.mstr_sel(1'b0), //not used
 
 	//From Hawk
  	.mstr0_axi_wr_bus_slv(hawk_axi_wr_bus.slv),
