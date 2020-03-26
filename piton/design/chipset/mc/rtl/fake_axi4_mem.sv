@@ -4,7 +4,9 @@ module  fake_axi4_mem (
     input clk                ,  
     input rst_n              , 
     HACD_MC_AXI_WR_BUS.slv wr_bus, 
-    HACD_MC_AXI_RD_BUS.slv rd_bus
+    HACD_MC_AXI_RD_BUS.slv rd_bus,
+
+    input wire dump_mem
    );
 
 
@@ -65,18 +67,12 @@ begin
 					while(bt_cnt_wr<wr_beat_cnt) begin
 			  		@(posedge clk);
 					  if(wr_bus.axi_wvalid==1'b1) begin //change below simple logic using mask to supprot byte level wdata control 
-					  	if(wr_bus.axi_wstrb==32'h0000FFFF) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
-					  		MEM[capt_addr][bt_cnt_wr]= {MEM[capt_addr][bt_cnt_wr][255:128] , wr_bus.axi_wdata[127:0]}; 
-					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
-					  	end
-					  	if(wr_bus.axi_wstrb==32'hFFFF0000) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
-					  		MEM[capt_addr][bt_cnt_wr]={wr_bus.axi_wdata[255:128],MEM[capt_addr][bt_cnt_wr][127:0]} ; 
-					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
-					  	end
-					  	if(wr_bus.axi_wstrb==32'hFFFFFFFF) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
-					  		MEM[capt_addr][bt_cnt_wr]=wr_bus.axi_wdata; 
-					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
-					  	end
+
+						MEM[capt_addr][bt_cnt_wr]= MEM[capt_addr][bt_cnt_wr] | (wr_bus.axi_wdata & mask);
+					  	$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
+						
+					
+
 					        bt_cnt_wr = bt_cnt_wr + 1;
 					 end//if
 					end //while
@@ -160,11 +156,11 @@ end
 `define SIZE2 128
 `define SIZE3 192
 `define LSTSIZE1 128
-function dump_mem();
+function bit dump_mem_func();
 bit [256:0] cacheline;
 AttEntry attentry[4];
 ListEntry lstentry[2];
-int att_cnt=0,lst_enry_id=1;
+int att_cnt=1,lst_enry_id=1;
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
@@ -184,7 +180,7 @@ foreach(MEM[addr]) begin
        attentry[3].way=cacheline[`SIZE3+56:`SIZE3+2];
        attentry[3].sts=cacheline[`SIZE3+1:`SIZE3+0];
      for (int j=0;j<4;j++) begin
-       $display("CACHE/DRAM ADDR: %h ATT_%d || zpd_cnt:%h || way:%h || sts:%h", addr,att_cnt/*4*i+j*/,attentry[j].zpd_cnt,attentry[j].way,attentry[j].sts); //cacheline[(i+1)*64-1:i*64]); 
+       $display("CACHE/DRAM ADDR: %h ATT_ENTRY->%d || zpd_cnt:%h || way:%h || sts:%h", addr,att_cnt/*4*i+j*/,attentry[j].zpd_cnt,attentry[j].way,attentry[j].sts); //cacheline[(i+1)*64-1:i*64]); 
 	att_cnt = att_cnt + 1;
      end //for
     end //for
@@ -202,17 +198,32 @@ foreach(MEM[addr]) begin
        lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
        lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
-       $display("CACHE/DRAM ADDR: %h LST_%d || way:%h || prev:%d || next:%d", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%d || way:%h || prev:%d || next:%d", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
 	lst_enry_id = lst_enry_id + 1;
      end //for
    end //for 
   end //if
-
 end //foreach
+  return 1;
 endfunction
+logic dump_mem_dly;
+always@(posedge clk) 
+	dump_mem_dly <= dump_mem;
+
+initial
+begin
+forever begin
+	@(posedge clk);
+		if(!dump_mem_dly && dump_mem) dump_mem_func();
+end
+
+end
+
+
 
 final begin
-  dump_mem();
+  $display("FINAL STATE of DRAM");
+  dump_mem_func();
 end
 
 
@@ -236,3 +247,19 @@ module  fake_axi4_mem (
 
 endmodule
 */
+
+	/*
+					  	if(wr_bus.axi_wstrb==32'h0000FFFF) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
+					  		MEM[capt_addr][bt_cnt_wr]= {MEM[capt_addr][bt_cnt_wr][255:128] , wr_bus.axi_wdata[127:0]}; 
+					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
+					  	end
+					  	if(wr_bus.axi_wstrb==32'hFFFF0000) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
+					  		MEM[capt_addr][bt_cnt_wr]={wr_bus.axi_wdata[255:128],MEM[capt_addr][bt_cnt_wr][127:0]} ; 
+					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
+					  	end
+					  	if(wr_bus.axi_wstrb==32'hFFFFFFFF) begin//fr now we control only 16ibts of wstr at a time, this logic should be enough
+					  		MEM[capt_addr][bt_cnt_wr]=wr_bus.axi_wdata; 
+					  		$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
+					  	end
+						*/
+

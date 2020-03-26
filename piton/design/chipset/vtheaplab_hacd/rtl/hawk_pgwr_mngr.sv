@@ -5,7 +5,7 @@
 `include "hacd_define.vh"
 import hacd_pkg::*;
 `define FSM_WID 4
-module hawk_pgwr_mngr (
+module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=1) (
 
   input clk_i,
   input rst_ni,
@@ -26,7 +26,9 @@ module hawk_pgwr_mngr (
   //status handshake to main comntroller
   output logic init_att_done, 
   output logic init_list_done,
-  output logic pgwr_mngr_ready 
+  output logic pgwr_mngr_ready,
+
+  output wire dump_mem  //this is used to help in  DV sims to dump mem when desired during different phase during same sims
 );
 
 //list head and tails
@@ -63,8 +65,8 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	input [clogb2(ATT_ENTRY_MAX)-1:0] etry_cnt;
 	input state_t p_state;
 	input [63:0] addr;
-	input [47:0] ppa; //if applicable , useful for LISt initiliazation
 	integer i;
+	logic [63:0] ppa;
 	//axi_wr_pld_t get_axi_wr_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
@@ -72,19 +74,37 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	get_axi_wr_pkt.data ='d0;
 	lst_entry.rsvd = 'd0;
 
+	ppa = (HAWK_PPA_START>>12)+ etry_cnt; //(ppa  & ~(64'hFFF))+ 64'h1000; //incremnt by 4KB for ppa
 	//optimization, 
 	//if we are in Init mode, we can send entire wstrb once, as we know
 	//data for entire cache line 
 	if      (p_state == INIT_ATT) begin
 		   //increment address by 64 (8 entries)
-		   get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
-		   att_entry.zpd_cnt='d0;
-		   att_entry.way='d0;
-		   att_entry.sts=1'b0;	
-		   for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
-		    get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
-	           end
-		   get_axi_wr_pkt.strb = {64{1'b1}};
+		   if (etry_cnt[2:0] == 3'b001) begin
+		   	get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+		   end else begin
+		   	get_axi_wr_pkt.addr = addr; //;get_att_addr()
+		   end
+		   	
+		   if (p_etry_cnt <= LIST_ENTRY_CNT && PWRUP_UNCOMP==1) begin
+		       att_entry.zpd_cnt='d0;
+		       att_entry.sts= STS_UNCOMP;//1'b0;	
+		       att_entry.way=ppa;
+		   end else begin
+		       att_entry.zpd_cnt='d0;
+		       att_entry.sts= STS_DALLOC;//1'b0;	
+		       att_entry.way='d0;
+		   end 
+		    
+		    i= (etry_cnt[2:0] == 3'b000) ? 'd7: (etry_cnt[2:0]-1);
+		    get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts};
+		    get_axi_wr_pkt.strb[i*8+:8]={8{1'b1}};
+		    
+		   //for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
+		   // att_entry.way=ppa+i; 
+		   // get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
+	           //end
+		   //get_axi_wr_pkt.strb = {64{1'b1}};
         end
 	else if (p_state == INIT_LIST ) begin
 		   if (etry_cnt[1:0] == 2'b01) begin
@@ -94,7 +114,7 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		   end
 		   
 		   //lst entry
-		    lst_entry.way = (ppa>>12) + 1; //this actually is 4KB aligned, so we incremnt sequentially here
+		    lst_entry.way = ppa; //(ppa>>12) + 1;
 		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
 		    lst_entry.next = etry_cnt + 1;
 		    if (etry_cnt[1:0] == 2'b01) begin
@@ -113,8 +133,6 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		    	get_axi_wr_pkt.data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        get_axi_wr_pkt.strb[63:48] ={16{1'b1}};
 		    end	
-
-		    get_axi_wr_pkt.ppa = ppa + 1;
 	end
 endfunction
 
@@ -142,9 +160,9 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		
 		//Which 64 bit we need to send this.
 		//case(attEntryId[2:0])
-		i=tbl_updat_pkt.attEntryId[2:0]-1;
+		i=(tbl_updat_pkt.attEntryId[2:0] == 3'b000)?'d7:(tbl_updat_pkt.attEntryId[2:0]-1);
 		get_tbl_axi_wrpkt.data[64*i+:64]=att_entry;
-		get_tbl_axi_wrpkt.strb[64*i+:64]={16{1'b1}};
+		get_tbl_axi_wrpkt.strb[8*i+:8]={8{1'b1}};
 	end
 	else if (p_state==TOL_SLST_UPDATE) begin  //POP FREE LIST , POP entry from head is same as updating prev of next entry to head, then update head to that
 
@@ -210,11 +228,11 @@ always@* begin
 			//needed //This handles only one mode at a time.
 			if      (init_att & !init_att_done) begin //wait in same state till table initialiation is done
 				n_state=INIT_ATT;
-				n_etry_cnt = 'd0;
+				n_axireq.addr = HAWK_ATT_START-64'h40;  
+				n_etry_cnt = 'd1;
 			end
 			else if (init_list & !init_list_done) begin
 				n_state=INIT_LIST;
-				n_axireq.ppa=HAWK_PPA_START-64'h40;
 				n_axireq.addr = HAWK_LIST_START-64'h40; //We can change this to any address if list tbael does not follow att immediately
 				n_etry_cnt = 'd1;
 				n_freeListHead = 'd1;
@@ -228,8 +246,8 @@ always@* begin
 		INIT_ATT:begin
 			  if(awready && !awvalid) begin
 				  //handle ATT initialization 
-				  if(p_etry_cnt < (ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)) begin //8 becuase 8 entry
-				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr,p_axireq.ppa); //prepare next packet
+				  if(p_etry_cnt <=(ATT_ENTRY_CNT)) begin //8 becuase 8 entry
+				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr); //prepare next packet
 				     n_req_awvalid = 1'b1;
 			  	     n_etry_cnt = p_etry_cnt + 1;
 				     n_state = WAIT_ATT;
@@ -251,7 +269,7 @@ always@* begin
 			  if(awready && !awvalid) begin
 				  //handle LIST initialization
 				  if (p_etry_cnt <= LIST_ENTRY_CNT) begin
-				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr,p_axireq.ppa); //prepare next packet
+				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr); //prepare next packet
 				     
 				     n_req_awvalid = 1'b1;
 			  	     n_etry_cnt = p_etry_cnt + 1;
@@ -334,7 +352,6 @@ begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
 		p_etry_cnt <= 'd0;
-		p_axireq.ppa <= HAWK_PPA_START-64'h40;
 
 		//Axi signals
 		p_axireq.addr <= HAWK_ATT_START-64'h40; //'d0;
@@ -350,7 +367,6 @@ begin
 	else begin
  		p_state <= n_state;	
 		p_etry_cnt <= n_etry_cnt;
-		p_axireq.ppa <= n_axireq.ppa;
 
 		//Axi signals
 		p_axireq.addr <= n_axireq.addr;
@@ -437,4 +453,8 @@ assign tol_HT.freeListTail=freeListTail;
 assign tol_HT.uncompListHead=uncompListHead;
 assign tol_HT.uncompListTail=uncompListTail;
 
+
+//For DV
+assign dump_mem = pgwr_mngr_ready;  //dump memory after operation is complete , dump mem is sensitive to only edge, we can give level signal
+//
 endmodule

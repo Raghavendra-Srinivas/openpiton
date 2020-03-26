@@ -19,8 +19,8 @@ package hacd_pkg;
 
     //default values for page tables start and end
     parameter bit [63:0] HAWK_ATT_START=64'hFFF6100000; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START=64'hFFF6101000; 
-    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000;
+    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000; 
+    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000-64'h1000;
 
     parameter bit [63:0] DDR_START_ADDR= 64'h80000000;
     parameter bit [63:0] HPPA_BASE_ADDR= DDR_START_ADDR;
@@ -37,8 +37,8 @@ package hacd_pkg;
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
-    parameter int ATT_ENTRY_CNT=16; // lower count for verification //update later
-    parameter int LIST_ENTRY_CNT=16; // update later
+    parameter int ATT_ENTRY_CNT=8; // lower count for verification //update later
+    parameter int LIST_ENTRY_CNT=4; // update later
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
@@ -66,8 +66,8 @@ package hacd_pkg;
  parameter [1:0] STS_COMP=2'b10;
  parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
-	bit [63:56] zpd_cnt; //zero page detection count
-	bit [/*49*/55:2]  way;      //technically it is start address of physical page
+	bit [63:54] zpd_cnt; //zero page detection count
+	bit [53:2]  way;      //technically it is start address of physical page
 	bit [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  	} AttEntry;
 	
@@ -94,8 +94,6 @@ package hacd_pkg;
  	logic [63:0]  addr;
 	logic [511:0] data;
 	logic [63:0]  strb;
-	//Below are extra othre fields
-	logic [47:0] ppa;
  } axi_wr_pld_t;
 
  typedef struct packed {

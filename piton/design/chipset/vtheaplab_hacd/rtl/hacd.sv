@@ -96,8 +96,9 @@ module hacd #
         //HACD<->MC
         //hacd will act as request master on request singslas to mc 
         HACD_MC_AXI_WR_BUS mc_axi_wr_bus, 
-        HACD_MC_AXI_RD_BUS mc_axi_rd_bus
+        HACD_MC_AXI_RD_BUS mc_axi_rd_bus,
 
+	output wire dump_mem
 );
 
   //Local wires
@@ -126,8 +127,9 @@ hacd_core u_hacd_core (
   .cpu_axi_rd_bus,
 
   .mc_axi_wr_bus,
-  .mc_axi_rd_bus
+  .mc_axi_rd_bus,
 
+  .dump_mem
 );
 
 endmodule

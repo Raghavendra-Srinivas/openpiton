@@ -708,14 +708,15 @@ mig_7series_axi4 u_mig_7series_axi4 (
   assign init_calib_complete = 1'b1;
  
   `define FAKE_MEM_HAWK 1
-
+  wire dump_mem;
  `ifdef FAKE_MEM_HAWK
-
+  
   fake_axi4_mem u_fake_aximem (
     .clk                (ui_clk                    ),  
     .rst_n              (~noc_axi4_bridge_rst      ), 
     .wr_bus(mc_axi_wr_bus.slv),
-    .rd_bus(mc_axi_rd_bus.slv)
+    .rd_bus(mc_axi_rd_bus.slv),
+    .dump_mem (dump_mem)
   );
 
 
@@ -836,8 +837,9 @@ u_hacd_top (
         .cpu_axi_rd_bus(cpu_axi_rd_bus.slv),
 
         .mc_axi_wr_bus(mc_axi_wr_bus.mstr),
-        .mc_axi_rd_bus(mc_axi_rd_bus.mstr)
+        .mc_axi_rd_bus(mc_axi_rd_bus.mstr),
 	
+	.dump_mem(dump_mem)
 );
 //END
 
