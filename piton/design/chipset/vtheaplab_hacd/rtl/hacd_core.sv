@@ -275,7 +275,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
         .m_axi_bready(hawk_axi_wr_bus.axi_bready)
      );
 
-     assign mc_axi_wr_bus.axi_wid='d0;
+     //assign mc_axi_wr_bus.axi_wid='d0;
       
   
    wire tbl_update_done;

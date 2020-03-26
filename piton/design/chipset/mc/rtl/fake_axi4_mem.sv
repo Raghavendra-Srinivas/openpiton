@@ -7,6 +7,14 @@ module  fake_axi4_mem (
     HACD_MC_AXI_RD_BUS.slv rd_bus
    );
 
+
+//typedef struct packed{
+//	bit [5:0] id;
+//} axi_wr_req_t;
+
+//axi_wr_req_t wrreq_queue[$];
+bit [5:0] wrreq_queue[$];
+
 typedef bit [63:0] ADDR;
 logic [`HACD_MC_AXI4_DATA_WIDTH-1:0] MEM[ADDR][2]; 
 //For Phase one of Hawk, we do not require read and write at same time.
@@ -26,6 +34,7 @@ endgenerate
 
 initial
 begin
+	logic [5:0] bid;
 	fork 
 		begin : MANAGE_WRITE
 			//Wait for reset
@@ -40,6 +49,11 @@ begin
 				//after or alogn with awvalid, so we are safe
 				//here
 				if(wr_bus.axi_awvalid & wr_bus.axi_awready) begin
+				        //save id to push request on to queue
+				        //to help drive response after storing
+				        //all wdata in memory
+				        bid=wr_bus.axi_awid;
+					//wrreq_queue.push_back(wr_bus.axi_awid);
 			  		wr_bus.axi_awready <=0;
 					wr_beat_cnt=wr_bus.axi_awlen+1;
 					capt_addr = wr_bus.axi_awaddr;
@@ -66,6 +80,7 @@ begin
 					        bt_cnt_wr = bt_cnt_wr + 1;
 					 end//if
 					end //while
+					wrreq_queue.push_back(bid);
 				end //if
 			end
 		end : MANAGE_WRITE
@@ -114,6 +129,32 @@ begin
 		end: MANAGE_READ
 	join
 end
+
+//Manage Write Response
+initial begin
+	//bit [5:0] bid;
+	fork 
+	 begin :MANAGE_BRESP
+		forever begin
+		      //@(posedge clk);
+				wr_bus.axi_bvalid<=1'b0;
+		      wait(wrreq_queue.size()>0);
+			//Have random delay here for robusting later	
+			@(posedge clk);
+				   $display("AXI4 FAKE MEM : Sending Bresp  =%t",$time);
+				   wr_bus.axi_bid<=wrreq_queue.pop_front();	
+				   wr_bus.axi_bresp<='d0;
+				   wr_bus.axi_bvalid<=1'b1;
+				  //we should remain asserted till we see
+				  //bready high on posedge from master
+				  while(wr_bus.axi_bready!==1'b1) begin
+		      			@(posedge clk);
+				  end
+		end
+	 end : MANAGE_BRESP
+	join 
+end
+
 
 `define SIZE1 64
 `define SIZE2 128

@@ -24,7 +24,7 @@ module hawk_axi_xbar_wrapper#(parameter PLACE_HOLDER=1)
     HACD_AXI_WR_BUS xbarOut_axi_wr_bus(); 
     HACD_AXI_RD_BUS xbarOut_axi_rd_bus();
 
-`define NO_AXI_XBAR 1
+//`define NO_AXI_XBAR 1
 `ifdef NO_AXI_XBAR
 always_comb
 begin
