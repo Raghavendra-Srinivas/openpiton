@@ -28,20 +28,159 @@ module hacd_core (
     HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus  
     );
 
-
+   //TOL Head tail broadcasted
+   hacd_pkg::hawk_tol_ht_t tol_HT;
    //hawk_pgwrite manager
    wire init_att,init_list,init_att_done,init_list_done;
    hacd_pkg::axi_wr_rdypkt_t wr_rdypkt;
    hacd_pkg::axi_wr_reqpkt_t wr_reqpkt;
+   hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
+
+
+   //rd manager
+   hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt;
    hacd_pkg::axi_rd_rdypkt_t rd_rdypkt;
    hacd_pkg::axi_rd_reqpkt_t rd_reqpkt;
    hacd_pkg::axi_rd_resppkt_t rd_resppkt;
-
-   hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
+   hacd_pkg::trnsl_reqpkt_t trnsl_reqpkt;
+   wire pgrd_mngr_ready;
+   hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
    HACD_AXI_RD_BUS hawk_axi_rd_bus();
 
+
+   HACD_AXI_WR_BUS stall_axi_wr_bus(); 
+   HACD_AXI_RD_BUS stall_axi_rd_bus();
+  
+   hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_rdpkt,hawk_cpu_ovrd_wrpkt;
+   hacd_pkg::cpu_reqpkt_t cpu_rd_reqpkt,cpu_wr_reqpkt;
+///hawk cpu rd stall
+hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
+    .clk(clk_i),
+    .rst(!rst_ni),
+
+    /*hawk interface*/
+    .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_rdpkt),
+    .cpu_reqpkt(cpu_rd_reqpkt),
+    .hawk_inactive(1'b1), //disabling for now 
+
+    /*
+     * AXI slave interface
+     */
+    .s_axi_arid(cpu_axi_rd_bus.axi_arid),
+    .s_axi_araddr(cpu_axi_rd_bus.axi_araddr),
+    .s_axi_arlen(cpu_axi_rd_bus.axi_arlen),
+    .s_axi_arsize(cpu_axi_rd_bus.axi_arsize),
+    .s_axi_arburst(cpu_axi_rd_bus.axi_arburst),
+    .s_axi_arlock(cpu_axi_rd_bus.axi_arlock),
+    .s_axi_arcache(cpu_axi_rd_bus.axi_arcache),
+    .s_axi_arprot(cpu_axi_rd_bus.axi_arprot),
+    .s_axi_arqos(cpu_axi_rd_bus.axi_arqos),
+    .s_axi_arregion(cpu_axi_rd_bus.axi_arregion),
+    .s_axi_aruser(cpu_axi_rd_bus.axi_aruser),
+    .s_axi_arvalid(cpu_axi_rd_bus.axi_arvalid),
+    .s_axi_arready(cpu_axi_rd_bus.axi_arready),
+    .s_axi_rid(cpu_axi_rd_bus.axi_rid),
+    .s_axi_rdata(cpu_axi_rd_bus.axi_rdata),
+    .s_axi_rresp(cpu_axi_rd_bus.axi_rresp),
+    .s_axi_rlast(cpu_axi_rd_bus.axi_rlast),
+    .s_axi_ruser(cpu_axi_rd_bus.axi_ruser),
+    .s_axi_rvalid(cpu_axi_rd_bus.axi_rvalid),
+    .s_axi_rready(cpu_axi_rd_bus.axi_rready),
+
+    /*
+     * AXI master interface
+     */
+    .m_axi_arid(stall_axi_rd_bus.axi_arid),
+    .m_axi_araddr(stall_axi_rd_bus.axi_araddr),
+    .m_axi_arlen(stall_axi_rd_bus.axi_arlen),
+    .m_axi_arsize(stall_axi_rd_bus.axi_arsize),
+    .m_axi_arburst(stall_axi_rd_bus.axi_arburst),
+    .m_axi_arlock(stall_axi_rd_bus.axi_arlock),
+    .m_axi_arcache(stall_axi_rd_bus.axi_arcache),
+    .m_axi_arprot(stall_axi_rd_bus.axi_arprot),
+    .m_axi_arqos(stall_axi_rd_bus.axi_arqos),
+    .m_axi_arregion(stall_axi_rd_bus.axi_arregion),
+    .m_axi_aruser(stall_axi_rd_bus.axi_aruser),
+    .m_axi_arvalid(stall_axi_rd_bus.axi_arvalid),
+    .m_axi_arready(stall_axi_rd_bus.axi_arready),
+    .m_axi_rid(stall_axi_rd_bus.axi_rid),
+    .m_axi_rdata(stall_axi_rd_bus.axi_rdata),
+    .m_axi_rresp(stall_axi_rd_bus.axi_rresp),
+    .m_axi_rlast(stall_axi_rd_bus.axi_rlast),
+    .m_axi_ruser(stall_axi_rd_bus.axi_ruser),
+    .m_axi_rvalid(stall_axi_rd_bus.axi_rvalid),
+    .m_axi_rready(stall_axi_rd_bus.axi_rready)
+
+);
+
+///hawk cpu wr stall
+hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
+    .clk(clk_i),
+    .rst(!rst_ni),
+
+    /*hawk interface*/
+    .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_wrpkt),
+    .cpu_reqpkt(cpu_wr_reqpkt),
+    .hawk_inactive(1'b1), //disabling for now 
+ 
+    /*
+     * AXI slave interface
+     */
+    .s_axi_awid(cpu_axi_wr_bus.axi_awid),
+    .s_axi_awaddr(cpu_axi_wr_bus.axi_awaddr),
+    .s_axi_awlen(cpu_axi_wr_bus.axi_awlen),
+    .s_axi_awsize(cpu_axi_wr_bus.axi_awsize),
+    .s_axi_awburst(cpu_axi_wr_bus.axi_awburst),
+    .s_axi_awlock(cpu_axi_wr_bus.axi_awlock),
+    .s_axi_awcache(cpu_axi_wr_bus.axi_awcache),
+    .s_axi_awprot(cpu_axi_wr_bus.axi_awprot),
+    .s_axi_awqos(cpu_axi_wr_bus.axi_awqos),
+    .s_axi_awregion(cpu_axi_wr_bus.axi_awregion),
+    .s_axi_awuser(cpu_axi_wr_bus.axi_awuser),
+    .s_axi_awvalid(cpu_axi_wr_bus.axi_awvalid),
+    .s_axi_awready(cpu_axi_wr_bus.axi_awready),
+    .s_axi_wdata(cpu_axi_wr_bus.axi_wdata),
+    .s_axi_wstrb(cpu_axi_wr_bus.axi_wstrb),
+    .s_axi_wlast(cpu_axi_wr_bus.axi_wlast),
+    .s_axi_wuser(cpu_axi_wr_bus.axi_wuser),
+    .s_axi_wvalid(cpu_axi_wr_bus.axi_wvalid),
+    .s_axi_wready(cpu_axi_wr_bus.axi_wready),
+    .s_axi_bid(cpu_axi_wr_bus.axi_bid),
+    .s_axi_bresp(cpu_axi_wr_bus.axi_bresp),
+    .s_axi_buser(cpu_axi_wr_bus.axi_buser),
+    .s_axi_bvalid(cpu_axi_wr_bus.axi_bvalid),
+    .s_axi_bready(cpu_axi_wr_bus.axi_bready),
+
+    /*
+     * AXI master interface
+     */
+    .m_axi_awid(stall_axi_wr_bus.axi_awid),
+    .m_axi_awaddr(stall_axi_wr_bus.axi_awaddr),
+    .m_axi_awlen(stall_axi_wr_bus.axi_awlen),
+    .m_axi_awsize(stall_axi_wr_bus.axi_awsize),
+    .m_axi_awburst(stall_axi_wr_bus.axi_awburst),
+    .m_axi_awlock(stall_axi_wr_bus.axi_awlock),
+    .m_axi_awcache(stall_axi_wr_bus.axi_awcache),
+    .m_axi_awprot(stall_axi_wr_bus.axi_awprot),
+    .m_axi_awqos(stall_axi_wr_bus.axi_awqos),
+    .m_axi_awregion(stall_axi_wr_bus.axi_awregion),
+    .m_axi_awuser(stall_axi_wr_bus.axi_awuser),
+    .m_axi_awvalid(stall_axi_wr_bus.axi_awvalid),
+    .m_axi_awready(stall_axi_wr_bus.axi_awready),
+    .m_axi_wdata(stall_axi_wr_bus.axi_wdata),
+    .m_axi_wstrb(stall_axi_wr_bus.axi_wstrb),
+    .m_axi_wlast(stall_axi_wr_bus.axi_wlast),
+    .m_axi_wuser(stall_axi_wr_bus.axi_wuser),
+    .m_axi_wvalid(stall_axi_wr_bus.axi_wvalid),
+    .m_axi_wready(stall_axi_wr_bus.axi_wready),
+    .m_axi_bid(stall_axi_wr_bus.axi_bid),
+    .m_axi_bresp(stall_axi_wr_bus.axi_bresp),
+    .m_axi_buser(stall_axi_wr_bus.axi_buser),
+    .m_axi_bvalid(stall_axi_wr_bus.axi_bvalid),
+    .m_axi_bready(stall_axi_wr_bus.axi_bready)
+);
 //////Hawk Read Master
     hawk_axird_master u_hawk_axird_mstr (
       .clk(clk_i),
@@ -131,11 +270,8 @@ module hacd_core (
      assign mc_axi_wr_bus.axi_wid='d0;
       
   
-   //CPU Master 
-
+   wire tbl_update_done;
    //controls from cu to cpu master
-    hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt; 
-    hacd_pkg::cpu_wr_reqpkt_t cpu_wr_reqpkt; 
    //hawk main control unit
    hawk_ctrl_unit #() u_hawk_cu 
    (
@@ -150,8 +286,7 @@ module hacd_core (
 
         //pg_rdmanager
     	.pgrd_mngr_ready,
-    	.allow_cpu_access,
-    	.tbl_update,
+	.trnsl_reqpkt,
 
     	//cpu master handshake
 	.cpu_rd_reqpkt,
@@ -160,8 +295,9 @@ module hacd_core (
 	//controls
 	.init_att,
 	.init_list,
-	.allow_cpu_rd_access,
-	.allow_cpu_wr_access
+
+	.hawk_cpu_ovrd_rdpkt,
+	.hawk_cpu_ovrd_wrpkt
    );
 
 
@@ -175,10 +311,6 @@ module hacd_core (
    //below module also includes downsizer to be compatible with DDR controller data
    //width of geensys2 board (256 bits). But HAWK always work on cachelines (512 bits)
    
-   //wire rd_mstr_sel;
-   //wire wr_mstr_sel;
-   //assign rd_mstr_sel= allow_cpu_rd_access; 
-   //assign wr_mstr_sel= allow_cpu_wr_access; 
 
    hawk_axi_xbar_wrapper#() u_axi_xbar_wrpr (
 
@@ -191,8 +323,8 @@ module hacd_core (
  	.mstr0_axi_rd_bus_slv(hawk_axi_rd_bus.slv),
 
 	//From CPU
-	.mstr1_axi_wr_bus_slv(cpu_axi_wr_bus),
-	.mstr1_axi_rd_bus_slv(cpu_axi_rd_bus),
+	.mstr1_axi_wr_bus_slv(stall_axi_wr_bus.slv),
+	.mstr1_axi_rd_bus_slv(stall_axi_rd_bus.slv),
 
 	//Towards memory controller   
    	.out_axi_wr_bus(mc_axi_wr_bus),

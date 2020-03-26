@@ -33,27 +33,28 @@ module hawk_ctrl_unit #()
 
     //pg_rdmanager
     input pgrd_mngr_ready,
-    input allow_cpu_access,
-    input tbl_update,
+    input hacd_pkg::trnsl_reqpkt_t trnsl_reqpkt,
+    output hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
     
     //cpu master handshake
-    output hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt, 
-    output hacd_pkg::cpu_wr_reqpkt_t cpu_wr_reqpkt, 
+    input hacd_pkg::cpu_reqpkt_t cpu_rd_reqpkt, 
+    input hacd_pkg::cpu_reqpkt_t cpu_wr_reqpkt, 
      
     //to control with hawk_pg_writer
     output logic init_att,
     output logic init_list,
     
     //to control cpu interface
-    output logic allow_cpu_rd_access,
-    output logic allow_cpu_wr_access
+    output hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_rdpkt,
+    output hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_wrpkt
 );
 
 
 
 //local variables
-att_lkup_reqpkt_t lkup_reqpkt,n_lkup_reqpkt;
-logic n_allow_cpu_wr_access, n_allow_cpu_rd_access;
+att_lkup_reqpkt_t n_lkup_reqpkt;
+hacd_pkg::hawk_cpu_ovrd_pkt_t n_hawk_cpu_ovrd_wrpkt;
+
 logic n_init_att,n_init_list;
 logic [`FSM_WID-1:0] n_state;
 logic [`FSM_WID-1:0] p_state;
@@ -91,9 +92,10 @@ begin
 	n_state=p_state;
 	n_init_att=init_att;
 	n_init_list=init_list;
-	n_allow_cpu_wr_access=0;
-	n_allow_cpu_rd_access=0;
-	n_lkup_reqpkt='d0;
+	n_lkup_reqpkt=lkup_reqpkt;//we need to latch lookup request till serviced
+	n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;//we need latch ppa till tbl update is done
+	n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0; //this woudl be asserted in diffrent states bsed on case
+	
 	case(p_state)
 		IDLE: begin
 			if(init_att_done) begin //wait in same state till table initialiation is done
@@ -105,7 +107,7 @@ begin
 			end
 		end
 		CHK_RD_ACTIVE:begin
-			if(pgrd_mngr_ready && !allow_cpu_rd_access) begin
+			if(pgrd_mngr_ready && !hawk_cpu_ovrd_rdpkt.allow_access) begin
 				if      (cpu_rd_reqpkt.valid) begin 
 					n_lkup_reqpkt.lookup=1'b1;
 					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
@@ -125,7 +127,7 @@ begin
 			//controller
 		end
 		CHK_WR_ACTIVE: begin
-			if(pgrd_mngr_ready && !allow_cpu_wr_access) begin
+			if(pgrd_mngr_ready && !hawk_cpu_ovrd_wrpkt.allow_access) begin
 			       if 	(cpu_wr_reqpkt.valid) begin
 			              n_lkup_reqpkt.lookup=1'b1;
 			              n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
@@ -139,23 +141,40 @@ begin
 			end
 		end
 		RD_LOOKUP_ALLOCATE: begin
-				if(allow_cpu_access) begin 
-				      n_allow_cpu_rd_access<=1'b1;
+				if(trnsl_reqpkt.allow_access) begin 
+
+				      n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b1;
+
+			              //drop lookup request
+				      n_lkup_reqpkt.lookup=1'b0;
+			              n_lkup_reqpkt.hppa='d0;
+	 
 				      n_state<=CHK_WR_ACTIVE;
 				end
-				else if (tbl_update) begin
+				else if (trnsl_reqpkt.tbl_update) begin
+				      n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0;
 				      n_state=RD_TBL_UPDATE;
 				end
 				//handle inflation later
 				//else if (infl)
 		end
 		WR_LOOKUP_ALLOCATE: begin
-				if(allow_cpu_access) begin 
-				     n_allow_cpu_wr_access<=1'b1;
-				     n_state<=CHK_RD_ACTIVE;
+				if(trnsl_reqpkt.allow_access) begin 
+				      n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b1;
+
+			              //drop lookup request
+				      n_lkup_reqpkt.lookup=1'b0;
+			              n_lkup_reqpkt.hppa='d0;
+
+				      n_state<=CHK_RD_ACTIVE;
 				end
-				else if (tbl_update) begin
-				     n_state=WR_TBL_UPDATE;
+				else if (trnsl_reqpkt.tbl_update) begin
+				      n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b0;
+				      n_state=WR_TBL_UPDATE;
 				end
 				//handle inflation later
 				//else if (infl)
@@ -166,13 +185,13 @@ begin
 		//to pipeline 
 		RD_TBL_UPDATE:begin
 				if(tbl_update_done) begin
-					n_allow_cpu_rd_access<=1'b1;
+				      	n_hawk_cpu_ovrd_rdpkt.allow_access=1'b1;
 					n_state<=CHK_WR_ACTIVE;
 				end
 		end
 		WR_TBL_UPDATE:begin
 				if(tbl_update_done) begin
-					n_allow_cpu_wr_access<=1'b1;
+				        n_hawk_cpu_ovrd_wrpkt.allow_access=1'b1;
 					n_state<=CHK_RD_ACTIVE;
 				end
 		end
@@ -185,13 +204,13 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state<=IDLE;
-		allow_cpu_rd_access<=1'b0;
-		allow_cpu_wr_access<=1'b0;
+		hawk_cpu_ovrd_wrpkt<='d0;
+		lkup_reqpkt<='d0;
 	end
 	else begin
 		p_state<=n_state;
-		allow_cpu_rd_access<=n_allow_cpu_rd_access;
-		allow_cpu_wr_access<=n_allow_cpu_wr_access;
+		hawk_cpu_ovrd_wrpkt<=n_hawk_cpu_ovrd_wrpkt;
+		lkup_reqpkt<=n_lkup_reqpkt;	
 	end
 end
 

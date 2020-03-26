@@ -1,4 +1,5 @@
 package hacd_pkg;
+    `include "hacd_define.vh"
     /// 32 bit address, 32 bit data request package
     typedef struct packed {
         logic [31:0] addr;
@@ -22,6 +23,7 @@ package hacd_pkg;
     parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000;
 
     parameter bit [63:0] DDR_START_ADDR= 64'h80000000;
+    parameter bit [63:0] HPPA_BASE_ADDR= DDR_START_ADDR;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
 
@@ -46,6 +48,10 @@ package hacd_pkg;
  	} PTT_ENTRY;
     */
  //align fields to byte, wherever possible
+ parameter [1:0] STS_DALLOC=2'b00;
+ parameter [1:0] STS_UNCOMP=2'b01;
+ parameter [1:0] STS_COMP=2'b10;
+ parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
 	bit [63:56] zpd_cnt; //zero page detection count
 	bit [/*49*/55:2]  way;      //technically it is start address of physical page
@@ -105,8 +111,8 @@ package hacd_pkg;
  } axi_rd_rdypkt_t;
 
  typedef struct packed {
- 	logic rresp;
- 	logic rdata;
+ 	logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
+ 	logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
  	logic rvalid;
 	logic rlast;
  } axi_rd_resppkt_t;
@@ -121,23 +127,23 @@ package hacd_pkg;
  typedef struct packed {
 	logic [47:0] ppa;
 	logic [1:0] sts;
-	logic update;
- } tblUpdt_reqpkt_t;
-
- typedef struct packed {
-	logic [47:0] ppa;
-	logic allow_cpu_access;
- } transltn_reqpkt_t;
+	logic tbl_update;
+	logic att_hit;
+	logic allow_access;
+ } trnsl_reqpkt_t;
 
  typedef struct packed {
 	logic [47:0] hppa;
 	logic valid;
- } cpu_rd_reqpkt_t;
+ } cpu_reqpkt_t;
+
 
  typedef struct packed {
-	logic [47:0] hppa;
-	logic valid;
- } cpu_wr_reqpkt_t;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
+	logic allow_access;
+ } hawk_cpu_ovrd_pkt_t;
+
+ 
 
 
  parameter int BLK_SIZE=64;
@@ -169,6 +175,12 @@ package hacd_pkg;
       end
   endfunction
 
+
+//ToL HEAD and TAILS
+ typedef struct packed {
+  logic [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] freeLstTail;	
+ } hawk_tol_ht_t;
 
 endpackage
 

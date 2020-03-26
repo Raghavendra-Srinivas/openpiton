@@ -29,10 +29,9 @@ module hawk_cpu_stall_rd #
     input  wire                     rst,
 
     /*hawk interface*/
-    input hawk_allow_cpu_access,
-   
-    output hacd_pkg::cpu_rd_reqpkt_t cpu_rd_reqpkt, 
-
+    input hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_pkt,
+    output hacd_pkg::cpu_reqpkt_t cpu_reqpkt, 
+    input hawk_inactive,
     /*
      * AXI slave interface
      */
@@ -82,6 +81,11 @@ module hawk_cpu_stall_rd #
     output wire                     m_axi_rready
 );
 
+    localparam [1:0]  
+        STATE_IDLE = 1'd0,
+        STATE_WAIT = 1'd1;
+
+    reg p_state,n_state;
 
 logic allow_cpu_access,allow_cpu_access_next;
     reg [ID_WIDTH-1:0] m_axi_arid_reg, m_axi_arid_next;
@@ -146,8 +150,7 @@ always@* begin
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
                 s_axi_arready_next = 1'b0;
-
-                if (/*!pending_rsp_q &&*/ m_axi_arready && allow_cpu_access ) begin
+                if (/*!pending_rsp_q &&*/ m_axi_arready && (allow_cpu_access || hawk_inactive) ) begin
                     m_axi_arvalid_next = 1'b1;
                     n_state = STATE_IDLE;
                 end 
@@ -193,18 +196,18 @@ assign s_axi_rvalid = m_axi_rvalid;
             s_axi_arready_reg <= s_axi_arready_next;
         end
 
-	if(hawk_allow_cpu_access)
+	if(hawk_cpu_ovrd_pkt.allow_access)
 	   allow_cpu_access<=1'b1;
 	else 
 	   allow_cpu_access<=allow_cpu_access_next;
 
         //if(s_read_access_vld)
 	//s_read_access_vld_reg<=1'b1;
-	//else if(hawk_allow_cpu_access)
+	//else if(hawk_cpu_ovrd_pkt.allow_access)
 	//s_read_access_vld_reg<=1'b0;
         
 	m_axi_arid_reg <= m_axi_arid_next;
-        m_axi_araddr_reg <= m_axi_araddr_next;
+        m_axi_araddr_reg <= (hawk_cpu_ovrd_pkt.allow_access & !hawk_inactive) ? {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]} : m_axi_araddr_next;
         m_axi_arlen_reg <= m_axi_arlen_next;
         m_axi_arsize_reg <= m_axi_arsize_next;
         m_axi_arburst_reg <= m_axi_arburst_next;
@@ -232,7 +235,7 @@ assign s_axi_rvalid = m_axi_rvalid;
     assign s_axi_arready = s_axi_arready_reg;
 
     //hawk req packet
-    assign cpu_rd_reqpkt.hppa  = m_axi_araddr_reg[59:12]; //4KB aligned
-    assign cpu_rd_reqpkt.valid = (p_state==STATE_WIAT);//s_read_access_vld_reg;
+    assign cpu_reqpkt.hppa  = m_axi_araddr_reg[59:12]; //4KB aligned
+    assign cpu_reqpkt.valid = (p_state==STATE_WAIT);//s_read_access_vld_reg;
 
 endmodule
