@@ -49,16 +49,19 @@ module hawk_axiwr_master #
 
     //FIFO
     //Wdata 
-    input  wire                     s_axi_wvalid,
-    output wire                     s_axi_wready,
-    input  wire [DATA_WIDTH-1:0]    s_axi_wdata,
+    input  wire                    s_axi_wvalid,
+    output wire                    s_axi_wready,
+    input  wire [DATA_WIDTH-1:0]   s_axi_wdata,
     input wire [STRB_WIDTH-1:0]    s_axi_wstrb,
 
     //AWaddr 
-    input  wire [ADDR_WIDTH-1:0]    s_axi_awaddr,
+    input  wire [ADDR_WIDTH-1:0]   s_axi_awaddr,
     input wire                     s_axi_awvalid,
-    output wire                     s_axi_awready,
+    output wire                    s_axi_awready,
     
+    output wire [1:0]              s_axi_bresp,
+    output wire                    s_axi_bvalid,
+    input wire                     s_axi_bready,
     /*
      * AXI master interface
      */
@@ -119,11 +122,7 @@ parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
 
     //Monitor this for write response
     wire [ID_WIDTH-1:0]      s_axi_bid;
-    wire [1:0]               s_axi_bresp;
     wire [BUSER_WIDTH-1:0]   s_axi_buser;
-    wire                     s_axi_bvalid;
-    
-    wire                     s_axi_bready;
 
 
 //aw channel
@@ -143,7 +142,6 @@ parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
     assign s_axi_wlast = 1'b1; //as we have only one beat
     assign s_axi_wuser='d0;
 
-    assign s_axi_bready=1'b1; //for now
 
 
 

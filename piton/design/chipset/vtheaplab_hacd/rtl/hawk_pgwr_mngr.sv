@@ -16,17 +16,25 @@ module hawk_pgwr_mngr (
   //AXI packets
   input hacd_pkg::axi_wr_rdypkt_t wr_rdypkt,
   output hacd_pkg::axi_wr_reqpkt_t wr_reqpkt,
+  input hacd_pkg::axi_wr_resppkt_t wr_resppkt,
 
-  //AXI Signals
-  //output logic wr_blk_vld,
-  //output logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_blk_data;
-  //output logic wr_blk_addr_vld,
-  //output logic [63:0] wr_blk_adrr,
+  //to rd manager
+  output hacd_pkg::hawk_tol_ht_t tol_HT,
 
+  //table update request pgrd_mangr
+  input hacd_pkg::tol_updpkt_t tol_updpkt,
   //status handshake to main comntroller
   output logic init_att_done, 
-  output logic init_list_done 
+  output logic init_list_done,
+  output logic pgwr_mngr_ready 
 );
+
+//list head and tails
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListHead,freeListHead;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListTail,freeListTail;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListHead,uncompListHead;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListTail,uncompListTail;
+
 
 //fsm variables  
 logic [clogb2(ATT_ENTRY_MAX):0] p_etry_cnt,n_etry_cnt;  //serves as entry id
@@ -36,11 +44,18 @@ typedef logic [`FSM_WID-1:0] state_t;
 state_t n_state;
 state_t p_state;
 //states
-localparam IDLE		='d0,
-	   INIT_ATT	='d1,
-	   WAIT_ATT	='d2,
-	   INIT_LIST	='d3,
-	   WAIT_LIST	='d4;
+localparam IDLE			='d0,
+	   INIT_ATT		='d1,
+	   WAIT_ATT		='d2,
+	   INIT_LIST		='d3,
+	   WAIT_LIST		='d4,
+	   ATT_UPDATE		='d5,
+	   WAIT_ATT_UPDATE	='d6,
+	   TOL_SLST_UPDATE	='d7,
+	   WAIT_TOL_SLST_UPDATE ='d8,
+	   TOL_DLST_UPDATE	='d9,
+	   WAIT_TOL_DLST_UPDATE ='d10,
+	   TBL_UPDATE_WAIT_RESP ='d11;
 
 
 //helper functions
@@ -103,11 +118,64 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	end
 endfunction
 
+function axi_wr_pld_t get_tbl_axi_wrpkt;
+	input tol_updpkt_t tbl_updat_pkt;
+	input state_t p_state;
+        input hacd_pkg::hawk_tol_ht_t tol_HT;
+	integer i;
+        AttEntry att_entry='d0;
+	ListEntry next_lst_entry='d0; //for pop
+	ListEntry my_lst_entry='d0; //for push
+	
+	att_entry.way='d0;
+	get_tbl_axi_wrpkt.data='d0;
+	get_tbl_axi_wrpkt.strb='d0;
+	
+	if (p_state==ATT_UPDATE) begin
+		get_tbl_axi_wrpkt.addr=HAWK_ATT_START + ((tbl_updat_pkt.attEntryId >> 3) << 6);
+		att_entry.zpd_cnt='d0;
+		att_entry.way=tbl_updat_pkt.lstEntry.way;  //list way would go into att_entry.way field for allocation
+		
+		if(tbl_updat_pkt.dst_list==UNCOMP) begin
+			att_entry.sts=STS_UNCOMP;
+		end
+		
+		//Which 64 bit we need to send this.
+		//case(attEntryId[2:0])
+		i=tbl_updat_pkt.attEntryId[2:0]-1;
+		get_tbl_axi_wrpkt.data[64*i+:64]=att_entry;
+		get_tbl_axi_wrpkt.strb[64*i+:64]={16{1'b1}};
+	end
+	else if (p_state==TOL_SLST_UPDATE) begin  //POP FREE LIST , POP entry from head is same as updating prev of next entry to head, then update head to that
+
+		//Original: freehead=Entry-1    -> ||prev=0,Entry=1,next=2||prev=1,Entry=2,next=3||
+		//AfterUpdate:freehead->Entry-2 -> ||prev=0,Entry=2,next=3||..
+		
+		//Change next entries content
+		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.next-1) >> 2) << 6);
+	
+		next_lst_entry.prev=tbl_updat_pkt.lstEntry.prev; //only prev changes, remaining remains same
+		//Which entry we shoudl change in cacheline
+		i=(tbl_updat_pkt.lstEntry.next[1:0]-1);
+		get_tbl_axi_wrpkt.data[128*i+:32]=next_lst_entry.prev; //pointers are 32 bits
+		get_tbl_axi_wrpkt.strb[16*i+:4]={4{1'b1}}; //pointers are 4 bytes
+	end
+	else if (p_state==TOL_DLST_UPDATE) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry-1) >> 2) << 6);
+	
+		my_lst_entry.prev= tol_HT.uncompListTail;	
+		my_lst_entry.next= 'd0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
+		i=(tbl_updat_pkt.tolEntryId[1:0]-1);
+		get_tbl_axi_wrpkt.data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+		get_tbl_axi_wrpkt.strb[16*i+:8]={8{1'b1}};
+	end
+endfunction
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
 //For birngup phase, we always work only hawk_master if both addr and data channels are ready and at cache line granularity always
 wire awready,wready;
 wire awvalid,wvalid;
+logic bresp_cmplt;
 assign awready = wr_rdypkt.awready;// & wr_rdypkt.wready;
 assign awvalid = wr_reqpkt.awvalid; // & vldpkt.wvalid;
 
@@ -115,9 +183,9 @@ assign wready = wr_rdypkt.wready;// & wr_rdypkt.wready;
 assign wvalid = wr_reqpkt.wvalid; // & vldpkt.wvalid;
 
 axi_wr_pld_t p_axireq,n_axireq;
-
+tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
 //logic to handle different modes
-always_comb begin
+always@* begin
 //default
 	n_init_att_done = 1'b0;
 	n_etry_cnt = p_etry_cnt; 
@@ -127,11 +195,19 @@ always_comb begin
 	n_req_awvalid = 1'b0; 	       //reset->fsm decides when to send packet
 	n_req_wvalid = 1'b0; 	       //reset->fsm decides when to send packet
 
+	n_tol_updpkt=p_tol_updpkt;
+
+	//default list head/tails
+	n_freeListHead=freeListHead;
+	n_freeListTail=freeListTail;
+	n_uncompListHead=uncompListHead;
+	n_uncompListTail=uncompListTail;
+
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
 			//initial values on required variables as
-			//needed
+			//needed //This handles only one mode at a time.
 			if      (init_att & !init_att_done) begin //wait in same state till table initialiation is done
 				n_state=INIT_ATT;
 				n_etry_cnt = 'd0;
@@ -141,8 +217,12 @@ always_comb begin
 				n_axireq.ppa=HAWK_PPA_START-64'h40;
 				n_axireq.addr = HAWK_LIST_START-64'h40; //We can change this to any address if list tbael does not follow att immediately
 				n_etry_cnt = 'd1;
+				n_freeListHead = 'd1;
 			end
-			//handle other modes below
+			else if(tol_updpkt.tbl_update) begin
+				n_state=ATT_UPDATE;
+			 	n_tol_updpkt=tol_updpkt;	
+			end
 
 		end
 		INIT_ATT:begin
@@ -178,6 +258,7 @@ always_comb begin
 				     n_state = WAIT_LIST;
 				  end
 				  else begin
+					n_freeListHead=p_etry_cnt; //-'d1;
 				        n_init_list_done = 1'b1;		  
 					n_state = IDLE;
 				  end
@@ -189,8 +270,62 @@ always_comb begin
 				     n_state = INIT_LIST;
 			  end
 		end
+		ATT_UPDATE : begin
+			  if(awready && !awvalid) begin
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_req_awvalid = 1'b1;
+				     n_state = WAIT_ATT_UPDATE;
+			  end
+		end
+		WAIT_ATT_UPDATE: begin
+			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
+				     n_req_wvalid = 1'b1;
+				     n_state = TOL_SLST_UPDATE;
+			  end
+		end
+		TOL_SLST_UPDATE: begin
+			  if(awready && !awvalid) begin
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_req_awvalid = 1'b1;
+				     n_state = WAIT_TOL_SLST_UPDATE;
+			  end
+		end
+		WAIT_TOL_SLST_UPDATE: begin
+			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
+				     //Update SLST HEAD/TAIL
+				     if(p_tol_updpkt.src_list==FREE) begin //for free list as source, it is pop_front
+					n_freeListHead=p_tol_updpkt.lstEntry.next; //my next will become head 	
+				     end //handle other cases later
+				     n_req_wvalid = 1'b1;
+				     n_state = TOL_DLST_UPDATE;
+			  end
+		end
+		TOL_DLST_UPDATE: begin
+			  if(awready && !awvalid) begin
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_req_awvalid = 1'b1;
+				     n_state = WAIT_TOL_DLST_UPDATE;
+			  end
+		end
+		WAIT_TOL_DLST_UPDATE: begin
+			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
+				     //Update DLST HEAD/TAIL
+				     if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
+					n_uncompListTail=p_tol_updpkt.lstEntry; //I will become the tail	
+				     end //handle other cases later
+				     n_req_wvalid = 1'b1;
+				     n_state = TBL_UPDATE_WAIT_RESP;
+			  end
+		end
+		TBL_UPDATE_WAIT_RESP: begin
+			  if(bresp_cmplt) begin //data has been already set, in prev state, just assert wvalid
+				     n_state = IDLE;
+			  end
+		end
 	endcase
 end
+
+ 
 
 
 //state register/output flops
@@ -205,8 +340,12 @@ begin
 		p_axireq.addr <= HAWK_ATT_START-64'h40; //'d0;
 		p_axireq.data <= 'd0;
 		p_axireq.strb <= 'd0;
+		//p_axireq.bready<=1'b1;
 		p_req_awvalid <= 1'b0;
 		p_req_wvalid <= 1'b0;
+
+		//Tabel update
+		p_tol_updpkt <='d0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -219,8 +358,14 @@ begin
 		p_axireq.strb <= n_axireq.strb;
 		p_req_awvalid <= n_req_awvalid ;
 		p_req_wvalid <= n_req_wvalid;
+
+		//
+		//p_axireq.bready<=1'b1;
+
+		p_tol_updpkt<=n_tol_updpkt;
 	end
 end
+assign pgwr_mngr_ready = p_state == IDLE;
 
 //done statuses
 //later useful to map it to status register if needed
@@ -243,17 +388,53 @@ assign wr_reqpkt.strb = p_axireq.strb;
 assign wr_reqpkt.awvalid = p_req_awvalid;
 assign wr_reqpkt.wvalid =  p_req_wvalid;
 
+//Write Response are posted : Check
+//For now, we support only in-order support: so no need to check ID
+logic [6:0] pending_txn_cnt; //max we can have only 64 cache line in pending
+logic bus_error; 
+always @(posedge clk_i or negedge rst_ni) begin
+	if(!rst_ni) begin
+		pending_txn_cnt<='d1; //by default pending_txn_cnt is 1; so , we should never get 0, if yes, then tht is unexpected extra resp
+		bus_error<=1'b0;
+	end
+	else begin
+		if(wr_reqpkt.awvalid && wr_rdypkt.awready && wr_resppkt.bvalid && (wr_resppkt.bresp=='d0)) begin
+			pending_txn_cnt<=pending_txn_cnt;
+		end
+		else if(wr_reqpkt.awvalid && wr_rdypkt.awready) begin
+			pending_txn_cnt<=pending_txn_cnt+1;
+		end
+		else if(wr_resppkt.bvalid && (wr_resppkt.bresp=='d0)) begin
+			pending_txn_cnt<=pending_txn_cnt-1;
+		end
+		if((wr_resppkt.bvalid && (wr_resppkt.bresp!='d0)) || (pending_txn_cnt=='d0))
+		    bus_error<=1'b1;
+	end
+end
+assign bresp_cmplt=pending_txn_cnt=='d1;
 
 
-//generic helper functions
-function integer clogb2;
-    input [31:0] value;
-    begin
-        value = value - 1;
-        for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
-            value = value >> 1;
-        end
-    end
-endfunction
+
+
+//ToL Head and Tails //move to separate module if required
+
+always @(posedge clk_i or negedge rst_ni) begin
+	if(!rst_ni) begin
+		freeListHead<='d0; //0 corresponds for NULL
+		freeListTail<='d0; 
+		uncompListHead<='d0; 
+		uncompListTail<='d0;
+	end else begin
+		freeListHead<=n_freeListHead;
+		freeListTail<=n_freeListTail; 
+		uncompListHead<=n_uncompListHead; 
+		uncompListTail<=n_uncompListTail;
+	end
+end
+//share with pgrd manager
+assign tol_HT.freeListHead=freeListHead;
+assign tol_HT.freeListTail=freeListTail;
+assign tol_HT.uncompListHead=uncompListHead;
+assign tol_HT.uncompListTail=uncompListTail;
 
 endmodule

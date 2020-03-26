@@ -24,7 +24,7 @@ module hawk_axi_xbar_wrapper#(parameter PLACE_HOLDER=1)
     HACD_AXI_WR_BUS xbarOut_axi_wr_bus(); 
     HACD_AXI_RD_BUS xbarOut_axi_rd_bus();
 
-
+`define NO_AXI_XBAR 1
 `ifdef NO_AXI_XBAR
 always_comb
 begin
@@ -214,31 +214,27 @@ axi_crossbar u_hawk_axi_crossbar (
      .m_axi_buser(xbarOut_axi_wr_bus.axi_buser),
      .m_axi_bvalid(xbarOut_axi_wr_bus.axi_bvalid),
      .m_axi_bready(xbarOut_axi_wr_bus.axi_bready),
-     .m_axi_arid(xbarOut_axi_wr_bus.axi_arid),
-     .m_axi_araddr(xbarOut_axi_wr_bus.axi_araddr),
-     .m_axi_arlen(xbarOut_axi_wr_bus.axi_arlen),
-     .m_axi_arsize(xbarOut_axi_wr_bus.axi_arsize),
-     .m_axi_arburst(xbarOut_axi_wr_bus.axi_arburst),
-     .m_axi_arlock(xbarOut_axi_wr_bus.axi_arlock),
-     .m_axi_arcache(xbarOut_axi_wr_bus.axi_arcache),
-     .m_axi_arprot(xbarOut_axi_wr_bus.axi_arprot),
-     .m_axi_arqos(xbarOut_axi_wr_bus.axi_arqos),
-     .m_axi_arregion(xbarOut_axi_wr_bus.axi_arregion),
-     .m_axi_aruser(xbarOut_axi_wr_bus.axi_aruser),
-     .m_axi_arvalid(xbarOut_axi_wr_bus.axi_arvalid),
-     .m_axi_arready(xbarOut_axi_wr_bus.axi_arready),
-     .m_axi_rid(xbarOut_axi_wr_bus.axi_rid),
-     .m_axi_rdata(xbarOut_axi_wr_bus.axi_rdata),
-     .m_axi_rresp(xbarOut_axi_wr_bus.axi_rresp),
-     .m_axi_rlast(xbarOut_axi_wr_bus.axi_rlast),
-     .m_axi_ruser(xbarOut_axi_wr_bus.axi_ruser),
-     .m_axi_rvalid(xbarOut_axi_wr_bus.axi_rvalid),
-     .m_axi_rready(xbarOut_axi_wr_bus.axi_rready)
+     .m_axi_arid(xbarOut_axi_rd_bus.axi_arid),
+     .m_axi_araddr(xbarOut_axi_rd_bus.axi_araddr),
+     .m_axi_arlen(xbarOut_axi_rd_bus.axi_arlen),
+     .m_axi_arsize(xbarOut_axi_rd_bus.axi_arsize),
+     .m_axi_arburst(xbarOut_axi_rd_bus.axi_arburst),
+     .m_axi_arlock(xbarOut_axi_rd_bus.axi_arlock),
+     .m_axi_arcache(xbarOut_axi_rd_bus.axi_arcache),
+     .m_axi_arprot(xbarOut_axi_rd_bus.axi_arprot),
+     .m_axi_arqos(xbarOut_axi_rd_bus.axi_arqos),
+     .m_axi_arregion(xbarOut_axi_rd_bus.axi_arregion),
+     .m_axi_aruser(xbarOut_axi_rd_bus.axi_aruser),
+     .m_axi_arvalid(xbarOut_axi_rd_bus.axi_arvalid),
+     .m_axi_arready(xbarOut_axi_rd_bus.axi_arready),
+     .m_axi_rid(xbarOut_axi_rd_bus.axi_rid),
+     .m_axi_rdata(xbarOut_axi_rd_bus.axi_rdata),
+     .m_axi_rresp(xbarOut_axi_rd_bus.axi_rresp),
+     .m_axi_rlast(xbarOut_axi_rd_bus.axi_rlast),
+     .m_axi_ruser(xbarOut_axi_rd_bus.axi_ruser),
+     .m_axi_rvalid(xbarOut_axi_rd_bus.axi_rvalid),
+     .m_axi_rready(xbarOut_axi_rd_bus.axi_rready)
 );
-
-
-
-
 `endif
 
 

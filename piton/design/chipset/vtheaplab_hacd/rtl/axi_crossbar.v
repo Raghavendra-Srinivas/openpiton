@@ -77,7 +77,7 @@ module axi_crossbar #
     // Master interface base addresses
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     // set to zero for default addressing based on M_ADDR_WIDTH
-    parameter M_BASE_ADDR = 0,
+    parameter M_BASE_ADDR = 64'hfff6100000, //0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},

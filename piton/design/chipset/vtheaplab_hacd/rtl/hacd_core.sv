@@ -34,8 +34,10 @@ module hacd_core (
    wire init_att,init_list,init_att_done,init_list_done;
    hacd_pkg::axi_wr_rdypkt_t wr_rdypkt;
    hacd_pkg::axi_wr_reqpkt_t wr_reqpkt;
+   hacd_pkg::axi_wr_resppkt_t wr_resppkt;
+   //
    hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
-
+   //
 
    //rd manager
    hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt;
@@ -43,7 +45,10 @@ module hacd_core (
    hacd_pkg::axi_rd_reqpkt_t rd_reqpkt;
    hacd_pkg::axi_rd_resppkt_t rd_resppkt;
    hacd_pkg::trnsl_reqpkt_t trnsl_reqpkt;
+   hacd_pkg::tol_updpkt_t tol_updpkt;
+
    wire pgrd_mngr_ready;
+   wire pgwr_mngr_ready;
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
@@ -205,7 +210,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
      .s_axi_rlast(rd_resppkt.rlast),
      .s_axi_ruser(), //not used for now
      .s_axi_rvalid(rd_resppkt.rvalid),
-     .s_axi_rready(rd_rdypkt.rready),
+     .s_axi_rready(rd_reqpkt.rready),
 
      .m_axi_arid(hawk_axi_rd_bus.axi_arid),
      .m_axi_araddr(hawk_axi_rd_bus.axi_araddr),
@@ -240,6 +245,9 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
 	.s_axi_awaddr(wr_reqpkt.addr),        //wr_blk_adrr), 	 //from hk_pgwr_manager
 	.s_axi_awvalid(wr_reqpkt.awvalid),    //wr_blk_addr_vld), //from hk_pgwr_manager
 	.s_axi_awready(wr_rdypkt.awready),    //wr_addr_fifo_ready),
+        .s_axi_bready(1'b1), //wr_reqpkt.bready),
+	.s_axi_bresp(wr_resppkt.bresp),
+	.s_axi_bvalid(wr_resppkt.bvalid),
 	
         .m_axi_awid(hawk_axi_wr_bus.axi_awid),
         .m_axi_awaddr(hawk_axi_wr_bus.axi_awaddr),
@@ -287,6 +295,8 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
         //pg_rdmanager
     	.pgrd_mngr_ready,
 	.trnsl_reqpkt,
+	.tol_updpkt,
+	.lkup_reqpkt,
 
     	//cpu master handshake
 	.cpu_rd_reqpkt,

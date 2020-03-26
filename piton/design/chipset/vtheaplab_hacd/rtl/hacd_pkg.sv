@@ -25,10 +25,23 @@ package hacd_pkg;
     parameter bit [63:0] DDR_START_ADDR= 64'h80000000;
     parameter bit [63:0] HPPA_BASE_ADDR= DDR_START_ADDR;
 
-    //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
+    parameter int BLK_SIZE=64;
+    parameter int ATT_ENTRY_SIZE=8;
+    parameter int ATT_ENTRY_PER_BLK=BLK_SIZE/ATT_ENTRY_SIZE;
+    parameter int LIST_ENTRY_SIZE=16;
+    parameter int LST_ENTRY_PER_BLK=BLK_SIZE/LIST_ENTRY_SIZE;
+    parameter int BYTE=8;
 
+    parameter int COMPRESSION_RATIO=4;
+    parameter int DRAM_SIZE=1<<30; ////1GB
+    parameter int PAGE_SIZE=1<<12; //4KB 
+    parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
+    parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
+    parameter int ATT_ENTRY_CNT=16; // lower count for verification //update later
+    parameter int LIST_ENTRY_CNT=16; // update later
+
+    //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
-   
     /*
     //ATT Entry , default values for init state 
     typedef struct packed {
@@ -59,12 +72,11 @@ package hacd_pkg;
  	} AttEntry;
 	
  typedef struct packed {
-	bit [127:104] rsvd; 
-	bit [103:54] way;
-	bit [53:28] prev;
-	bit [27:0] next;
+	bit [127:114] rsvd; 
+	bit [113:64] way;
+	bit [63:32] prev;
+	bit [31:0] next;
  } ListEntry;
-
 
  //Below packet is between hawk_axiwr_master and hawk_pgwr_mngr
  //For simplicity , we dont treat addr and data as separate, though they are
@@ -75,6 +87,7 @@ package hacd_pkg;
 	logic [63:0]  strb;
 	logic awvalid;
 	logic wvalid;
+	//logic bready;
  } axi_wr_reqpkt_t;
 
   typedef struct packed {
@@ -92,12 +105,14 @@ package hacd_pkg;
 
  typedef struct packed {
  	logic bresp;
+	logic bvalid;
  } axi_wr_resppkt_t;
 
  //Axi Read Packets betwenn hawk_axird_master and hawk_pgrd_mngr
   typedef struct packed {
  	logic [63:0]  addr;
 	logic arvalid;
+	logic rready;
  } axi_rd_reqpkt_t;
 
 
@@ -107,7 +122,6 @@ package hacd_pkg;
 
  typedef struct packed {
  	logic arready;
-	logic rready;
  } axi_rd_rdypkt_t;
 
  typedef struct packed {
@@ -123,14 +137,26 @@ package hacd_pkg;
  	logic [47:0] hppa;
 	logic lookup;
  } att_lkup_reqpkt_t;
- 
+
+ //below packet is used for  
  typedef struct packed {
 	logic [47:0] ppa;
 	logic [1:0] sts;
-	logic tbl_update;
-	logic att_hit;
 	logic allow_access;
  } trnsl_reqpkt_t;
+
+	
+ typedef enum {FREE,UNCOMP,COMP,INCOMP} LIST_NAME;
+ typedef struct packed {
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
+	logic [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
+	ListEntry lstEntry;
+	LIST_NAME src_list; //from which source we are removing this entry
+	LIST_NAME dst_list; //to which list , we are moving this entry
+	//logic [47:0] ppa;
+	logic tbl_update;
+ } tol_updpkt_t;
+
 
  typedef struct packed {
 	logic [47:0] hppa;
@@ -146,20 +172,7 @@ package hacd_pkg;
  
 
 
- parameter int BLK_SIZE=64;
- parameter int ATT_ENTRY_SIZE=8;
- parameter int ATT_ENTRY_PER_BLK=BLK_SIZE/ATT_ENTRY_SIZE;
- parameter int LIST_ENTRY_SIZE=16;
- parameter int LST_ENTRY_PER_BLK=BLK_SIZE/LIST_ENTRY_SIZE;
- parameter int BYTE=8;
 
- parameter int COMPRESSION_RATIO=4;
- parameter int DRAM_SIZE=1<<30; ////1GB
- parameter int PAGE_SIZE=1<<12; //4KB 
- parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
- parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
- parameter int ATT_ENTRY_CNT=16; // lower count for verification //update later
- parameter int LIST_ENTRY_CNT=16; // update later
 
 
 
@@ -178,8 +191,10 @@ package hacd_pkg;
 
 //ToL HEAD and TAILS
  typedef struct packed {
-  logic [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;	
-  logic [clogb2(LST_ENTRY_MAX)-1:0] freeLstTail;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] freeListHead;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] freeListTail;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListHead;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListTail;	
  } hawk_tol_ht_t;
 
 endpackage

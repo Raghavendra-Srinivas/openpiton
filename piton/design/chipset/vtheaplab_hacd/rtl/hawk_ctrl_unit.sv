@@ -34,6 +34,7 @@ module hawk_ctrl_unit #()
     //pg_rdmanager
     input pgrd_mngr_ready,
     input hacd_pkg::trnsl_reqpkt_t trnsl_reqpkt,
+    input hacd_pkg::tol_updpkt_t tol_updpkt,
     output hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
     
     //cpu master handshake
@@ -53,7 +54,7 @@ module hawk_ctrl_unit #()
 
 //local variables
 att_lkup_reqpkt_t n_lkup_reqpkt;
-hacd_pkg::hawk_cpu_ovrd_pkt_t n_hawk_cpu_ovrd_wrpkt;
+hacd_pkg::hawk_cpu_ovrd_pkt_t n_hawk_cpu_ovrd_wrpkt,n_hawk_cpu_ovrd_rdpkt;
 
 logic n_init_att,n_init_list;
 logic [`FSM_WID-1:0] n_state;
@@ -67,25 +68,6 @@ localparam IDLE			='d0,
 	   RD_TBL_UPDATE	='d5,
 	   WR_TBL_UPDATE	='d6;
 
-//state & output register
-always_ff@(posedge clk_i or negedge rst_ni) 
-begin
-	if(!rst_ni) begin
-		p_state<=IDLE;
-
-		//output regs
-		init_att<=1'b1; //init_att is enabled upon reset
-		init_list<=1'b1; //init_att is enabled upon reset
-	end
-	else begin
-		p_state<=n_state;
-
-		//output regs
-		init_att<=n_init_att;
-		init_list<=n_init_list;
-	end
-end
-
 //fsm combo
 always_comb
 begin
@@ -94,6 +76,8 @@ begin
 	n_init_list=init_list;
 	n_lkup_reqpkt=lkup_reqpkt;//we need to latch lookup request till serviced
 	n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;//we need latch ppa till tbl update is done
+	n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;//we need latch ppa till tbl update is done
+	n_hawk_cpu_ovrd_wrpkt.allow_access=1'b0; //this woudl be asserted in diffrent states bsed on case
 	n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0; //this woudl be asserted in diffrent states bsed on case
 	
 	case(p_state)
@@ -152,8 +136,8 @@ begin
 	 
 				      n_state<=CHK_WR_ACTIVE;
 				end
-				else if (trnsl_reqpkt.tbl_update) begin
-				      n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;
+				else if (tol_updpkt.tbl_update) begin
+				      n_hawk_cpu_ovrd_rdpkt.ppa=tol_updpkt.lstEntry.way;
 				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0;
 				      n_state=RD_TBL_UPDATE;
 				end
@@ -171,8 +155,8 @@ begin
 
 				      n_state<=CHK_RD_ACTIVE;
 				end
-				else if (trnsl_reqpkt.tbl_update) begin
-				      n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;
+				else if (tol_updpkt.tbl_update) begin
+				      n_hawk_cpu_ovrd_wrpkt.ppa=tol_updpkt.lstEntry.way;
 				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b0;
 				      n_state=WR_TBL_UPDATE;
 				end
@@ -206,11 +190,17 @@ begin
 		p_state<=IDLE;
 		hawk_cpu_ovrd_wrpkt<='d0;
 		lkup_reqpkt<='d0;
+		//output regs
+		init_att<=1'b1; //init_att is enabled upon reset
+		init_list<=1'b1; //init_att is enabled upon reset
 	end
 	else begin
 		p_state<=n_state;
 		hawk_cpu_ovrd_wrpkt<=n_hawk_cpu_ovrd_wrpkt;
 		lkup_reqpkt<=n_lkup_reqpkt;	
+		//output regs
+		init_att<=n_init_att;
+		init_list<=n_init_list;
 	end
 end
 

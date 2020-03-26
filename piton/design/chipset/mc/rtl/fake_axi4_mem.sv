@@ -152,14 +152,14 @@ foreach(MEM[addr]) begin
      for (int i=0;i<2;i++) begin
        cacheline=MEM[addr][i];
        //$display("Half cache line: ADDR:%h: DATA:%h",addr,cacheline);	
-       lstentry[0].rsvd=cacheline[127:104];
-       lstentry[0].way=cacheline[103:54];
-       lstentry[0].prev=cacheline[53:28];
-       lstentry[0].next=cacheline[27:0];
-       lstentry[1].rsvd=cacheline[`LSTSIZE1+127:`LSTSIZE1+104];
-       lstentry[1].way=cacheline[`LSTSIZE1+103:`LSTSIZE1+54];
-       lstentry[1].prev=cacheline[`LSTSIZE1+53:`LSTSIZE1+28];
-       lstentry[1].next=cacheline[`LSTSIZE1+27:`LSTSIZE1+0];
+       lstentry[0].rsvd=cacheline[127:114];
+       lstentry[0].way=cacheline[113:64];
+       lstentry[0].prev=cacheline[63:32];
+       lstentry[0].next=cacheline[31:0];
+       lstentry[1].rsvd=cacheline[`LSTSIZE1+127:`LSTSIZE1+114];
+       lstentry[1].way=cacheline[`LSTSIZE1+113:`LSTSIZE1+64];
+       lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
+       lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
        $display("CACHE/DRAM ADDR: %h LST_%d || way:%h || prev:%d || next:%d", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
 	lst_enry_id = lst_enry_id + 1;

@@ -40,7 +40,7 @@ module hawk_cpu_stall_wr #
     parameter [1:0] BURST_TYPE=`HACD_AXI4_BURST_TYPE,
 
     // Write data FIFO depth (cycles)
-    parameter FIFO_DEPTH = 1,
+    parameter FIFO_DEPTH = 16, //maximum 16 beats
     // Hold write address until write data in FIFO, if possible
     parameter FIFO_DELAY = 1
 )
