@@ -150,7 +150,7 @@ always@* begin
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
                 s_axi_arready_next = 1'b0;
-                if (/*!pending_rsp_q &&*/ m_axi_arready && (allow_cpu_access || hawk_inactive) ) begin
+                if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
                     m_axi_arvalid_next = 1'b1;
                     n_state = STATE_IDLE;
                 end 

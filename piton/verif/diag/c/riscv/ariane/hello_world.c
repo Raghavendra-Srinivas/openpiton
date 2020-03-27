@@ -17,7 +17,7 @@
 
 #define HACD_BASE    0xfff5100000ULL
 
-#define HAWK_MEM_BASE 0xfff6300000ULL
+#define HAWK_MEM_BASE 0xfff6200000ULL
 
 int main(int argc, char ** argv) {
 
@@ -46,7 +46,7 @@ int main(int argc, char ** argv) {
 
   //access ddr
       addr = (uint64_t*)(HAWK_MEM_BASE);
-      *addr=(uint32_t) 0x12345678;	
+      //*addr=(uint32_t) 0x12345678;	
       printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
       	 
 

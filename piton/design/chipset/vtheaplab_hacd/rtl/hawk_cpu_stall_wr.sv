@@ -267,7 +267,7 @@ logic allow_cpu_access,allow_cpu_access_next;
             end
 	   STATE_WAIT:begin
                 s_axi_awready_next = 1'b0;
-                if (/*!pending_rsp_q &&*/ m_axi_awready && (allow_cpu_access || hawk_inactive) ) begin
+                if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
                     m_axi_awvalid_next = 1'b1;
                     state_next = STATE_IDLE;
                 end 

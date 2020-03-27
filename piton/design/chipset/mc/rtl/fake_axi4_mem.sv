@@ -25,7 +25,6 @@ logic [`HACD_MC_AXI4_DATA_WIDTH-1:0] MEM[ADDR][2];
 int wr_beat_cnt,rd_beat_cnt,i;
 int temp_beat_cnt=0;
 int bt_cnt_wr=0;
-bit [63:0] capt_addr;
 wire [`HACD_MC_AXI4_DATA_WIDTH-1:0] mask;
 genvar g;
 generate
@@ -39,6 +38,7 @@ begin
 	logic [5:0] bid;
 	fork 
 		begin : MANAGE_WRITE
+			bit [63:0] capt_addr;
 			//Wait for reset
 			@(negedge rst_n);
 			  wr_bus.axi_awready <=1;
@@ -69,7 +69,7 @@ begin
 					  if(wr_bus.axi_wvalid==1'b1) begin //change below simple logic using mask to supprot byte level wdata control 
 
 						MEM[capt_addr][bt_cnt_wr]= MEM[capt_addr][bt_cnt_wr] | (wr_bus.axi_wdata & mask);
-					  	$display("Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
+					  	$display("AXI4_MEM:Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
 						
 					
 
@@ -81,37 +81,43 @@ begin
 			end
 		end : MANAGE_WRITE
 		begin : MANAGE_READ
+			bit [63:0] capt_addr;
+			logic [5:0] capt_id;
 			//Wait for reset
 			@(negedge rst_n);
+			forever begin
 			  rd_bus.axi_arready <=1;
 			  rd_bus.axi_rvalid<=0;
 			  rd_bus.axi_rresp<=0;
 			  rd_bus.axi_rdata<='dx;
 			  rd_bus.axi_rlast<=0;
-
-			forever begin
-			  rd_bus.axi_arready <=1;
+			  rd_bus.axi_rid<='dx;
 			  @(posedge clk);
 				//hawk design makes sure , we get wvalid only
 				//after or alogn with awvalid, so we are safe
 				//here
 				if(rd_bus.axi_arvalid & rd_bus.axi_arready) begin
+					capt_addr = rd_bus.axi_araddr;
+					capt_id=rd_bus.axi_arid;
+					$display("AXI4_MEM:Observed RD TXN: ADDR:%h,",capt_addr);
 			  		rd_bus.axi_arready <=0;
 					rd_beat_cnt=rd_bus.axi_arlen+1;
 					temp_beat_cnt=0;
-						while(temp_beat_cnt<rd_beat_cnt) begin
+					while(temp_beat_cnt<rd_beat_cnt) begin
 						@(posedge clk); //add timeput if required later
 						rd_bus.axi_rvalid<=0;
 						rd_bus.axi_rdata<='dx;
 			  			rd_bus.axi_rresp<='dx;
 						rd_bus.axi_rlast<=0;
+			  			rd_bus.axi_rid<='dx;
 						if(rd_bus.axi_rready==1'b1) begin
+							$display("AXI4_MEM:Observed RREADY for : ADDR:%h,",capt_addr);
 							rd_bus.axi_rvalid<=1; 
 			  				rd_bus.axi_rresp<=0;
-							rd_bus.axi_rdata<=MEM[rd_bus.axi_araddr][temp_beat_cnt];
+			  				rd_bus.axi_rid<=capt_id;
+							rd_bus.axi_rdata<=MEM[capt_addr][temp_beat_cnt];
 							temp_beat_cnt = temp_beat_cnt +1;
 							rd_bus.axi_rlast<=temp_beat_cnt==rd_beat_cnt;
-							
 						end
 
 					end//while
