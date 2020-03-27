@@ -60,16 +60,18 @@ logic n_init_att,n_init_list;
 logic [`FSM_WID-1:0] n_state;
 logic [`FSM_WID-1:0] p_state;
 //states
-localparam IDLE			='d0,
-	   CHK_RD_ACTIVE 	='d1,
-	   CHK_WR_ACTIVE 	='d2,
-	   RD_LOOKUP_ALLOCATE	='d3,
-	   WR_LOOKUP_ALLOCATE	='d4,
-	   RD_TBL_UPDATE	='d5,
-	   WR_TBL_UPDATE	='d6;
+localparam [`FSM_WID-1:0] IDLE			='d0,
+	      		  CHK_RD_ACTIVE 	='d1,
+	      		  CHK_WR_ACTIVE 	='d2,
+	      		  RD_LKP_REQ		='d3,
+	      		  WR_LKP_REQ		='d4,
+	      		  RD_LOOKUP_ALLOCATE	='d5,
+	      		  WR_LOOKUP_ALLOCATE	='d6,
+	      		  RD_TBL_UPDATE		='d7,
+	      		  WR_TBL_UPDATE		='d8;
 
-//fsm combo
-always_comb
+//fsm
+always@* 
 begin
 	n_state=p_state;
 	n_init_att=init_att;
@@ -85,44 +87,42 @@ begin
 			if(init_att_done) begin //wait in same state till table initialiation is done
 				n_init_att=1'b0;
 			end
-			else if (init_list_done) begin
+			if (init_list_done) begin
 				n_init_list=1'b0;
 				n_state=CHK_RD_ACTIVE;
 			end
 		end
 		CHK_RD_ACTIVE:begin
-			if(pgrd_mngr_ready && !hawk_cpu_ovrd_rdpkt.allow_access) begin
 				if      (cpu_rd_reqpkt.valid) begin 
-					n_lkup_reqpkt.lookup=1'b1;
 					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
-				  	n_state=RD_LOOKUP_ALLOCATE;
+				  	n_state=RD_LKP_REQ;
 				end
 				else if (cpu_wr_reqpkt.valid) begin
-					n_lkup_reqpkt.lookup=1'b1;
 					n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
-				  	n_state=WR_LOOKUP_ALLOCATE;
+				  	n_state=WR_LKP_REQ;
 		  		end
-			end 
-			//chk if we need fairness among wries and read later
-			//however even if we priotise reads over
-			//writes, coherecny should not be breoken, even if read
-			//comes on same line as write, which is not yet written. It
-			//should be handled at system level /one cache before memory
-			//controller
 		end
-		CHK_WR_ACTIVE: begin
+		CHK_WR_ACTIVE:begin
+				if      (cpu_wr_reqpkt.valid) begin 
+					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
+				  	n_state=WR_LKP_REQ;
+				end
+				else if (cpu_rd_reqpkt.valid) begin
+					n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
+				  	n_state=RD_LKP_REQ;
+		  		end
+		end
+		RD_LKP_REQ: begin
+			if(pgrd_mngr_ready && !hawk_cpu_ovrd_rdpkt.allow_access) begin
+					n_lkup_reqpkt.lookup=1'b1;
+				  	n_state=RD_LOOKUP_ALLOCATE;
+			end 
+		end
+		WR_LKP_REQ: begin
 			if(pgrd_mngr_ready && !hawk_cpu_ovrd_wrpkt.allow_access) begin
-			       if 	(cpu_wr_reqpkt.valid) begin
-			              n_lkup_reqpkt.lookup=1'b1;
-			              n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
-			              n_state=WR_LOOKUP_ALLOCATE;
-		  	       end
-			       else if (cpu_rd_reqpkt.valid) begin 
-			              n_lkup_reqpkt.lookup=1'b1;
-			              n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
-			              n_state=RD_LOOKUP_ALLOCATE;
-			       end
-			end
+					n_lkup_reqpkt.lookup=1'b1;
+				  	n_state=WR_LOOKUP_ALLOCATE;
+			end 
 		end
 		RD_LOOKUP_ALLOCATE: begin
 				if(trnsl_reqpkt.allow_access) begin 
@@ -189,6 +189,7 @@ begin
 	if(!rst_ni) begin
 		p_state<=IDLE;
 		hawk_cpu_ovrd_wrpkt<='d0;
+		hawk_cpu_ovrd_rdpkt<='d0;
 		lkup_reqpkt<='d0;
 		//output regs
 		init_att<=1'b1; //init_att is enabled upon reset
@@ -197,6 +198,7 @@ begin
 	else begin
 		p_state<=n_state;
 		hawk_cpu_ovrd_wrpkt<=n_hawk_cpu_ovrd_wrpkt;
+		hawk_cpu_ovrd_rdpkt<=n_hawk_cpu_ovrd_rdpkt;
 		lkup_reqpkt<=n_lkup_reqpkt;	
 		//output regs
 		init_att<=n_init_att;

@@ -17,7 +17,7 @@
 
 #define HACD_BASE    0xfff5100000ULL
 
-#define HAWK_MEM_BASE 0xfff6100000ULL
+#define HAWK_MEM_BASE 0xfff6300000ULL
 
 int main(int argc, char ** argv) {
 
@@ -28,21 +28,27 @@ int main(int argc, char ** argv) {
 
   ////Generating Interrupt
 
-  //    printf("HACD: Accessing HAWK \n");
-  //    uint64_t *addr;
-  //    
-  //    addr = (uint64_t*)(HACD_BASE);
-  //    printf("HACD: Cntrl result = 0x%016x\n",*addr);
-  //    printf("Writing Control Register.\n");
-  //    *addr = (uint32_t) 0x1;
-  //    printf("HACD: Cntrl result = 0x%016x\n",*addr);
-  //    
-  //    addr = (uint64_t*)(HACD_BASE+4);
-  //    printf("HACD: Low water mark result = 0x%016x\n",*addr);
-  //    printf("Writing Low WaterMark Register.\n");
-  //    *addr = (uint32_t) 0x1234;
-  //    printf("HACD: Low water mark result = 0x%016x\n",*addr);
+      printf("HACD: Accessing HAWK \n");
+      uint64_t *addr;
+      
+      //addr = (uint64_t*)(HACD_BASE);
+      //printf("HACD: Cntrl result = 0x%016x\n",*addr);
+      //printf("Writing Control Register.\n");
+      //*addr = (uint32_t) 0x1;
+      //printf("HACD: Cntrl result = 0x%016x\n",*addr);
+      //
+      //addr = (uint64_t*)(HACD_BASE+4);
+      //printf("HACD: Low water mark result = 0x%016x\n",*addr);
+      //printf("Writing Low WaterMark Register.\n");
+      //*addr = (uint32_t) 0x1234;
+      //printf("HACD: Low water mark result = 0x%016x\n",*addr);
 
+
+  //access ddr
+      addr = (uint64_t*)(HAWK_MEM_BASE);
+      *addr=(uint32_t) 0x12345678;	
+      printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+      	 
 
   printf("Done!\n");
 

@@ -180,7 +180,7 @@ logic allow_cpu_access,allow_cpu_access_next;
     reg [3:0] m_axi_awqos_reg = 4'd0, m_axi_awqos_next;
     reg [3:0] m_axi_awregion_reg = 4'd0, m_axi_awregion_next;
     reg [AWUSER_WIDTH-1:0] m_axi_awuser_reg = {AWUSER_WIDTH{1'b0}}, m_axi_awuser_next;
-    reg m_axi_awvalid_reg = 1'b0, m_axi_awvalid_next;
+    reg m_axi_awvalid_reg , m_axi_awvalid_next;
 
     reg s_axi_awready_reg = 1'b0, s_axi_awready_next;
 
@@ -202,7 +202,7 @@ logic allow_cpu_access,allow_cpu_access_next;
     assign hold = hold_reg;
 
     always @* begin
-        state_next = STATE_IDLE;
+        state_next = state_reg;
 
         hold_next = hold_reg;
         count_next = count_reg;
@@ -275,6 +275,11 @@ logic allow_cpu_access,allow_cpu_access_next;
         endcase
     end
 
+    wire hawk_allow_cpu_access;
+    wire [ADDR_WIDTH-1:12] hawk_ovrd_ppa;
+    assign hawk_allow_cpu_access=hawk_cpu_ovrd_pkt.allow_access;
+    assign hawk_ovrd_ppa=hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12];
+ 
     always @(posedge clk) begin
         if (rst) begin
             state_reg <= STATE_IDLE;
@@ -287,16 +292,17 @@ logic allow_cpu_access,allow_cpu_access_next;
             hold_reg <= hold_next;
             m_axi_awvalid_reg <= m_axi_awvalid_next;
             s_axi_awready_reg <= s_axi_awready_next;
+		if(hawk_allow_cpu_access) begin
+		   allow_cpu_access<=1'b1;
+		end else begin 
+	   	   allow_cpu_access<=allow_cpu_access_next;
+		end
         end
-	if(hawk_cpu_ovrd_pkt.allow_access)
-	   allow_cpu_access<=1'b1;
-	else 
-	   allow_cpu_access<=allow_cpu_access_next;
 
         count_reg <= count_next;
 
         m_axi_awid_reg <= m_axi_awid_next;
-        m_axi_awaddr_reg <= (hawk_cpu_ovrd_pkt.allow_access & !hawk_inactive) ? {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_awaddr_next[11:0]} : m_axi_awaddr_next;
+        m_axi_awaddr_reg <= ( hawk_allow_cpu_access & !hawk_inactive) ? {hawk_ovrd_ppa,m_axi_awaddr_next[11:0]} : m_axi_awaddr_next;
         m_axi_awlen_reg <= m_axi_awlen_next;
         m_axi_awsize_reg <= m_axi_awsize_next;
         m_axi_awburst_reg <= m_axi_awburst_next;

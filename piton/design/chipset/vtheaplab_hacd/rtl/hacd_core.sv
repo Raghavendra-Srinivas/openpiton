@@ -33,7 +33,7 @@ module hacd_core (
    //TOL Head tail broadcasted
    hacd_pkg::hawk_tol_ht_t tol_HT;
    //hawk_pgwrite manager
-   wire init_att,init_list,init_att_done,init_list_done;
+   logic init_att,init_list,init_att_done,init_list_done;
    hacd_pkg::axi_wr_rdypkt_t wr_rdypkt;
    hacd_pkg::axi_wr_reqpkt_t wr_reqpkt;
    hacd_pkg::axi_wr_resppkt_t wr_resppkt;
@@ -193,20 +193,20 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
       .clk(clk_i),
       .rst(!rst_ni),
     
-     .s_axi_arid('d0),//in-order for now
+     .s_axi_arid(6'd0),//in-order for now
      .s_axi_araddr(rd_reqpkt.addr),
-     .s_axi_arlen('d0), //fix to 1 beat always for hawk now
+     .s_axi_arlen(8'd0), //fix to 1 beat always for hawk now
      .s_axi_arsize(`HACD_AXI4_BURST_SIZE),
      .s_axi_arburst(`HACD_AXI4_BURST_TYPE),
-     .s_axi_arlock('d0),
-     .s_axi_arcache('d0),
+     .s_axi_arlock(1'd0),
+     .s_axi_arcache(4'd0),
      .s_axi_arprot(3'b010),
-     .s_axi_arqos('d0),
-     .s_axi_arregion('d0),
-     .s_axi_aruser('d0),
+     .s_axi_arqos(4'd0),
+     .s_axi_arregion(4'd0),
+     .s_axi_aruser(11'd0),
      .s_axi_arvalid(rd_reqpkt.arvalid),
      .s_axi_arready(rd_rdypkt.arready),
-     .s_axi_rid('d0),
+     .s_axi_rid(6'd0),//in-order for now
      .s_axi_rdata(rd_resppkt.rdata),
      .s_axi_rresp(rd_resppkt.rresp),
      .s_axi_rlast(rd_resppkt.rlast),
