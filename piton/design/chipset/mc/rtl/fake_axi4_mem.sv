@@ -68,7 +68,10 @@ begin
 			  		@(posedge clk);
 					  if(wr_bus.axi_wvalid==1'b1) begin //change below simple logic using mask to supprot byte level wdata control 
 
-						MEM[capt_addr][bt_cnt_wr]= MEM[capt_addr][bt_cnt_wr] | (wr_bus.axi_wdata & mask);
+						//MEM[capt_addr][bt_cnt_wr]= MEM[capt_addr][bt_cnt_wr] | (wr_bus.axi_wdata & mask);
+						for(int b=0;b<32;b++) begin
+						  if(wr_bus.axi_wstrb[b]) MEM[capt_addr][bt_cnt_wr][8*b+:8] = wr_bus.axi_wdata[8*b+:8];
+						end
 					  	$display("AXI4_MEM:Observed WR TXN: ADDR:%h,DATA:%h,mask:%h",capt_addr,wr_bus.axi_wdata,wr_bus.axi_wstrb);
 						
 					
@@ -101,6 +104,10 @@ begin
 					capt_addr = rd_bus.axi_araddr;
 					capt_id=rd_bus.axi_arid;
 					$display("AXI4_MEM:Observed RD TXN: ADDR:%h,",capt_addr);
+					if(!MEM.exists(capt_addr)) begin
+					    MEM[capt_addr][0] ='d0;	
+					    MEM[capt_addr][1] ='d0;	
+					end
 			  		rd_bus.axi_arready <=0;
 					rd_beat_cnt=rd_bus.axi_arlen+1;
 					temp_beat_cnt=0;
@@ -185,11 +192,12 @@ endfunction
 `define SIZE2 128
 `define SIZE3 192
 `define LSTSIZE1 128
-function bit dump_mem_func();
+function automatic bit dump_mem_func();
+input int cnt;
 bit [255:0] cacheline,reverseswap;
 AttEntry attentry[4];
 ListEntry lstentry[2];
-int att_cnt=1,lst_enry_id=1;
+int att_cnt=cnt,lst_enry_id=cnt;
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
@@ -247,7 +255,7 @@ initial
 begin
 forever begin
 	@(posedge clk);
-		if(!dump_mem_dly && dump_mem) dump_mem_func();
+		if(!dump_mem_dly && dump_mem) dump_mem_func(1);
 end
 
 end
@@ -256,7 +264,7 @@ end
 
 final begin
   $display("FINAL STATE of DRAM");
-  dump_mem_func();
+  dump_mem_func(1);
 end
 
 

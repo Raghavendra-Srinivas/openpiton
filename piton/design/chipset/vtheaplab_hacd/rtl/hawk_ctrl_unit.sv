@@ -77,8 +77,9 @@ begin
 	n_init_att=init_att;
 	n_init_list=init_list;
 	n_lkup_reqpkt=lkup_reqpkt;//we need to latch lookup request till serviced
-	n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;//we need latch ppa till tbl update is done
-	n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;//we need latch ppa till tbl update is done
+	n_lkup_reqpkt.lookup=1'b0;
+	n_hawk_cpu_ovrd_wrpkt.ppa=hawk_cpu_ovrd_wrpkt.ppa;//we need latch ppa till tbl update is done
+	n_hawk_cpu_ovrd_rdpkt.ppa=hawk_cpu_ovrd_rdpkt.ppa;//we need latch ppa till tbl update is done
 	n_hawk_cpu_ovrd_wrpkt.allow_access=1'b0; //this woudl be asserted in diffrent states bsed on case
 	n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0; //this woudl be asserted in diffrent states bsed on case
 	
@@ -131,8 +132,8 @@ begin
 				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b1;
 
 			              //drop lookup request
-				      n_lkup_reqpkt.lookup=1'b0;
-			              n_lkup_reqpkt.hppa='d0;
+				      //n_lkup_reqpkt.lookup=1'b0;
+			              //n_lkup_reqpkt.hppa='d0;
 	 
 				      n_state<=CHK_WR_ACTIVE;
 				end
@@ -150,8 +151,8 @@ begin
 				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b1;
 
 			              //drop lookup request
-				      n_lkup_reqpkt.lookup=1'b0;
-			              n_lkup_reqpkt.hppa='d0;
+				      //n_lkup_reqpkt.lookup=1'b0;
+			              //n_lkup_reqpkt.hppa='d0;
 
 				      n_state<=CHK_RD_ACTIVE;
 				end

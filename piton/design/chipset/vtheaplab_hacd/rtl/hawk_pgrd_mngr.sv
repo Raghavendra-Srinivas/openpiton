@@ -26,6 +26,11 @@ module hawk_pgrd_mngr (
   output pgrd_mngr_ready
 );
 
+  //in waves, not able to obseves struct ports, so mapping for easier debug
+  wire lookup;
+  wire [`HACD_AXI4_ADDR_WIDTH-1:12] lookup_hppa;
+  assign lookup=lkup_reqpkt.lookup;
+  assign lookup_hppa=lkup_reqpkt.hppa;
 
   wire [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;	
   wire [clogb2(LST_ENTRY_MAX)-1:0] freeLstTail;
@@ -67,7 +72,7 @@ function axi_rd_pld_t get_axi_rd_pkt;
 		   //we get incremnt of 1 for every 8 incrments of hppa.
 		   //and we need to multiply that quantity by 64(<<6) (as cacheline
 		   //size is 64bytes
-		 get_axi_rd_pkt.addr = HAWK_ATT_START + ((attEntryId >> 3) << 6);//map hppa to att cache line address
+		 get_axi_rd_pkt.addr = HAWK_ATT_START + (((attEntryId-1) >> 3) << 6);//map hppa to att cache line address
         end
 	else if (p_state == POP_FREE_LST ) begin
 		 //generate address which does pop from free list referenced
@@ -79,7 +84,7 @@ endfunction
 
 //function  decode_AttEntry
 function trnsl_reqpkt_t decode_AttEntry;
-	input logic [47:0] hppa;
+	input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
  	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 	integer i;
         AttEntry att_entry[8];
@@ -116,10 +121,10 @@ function tol_updpkt_t get_Tolpkt;
 		 //one block contains 4 lsit entries, we need to pcik the one
 		 //pointed by freeLstHead
 		 case(freeLstHead[1:0])
-			2'b00:	list_entry = rdata[127:0];
-			2'b01:	list_entry = rdata[255:128];
-			2'b10:	list_entry = rdata[383:256];
-			2'b11:	list_entry = rdata[511:384];
+			2'b01:	list_entry = rdata[127:0];
+			2'b10:	list_entry = rdata[255:128];
+			2'b11:	list_entry = rdata[383:256];
+			2'b00:	list_entry = rdata[511:384];
 		 endcase
 		 get_Tolpkt.lstEntry=list_entry;
 	
@@ -131,6 +136,7 @@ endfunction
 wire arready,rready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
+assign arvalid=rd_reqpkt.arvalid;
 
 logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -152,15 +158,16 @@ always@* begin
 	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
 	n_rdata=p_rdata;
-	n_trnsl_reqpkt='d0;
+	n_trnsl_reqpkt.allow_access=1'b0;
+	n_tol_updpkt.tbl_update=1'b0;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
 			//initial values on required variables as
 			//needed
-			if      (lkup_reqpkt.lookup && !p_trnsl_reqpkt.allow_access) begin 
+			if      (lkup_reqpkt.lookup /*&& !p_trnsl_reqpkt.allow_access*/) begin 
 				//For ATT lookup, we need to have attEntryId to
-				n_attEntryId=lkup_reqpkt.hppa-HPPA_BASE_ADDR;
+				n_attEntryId=lkup_reqpkt.hppa-(HPPA_BASE_ADDR>>12)+1; //entry id starts from 1
 				n_state=LOOKUP_ATT;
 			end
 			//handle other modes below
@@ -210,20 +217,18 @@ always@* begin
 		end
 		WAIT_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
-				     n_rdata=rdata; 
+				     n_rdata=get_8byte_byteswap(rdata); 
 				     n_state = ALLOCATE_PPA;
 			  end
 		end
 
 		ALLOCATE_PPA: begin //this stae, we get ppa from freelist and also prepare att & tol updte packet taht is sent pgwr_manager
-			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this 
 				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,p_rdata,p_state); //freelisthead tells, which tol entry we need
 			   	     if(pgwr_mngr_ready) begin
 				     	n_tol_updpkt.tbl_update=1'b1;
 				     	n_state = IDLE;
 				     end
 				     else n_state = TBL_UPDATE;	
-			   end
 		end
 		TBL_UPDATE:begin
 			   //we can deliver packet to PWM only if it's ready
@@ -250,21 +255,24 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
-		
+		p_attEntryId <= 'd0;		
 		p_axireq.addr <= HAWK_ATT_START; 
 		p_req_arvalid <= 1'b0;
 		p_rready <= 1'b0;
+		p_rdata <='d0;
 
 		p_trnsl_reqpkt<='d0;
 		p_tol_updpkt <='d0;
 	end
 	else begin
  		p_state <= n_state;	
+		p_attEntryId <= n_attEntryId;		
 
 		//Axi signals
 		p_axireq.addr <= n_axireq.addr;
 		p_req_arvalid <= n_req_arvalid ;
 		p_rready <= n_rready;
+		p_rdata <=n_rdata;
 
 		//Tranalstion Request : It can be att hit or tbl update
 		p_trnsl_reqpkt<=n_trnsl_reqpkt;

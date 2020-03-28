@@ -314,7 +314,7 @@ logic allow_cpu_access,allow_cpu_access_next;
         m_axi_awuser_reg <= m_axi_awuser_next;
     end
     //hawk req packet
-    assign cpu_reqpkt.hppa  = m_axi_awaddr_reg[59:12]; //4KB aligned
+    assign cpu_reqpkt.hppa  = m_axi_awaddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
     assign cpu_reqpkt.valid = (state_reg==STATE_WAIT);//s_read_access_vld_reg;
 end else begin
     // bypass AW channel

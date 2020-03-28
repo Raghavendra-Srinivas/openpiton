@@ -37,6 +37,7 @@ module hacd_core (
    hacd_pkg::axi_wr_rdypkt_t wr_rdypkt;
    hacd_pkg::axi_wr_reqpkt_t wr_reqpkt;
    hacd_pkg::axi_wr_resppkt_t wr_resppkt;
+   wire tbl_update_done;
    //
    hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
    //
@@ -70,7 +71,7 @@ hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
     /*hawk interface*/
     .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_rdpkt),
     .cpu_reqpkt(cpu_rd_reqpkt),
-    .hawk_inactive(1'b1), //disabling for now 
+    .hawk_inactive(1'b0), //disabling for now 
 
     /*
      * AXI slave interface
@@ -133,7 +134,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     /*hawk interface*/
     .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_wrpkt),
     .cpu_reqpkt(cpu_wr_reqpkt),
-    .hawk_inactive(1'b1), //disabling for now 
+    .hawk_inactive(1'b0), //disabling for now 
  
     /*
      * AXI slave interface
@@ -209,7 +210,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
      .s_axi_aruser(11'd0),
      .s_axi_arvalid(rd_reqpkt.arvalid),
      .s_axi_arready(rd_rdypkt.arready),
-     .s_axi_rid(6'd0),//in-order for now
+     .s_axi_rid(),//in-order for now
      .s_axi_rdata(rd_resppkt.rdata),
      .s_axi_rresp(rd_resppkt.rresp),
      .s_axi_rlast(rd_resppkt.rlast),
@@ -283,7 +284,6 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
      //assign mc_axi_wr_bus.axi_wid='d0;
       
   
-   wire tbl_update_done;
    //controls from cu to cpu master
    //hawk main control unit
    hawk_ctrl_unit #() u_hawk_cu 

@@ -5,7 +5,7 @@
 `include "hacd_define.vh"
 import hacd_pkg::*;
 `define FSM_WID 4
-module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=1) (
+module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
 
   input clk_i,
   input rst_ni,
@@ -27,6 +27,7 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=1) (
   output logic init_att_done, 
   output logic init_list_done,
   output logic pgwr_mngr_ready,
+  output wire tbl_update_done,
 
   output wire dump_mem  //this is used to help in  DV sims to dump mem when desired during different phase during same sims
 );
@@ -37,6 +38,24 @@ logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListTail,freeListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListHead,uncompListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListTail,uncompListTail;
 
+wire tbl_update;
+wire [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
+wire [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
+wire [1:0] src_list; //from which source we are removing this entry
+wire [1:0] dst_list; //to which list , we are moving this entry
+wire [127:114] rsvd; 
+wire [113:64] way;
+wire [63:32] prev;
+wire [31:0] next;
+
+assign tbl_update=tol_updpkt.tbl_update;
+assign attEntryId=tol_updpkt.attEntryId;
+assign tolEntryId=tol_updpkt.tolEntryId;
+assign src_list=tol_updpkt.src_list;
+assign dst_list=tol_updpkt.dst_list;
+assign way=tol_updpkt.lstEntry.way;
+assign prev=tol_updpkt.lstEntry.prev;
+assign next=tol_updpkt.lstEntry.next;
 
 //fsm variables  
 logic [clogb2(ATT_ENTRY_MAX):0] p_etry_cnt,n_etry_cnt;  //serves as entry id
@@ -69,14 +88,20 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	logic [63:0] ppa;
 
 	bit [511:0] data;
+	bit [63:0] wstrb;
 	//axi_wr_pld_t get_axi_wr_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
 	get_axi_wr_pkt.strb ='d0;
 	get_axi_wr_pkt.data ='d0;
 	lst_entry.rsvd = 'd0;
-	
-	ppa = (HAWK_PPA_START>>12)+ etry_cnt; //(ppa  & ~(64'hFFF))+ 64'h1000; //incremnt by 4KB for ppa
+
+        if(etry_cnt=='d0) begin
+	   ppa = (HAWK_PPA_START>>12);
+	end
+	else begin	
+	   ppa = (HAWK_PPA_START>>12)+ etry_cnt; //incremnt by 4KB for ppa
+	end
 	//optimization, 
 	//if we are in Init mode, we can send entire wstrb once, as we know
 	//data for entire cache line 
@@ -100,13 +125,13 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		    
 		    i= (etry_cnt[2:0] == 3'b000) ? 'd7: (etry_cnt[2:0]-1);
 		    data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts};
-		    get_axi_wr_pkt.strb[i*8+:8]={8{1'b1}};
+		    wstrb[i*8+:8]={8{1'b1}};
 		    
 		   //for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
 		   // att_entry.way=ppa+i; 
 		   // data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
 	           //end
-		   //get_axi_wr_pkt.strb = {64{1'b1}};
+		   //wstrb = {64{1'b1}};
         end
 	else if (p_state == INIT_LIST ) begin
 		   if (etry_cnt[1:0] == 2'b01) begin
@@ -121,24 +146,25 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		    lst_entry.next = etry_cnt + 1;
 		    if (etry_cnt[1:0] == 2'b01) begin
 		    	data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_wr_pkt.strb[15:0] ={16{1'b1}};
+		        wstrb[15:0] ={16{1'b1}};
 		    end
 		    else if  (etry_cnt[1:0] == 2'b10) begin
 		    	data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_wr_pkt.strb[31:16] ={16{1'b1}};
+		        wstrb[31:16] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b11) begin
 		    	data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_wr_pkt.strb[47:32] ={16{1'b1}};
+		        wstrb[47:32] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b00) begin
 		    	data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
-		        get_axi_wr_pkt.strb[63:48] ={16{1'b1}};
+		        wstrb[63:48] ={16{1'b1}};
 		    end
 	end
 	//Test byte swap/endianess of riscv core
 	//data=511'h0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF;
  	get_axi_wr_pkt.data = get_8byte_byteswap(data); //511'h0123456789ABCDEF;		
+	get_axi_wr_pkt.strb = get_strb_swap(wstrb);		
 endfunction
 
 
@@ -148,16 +174,19 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input state_t p_state;
         input hacd_pkg::hawk_tol_ht_t tol_HT;
 	integer i;
+	bit [511:0] data;
+	bit [63:0] wstrb;
         AttEntry att_entry='d0;
 	ListEntry next_lst_entry='d0; //for pop
 	ListEntry my_lst_entry='d0; //for push
 	
 	att_entry.way='d0;
+	att_entry.sts=STS_DALLOC;
 	get_tbl_axi_wrpkt.data='d0;
 	get_tbl_axi_wrpkt.strb='d0;
 	
 	if (p_state==ATT_UPDATE) begin
-		get_tbl_axi_wrpkt.addr=HAWK_ATT_START + ((tbl_updat_pkt.attEntryId >> 3) << 6);
+		get_tbl_axi_wrpkt.addr=HAWK_ATT_START + (((tbl_updat_pkt.attEntryId-1) >> 3) << 6);
 		att_entry.zpd_cnt='d0;
 		att_entry.way=tbl_updat_pkt.lstEntry.way;  //list way would go into att_entry.way field for allocation
 		
@@ -168,8 +197,8 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		//Which 64 bit we need to send this.
 		//case(attEntryId[2:0])
 		i=(tbl_updat_pkt.attEntryId[2:0] == 3'b000)?'d7:(tbl_updat_pkt.attEntryId[2:0]-1);
-		get_tbl_axi_wrpkt.data[64*i+:64]=att_entry;
-		get_tbl_axi_wrpkt.strb[8*i+:8]={8{1'b1}};
+		data[64*i+:64]=att_entry;
+		wstrb[8*i+:8]={8{1'b1}};
 	end
 	else if (p_state==TOL_SLST_UPDATE) begin  //POP FREE LIST , POP entry from head is same as updating prev of next entry to head, then update head to that
 
@@ -179,21 +208,22 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		//Change next entries content
 		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.next-1) >> 2) << 6);
 	
-		next_lst_entry.prev=tbl_updat_pkt.lstEntry.prev; //only prev changes, remaining remains same
 		//Which entry we shoudl change in cacheline
-		i=(tbl_updat_pkt.lstEntry.next[1:0]-1);
-		get_tbl_axi_wrpkt.data[128*i+:32]=next_lst_entry.prev; //pointers are 32 bits
-		get_tbl_axi_wrpkt.strb[16*i+:4]={4{1'b1}}; //pointers are 4 bytes
+		i= (tbl_updat_pkt.lstEntry.next[1:0] == 2'b00 ) ? 3 : (tbl_updat_pkt.lstEntry.next[1:0]-1);
+		data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
+		wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
 	end
 	else if (p_state==TOL_DLST_UPDATE) begin //PUSH BACK on tail of UNCOMPRESSED LIST
-		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry-1) >> 2) << 6);
+		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 	
 		my_lst_entry.prev= tol_HT.uncompListTail;	
 		my_lst_entry.next= 'd0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
-		i=(tbl_updat_pkt.tolEntryId[1:0]-1);
-		get_tbl_axi_wrpkt.data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-		get_tbl_axi_wrpkt.strb[16*i+:8]={8{1'b1}};
+		i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+		data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+		wstrb[16*i+:8]={8{1'b1}};
 	end
+ 	get_tbl_axi_wrpkt.data = get_8byte_byteswap(data); //511'h0123456789ABCDEF;
+	get_tbl_axi_wrpkt.strb = get_strb_swap(wstrb);		
 endfunction
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
@@ -283,7 +313,7 @@ always@* begin
 				     n_state = WAIT_LIST;
 				  end
 				  else begin
-					n_freeListHead=p_etry_cnt; //-'d1;
+					n_freeListTail=p_etry_cnt-'d1;
 				        n_init_list_done = 1'b1;		  
 					n_state = IDLE;
 				  end
@@ -336,7 +366,13 @@ always@* begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     //Update DLST HEAD/TAIL
 				     if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
-					n_uncompListTail=p_tol_updpkt.lstEntry; //I will become the tail	
+					if   (uncompListHead == uncompListTail) begin//If I was null, update both , tail and head to first entry
+						n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
+						n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
+					end
+					else begin
+						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
+					end
 				     end //handle other cases later
 				     n_req_wvalid = 1'b1;
 				     n_state = TBL_UPDATE_WAIT_RESP;
@@ -350,7 +386,7 @@ always@* begin
 	endcase
 end
 
- 
+assign tbl_update_done = (p_state == TBL_UPDATE_WAIT_RESP) && bresp_cmplt;
 
 
 //state register/output flops

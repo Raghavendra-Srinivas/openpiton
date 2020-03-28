@@ -150,6 +150,7 @@ always@* begin
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
                 s_axi_arready_next = 1'b0;
+		m_axi_araddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_reg[11:0]};
                 if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
                     m_axi_arvalid_next = 1'b1;
                     n_state = STATE_IDLE;
@@ -183,7 +184,7 @@ assign s_axi_ruser = m_axi_ruser;
 assign s_axi_rvalid = m_axi_rvalid;
 
 //Store the request from CPU 
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (rst) begin
             p_state <= STATE_IDLE;
             m_axi_arvalid_reg <= 1'b0;
@@ -207,7 +208,14 @@ assign s_axi_rvalid = m_axi_rvalid;
 	//s_read_access_vld_reg<=1'b0;
         
 	m_axi_arid_reg <= m_axi_arid_next;
-        m_axi_araddr_reg <= (hawk_cpu_ovrd_pkt.allow_access & !hawk_inactive) ? {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]} : m_axi_araddr_next;
+
+	//if(allow_cpu_access & !hawk_inactive) begin
+        //   m_axi_araddr_reg <= {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]};
+	//end
+	//else begin
+           m_axi_araddr_reg <= m_axi_araddr_next;
+	//end
+
         m_axi_arlen_reg <= m_axi_arlen_next;
         m_axi_arsize_reg <= m_axi_arsize_next;
         m_axi_arburst_reg <= m_axi_arburst_next;
@@ -235,7 +243,7 @@ assign s_axi_rvalid = m_axi_rvalid;
     assign s_axi_arready = s_axi_arready_reg;
 
     //hawk req packet
-    assign cpu_reqpkt.hppa  = m_axi_araddr_reg[59:12]; //4KB aligned
+    assign cpu_reqpkt.hppa  = m_axi_araddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
     assign cpu_reqpkt.valid = (p_state==STATE_WAIT);//s_read_access_vld_reg;
 
 endmodule

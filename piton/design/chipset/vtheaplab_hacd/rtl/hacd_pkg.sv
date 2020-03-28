@@ -18,12 +18,12 @@ package hacd_pkg;
   
 
     //default values for page tables start and end
-    parameter bit [63:0] HAWK_ATT_START=64'hFFF6100000; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START=64'hFFF6200000; 
-    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000-64'h1000;
+    parameter bit [63:0] HAWK_ATT_START=  64'hFFF6100000; //64'h80000000;
+    parameter bit [63:0] HAWK_LIST_START= 64'hFFF6110000; 
+    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6120000;
 
-    parameter bit [63:0] DDR_START_ADDR= 64'h80000000;
-    parameter bit [63:0] HPPA_BASE_ADDR= DDR_START_ADDR;
+    parameter bit [63:0] DDR_START_ADDR=  64'h80000000;
+    parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6140000; //for DV //DDR_START_ADDR;
 
     parameter int BLK_SIZE=64;
     parameter int ATT_ENTRY_SIZE=8;
@@ -38,7 +38,7 @@ package hacd_pkg;
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
     parameter int ATT_ENTRY_CNT=8; // lower count for verification //update later
-    parameter int LIST_ENTRY_CNT=4; // update later
+    parameter int LIST_ENTRY_CNT=8; // update later
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
@@ -132,32 +132,33 @@ package hacd_pkg;
  //packets for interaction between cu, rd and write managers
 
  typedef struct packed {
- 	logic [47:0] hppa;
+ 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
 	logic lookup;
  } att_lkup_reqpkt_t;
 
  //below packet is used for  
  typedef struct packed {
-	logic [47:0] ppa;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 	logic [1:0] sts;
 	logic allow_access;
  } trnsl_reqpkt_t;
 
 	
- typedef enum {FREE,UNCOMP,COMP,INCOMP} LIST_NAME;
+ //typedef enum {FREE,UNCOMP,COMP,INCOMP} LIST_NAME;
+ localparam [1:0] FREE='d0, UNCOMP='d1,COMP='d2,INCOMP='d3;
  typedef struct packed {
 	logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 	logic [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
 	ListEntry lstEntry;
-	LIST_NAME src_list; //from which source we are removing this entry
-	LIST_NAME dst_list; //to which list , we are moving this entry
+	logic [1:0] src_list; //from which source we are removing this entry
+	logic [1:0] dst_list; //to which list , we are moving this entry
 	//logic [47:0] ppa;
 	logic tbl_update;
  } tol_updpkt_t;
 
 
  typedef struct packed {
-	logic [47:0] hppa;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
 	logic valid;
  } cpu_reqpkt_t;
 
@@ -189,7 +190,23 @@ function bit [511:0] get_8byte_byteswap;
 		end
 		get_8byte_byteswap[(64*i)+:64]=swappedEightByte;
 	end	
-endfunction 
+endfunction
+function bit [63:0] get_strb_swap;
+	input bit [63:0] data;
+	integer i,j;
+	bit [7:0] eightByte,swappedEightByte;
+
+  	for(i=0;i<8;i=i+1) begin //8*8bytes = 64bytes per cacheline
+		//Take first 8byte
+		eightByte = data[(8*i)+:8];
+		//within 8byte swap bytes
+		for(j=0;j<8;j=j+1) begin //byteswap in each 8bytes 
+			swappedEightByte[1*j+:1] = eightByte[(7-1*j)-:1];
+		end
+		get_strb_swap[(8*i)+:8]=swappedEightByte;
+	end	
+endfunction
+ 
   //generic helper functions
   function integer clogb2;
       input [31:0] value;
