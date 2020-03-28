@@ -88,7 +88,8 @@ begin
 			forever begin
 			  rd_bus.axi_arready <=1;
 			  rd_bus.axi_rvalid<=0;
-			  rd_bus.axi_rresp<=0;
+			  rd_bus.axi_rresp<='dx;
+			  rd_bus.axi_ruser<='dx;
 			  rd_bus.axi_rdata<='dx;
 			  rd_bus.axi_rlast<=0;
 			  rd_bus.axi_rid<='dx;
@@ -106,14 +107,16 @@ begin
 					while(temp_beat_cnt<rd_beat_cnt) begin
 						@(posedge clk); //add timeput if required later
 						rd_bus.axi_rvalid<=0;
-						rd_bus.axi_rdata<='dx;
-			  			rd_bus.axi_rresp<='dx;
+						rd_bus.axi_rdata<='d0;
+			  			rd_bus.axi_rresp<='d0;
+			  			rd_bus.axi_ruser<='d0;
 						rd_bus.axi_rlast<=0;
-			  			rd_bus.axi_rid<='dx;
+			  			rd_bus.axi_rid<='d0;
 						if(rd_bus.axi_rready==1'b1) begin
 							$display("AXI4_MEM:Observed RREADY for : ADDR:%h,",capt_addr);
 							rd_bus.axi_rvalid<=1; 
 			  				rd_bus.axi_rresp<=0;
+			  				rd_bus.axi_ruser<='d0;
 			  				rd_bus.axi_rid<=capt_id;
 							rd_bus.axi_rdata<=MEM[capt_addr][temp_beat_cnt];
 							temp_beat_cnt = temp_beat_cnt +1;
@@ -123,8 +126,10 @@ begin
 					end//while
 					@(posedge clk);
 					rd_bus.axi_rvalid<=0;
-					rd_bus.axi_rdata<='dx;
-			  		rd_bus.axi_rresp<='dx;
+					rd_bus.axi_rdata<='d0;
+			  		rd_bus.axi_rresp<='d0;
+			  		rd_bus.axi_ruser<='d0;
+			  		rd_bus.axi_rid<='d0;
 					rd_bus.axi_rlast<=0;
 				end
 			end
@@ -140,12 +145,14 @@ initial begin
 		forever begin
 		      //@(posedge clk);
 				wr_bus.axi_bvalid<=1'b0;
+				wr_bus.axi_buser<='d0;
 		      wait(wrreq_queue.size()>0);
 			//Have random delay here for robusting later	
 			@(posedge clk);
 				   $display("AXI4 FAKE MEM : Sending Bresp  =%t",$time);
 				   wr_bus.axi_bid<=wrreq_queue.pop_front();	
 				   wr_bus.axi_bresp<='d0;
+				   wr_bus.axi_buser<='d0;
 				   wr_bus.axi_bvalid<=1'b1;
 				  //we should remain asserted till we see
 				  //bready high on posedge from master
@@ -158,12 +165,28 @@ initial begin
 end
 
 
+function bit [255:0] get_unswapped_line;
+	input bit [255:0] line;
+	integer i,j;
+	bit [63:0] eightByte,swappedEightByte;
+
+  	for(i=0;i<4;i=i+1) begin //4*8bytes = 32bytes per half cacheline
+		//Take first 8byte
+		eightByte = line[(64*i)+:64];
+		//within 8byte swap bytes
+		for(j=0;j<8;j=j+1) begin //byteswap in each 8bytes 
+			swappedEightByte[8*j+:8] = eightByte[(63-8*j)-:8];
+		end
+		get_unswapped_line[(64*i)+:64]=swappedEightByte;
+	end
+endfunction
+
 `define SIZE1 64
 `define SIZE2 128
 `define SIZE3 192
 `define LSTSIZE1 128
 function bit dump_mem_func();
-bit [256:0] cacheline;
+bit [255:0] cacheline,reverseswap;
 AttEntry attentry[4];
 ListEntry lstentry[2];
 int att_cnt=1,lst_enry_id=1;
@@ -172,7 +195,10 @@ foreach(MEM[addr]) begin
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
   begin
     for (int i=0;i<2;i++) begin
-       cacheline=MEM[addr][i];
+       reverseswap=MEM[addr][i];
+       //8byteSwap within 8byte word
+       cacheline=get_unswapped_line(reverseswap);	
+
        attentry[0].zpd_cnt=cacheline[63:57];
        attentry[0].way=cacheline[56:2];
        attentry[0].sts=cacheline[1:0];
@@ -193,7 +219,8 @@ foreach(MEM[addr]) begin
   end//if
   else if ( addr >= HAWK_LIST_START && addr < HAWK_PPA_START) begin
      for (int i=0;i<2;i++) begin
-       cacheline=MEM[addr][i];
+       reverseswap=MEM[addr][i];
+       cacheline=get_unswapped_line(reverseswap);	
        //$display("Half cache line: ADDR:%h: DATA:%h",addr,cacheline);	
        lstentry[0].rsvd=cacheline[127:114];
        lstentry[0].way=cacheline[113:64];
@@ -204,7 +231,7 @@ foreach(MEM[addr]) begin
        lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
        lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
-       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%d || way:%h || prev:%d || next:%d", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%d || way:%h || prev:%h || next:%h", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
 	lst_enry_id = lst_enry_id + 1;
      end //for
    end //for 

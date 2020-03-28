@@ -45,10 +45,16 @@ int main(int argc, char ** argv) {
 
 
   //access ddr
-      addr = (uint64_t*)(HAWK_MEM_BASE);
-      //*addr=(uint32_t) 0x12345678;	
-      printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+   //Read List entries
+
+  //We can access 8 bytes at max on 64bit architecture, so access cacheline 8 times
+  for (int k = 0; k < 8; k++) {
+    addr = (uint64_t*)(HAWK_MEM_BASE+k*0x8);
+    //*addr=(uint64_t) 0xABCDABCD12345678;	
+    printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  }
       	 
+     
 
   printf("Done!\n");
 

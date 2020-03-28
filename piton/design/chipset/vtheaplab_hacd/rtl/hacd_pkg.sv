@@ -174,7 +174,22 @@ package hacd_pkg;
 
 
 
-  //helkper fucntins
+//helper fucntins
+function bit [511:0] get_8byte_byteswap;
+	input bit [511:0] data;
+	integer i,j;
+	bit [63:0] eightByte,swappedEightByte;
+
+  	for(i=0;i<8;i=i+1) begin //8*8bytes = 64bytes per cacheline
+		//Take first 8byte
+		eightByte = data[(64*i)+:64];
+		//within 8byte swap bytes
+		for(j=0;j<8;j=j+1) begin //byteswap in each 8bytes 
+			swappedEightByte[8*j+:8] = eightByte[(63-8*j)-:8];
+		end
+		get_8byte_byteswap[(64*i)+:64]=swappedEightByte;
+	end	
+endfunction 
   //generic helper functions
   function integer clogb2;
       input [31:0] value;

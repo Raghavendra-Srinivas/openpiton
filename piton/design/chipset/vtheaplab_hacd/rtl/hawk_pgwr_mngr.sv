@@ -67,13 +67,15 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	input [63:0] addr;
 	integer i;
 	logic [63:0] ppa;
+
+	bit [511:0] data;
 	//axi_wr_pld_t get_axi_wr_pkt;
         AttEntry att_entry;
 	ListEntry lst_entry;
 	get_axi_wr_pkt.strb ='d0;
 	get_axi_wr_pkt.data ='d0;
 	lst_entry.rsvd = 'd0;
-
+	
 	ppa = (HAWK_PPA_START>>12)+ etry_cnt; //(ppa  & ~(64'hFFF))+ 64'h1000; //incremnt by 4KB for ppa
 	//optimization, 
 	//if we are in Init mode, we can send entire wstrb once, as we know
@@ -97,12 +99,12 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		   end 
 		    
 		    i= (etry_cnt[2:0] == 3'b000) ? 'd7: (etry_cnt[2:0]-1);
-		    get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts};
+		    data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts};
 		    get_axi_wr_pkt.strb[i*8+:8]={8{1'b1}};
 		    
 		   //for (i=0;i<(BLK_SIZE/ATT_ENTRY_SIZE);i++) begin
 		   // att_entry.way=ppa+i; 
-		   // get_axi_wr_pkt.data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
+		   // data[(i*ATT_ENTRY_SIZE*BYTE)+:ATT_ENTRY_SIZE*BYTE] = {att_entry.zpd_cnt,att_entry.way,att_entry.sts}; 
 	           //end
 		   //get_axi_wr_pkt.strb = {64{1'b1}};
         end
@@ -118,23 +120,28 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
 		    lst_entry.next = etry_cnt + 1;
 		    if (etry_cnt[1:0] == 2'b01) begin
-		    	get_axi_wr_pkt.data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        get_axi_wr_pkt.strb[15:0] ={16{1'b1}};
 		    end
 		    else if  (etry_cnt[1:0] == 2'b10) begin
-		    	get_axi_wr_pkt.data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        get_axi_wr_pkt.strb[31:16] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b11) begin
-		    	get_axi_wr_pkt.data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        get_axi_wr_pkt.strb[47:32] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b00) begin
-		    	get_axi_wr_pkt.data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        get_axi_wr_pkt.strb[63:48] ={16{1'b1}};
-		    end	
+		    end
 	end
+	//Test byte swap/endianess of riscv core
+	//data=511'h0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF;
+ 	get_axi_wr_pkt.data = get_8byte_byteswap(data); //511'h0123456789ABCDEF;		
 endfunction
+
+
 
 function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input tol_updpkt_t tbl_updat_pkt;

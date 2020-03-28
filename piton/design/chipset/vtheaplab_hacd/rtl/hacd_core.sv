@@ -122,6 +122,9 @@ hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
 
 );
 
+assign stall_axi_rd_bus.axi_rid[5]=1'b0;
+assign stall_axi_wr_bus.axi_bid[5]=1'b0;
+
 ///hawk cpu wr stall
 hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .clk(clk_i),
