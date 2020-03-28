@@ -105,11 +105,11 @@ begin
 		end
 		CHK_WR_ACTIVE:begin
 				if      (cpu_wr_reqpkt.valid) begin 
-					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
+					n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
 				  	n_state=WR_LKP_REQ;
 				end
 				else if (cpu_rd_reqpkt.valid) begin
-					n_lkup_reqpkt.hppa=cpu_wr_reqpkt.hppa;	 
+					n_lkup_reqpkt.hppa=cpu_rd_reqpkt.hppa;	 
 				  	n_state=RD_LKP_REQ;
 		  		end
 		end

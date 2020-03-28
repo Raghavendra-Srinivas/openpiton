@@ -203,9 +203,10 @@ foreach(MEM[addr]) begin
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
   begin
     for (int i=0;i<2;i++) begin
-       reverseswap=MEM[addr][i];
+       cacheline=MEM[addr][i];
        //8byteSwap within 8byte word
-       cacheline=get_unswapped_line(reverseswap);	
+       //reverseswap=MEM[addr][i];
+       //cacheline=get_unswapped_line(reverseswap);	
 
        attentry[0].zpd_cnt=cacheline[63:57];
        attentry[0].way=cacheline[56:2];
@@ -227,8 +228,9 @@ foreach(MEM[addr]) begin
   end//if
   else if ( addr >= HAWK_LIST_START && addr < HAWK_PPA_START) begin
      for (int i=0;i<2;i++) begin
-       reverseswap=MEM[addr][i];
-       cacheline=get_unswapped_line(reverseswap);	
+       cacheline=MEM[addr][i];
+       //reverseswap=MEM[addr][i];
+       //cacheline=get_unswapped_line(reverseswap);	
        //$display("Half cache line: ADDR:%h: DATA:%h",addr,cacheline);	
        lstentry[0].rsvd=cacheline[127:114];
        lstentry[0].way=cacheline[113:64];

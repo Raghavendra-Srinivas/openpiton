@@ -150,8 +150,8 @@ always@* begin
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
                 s_axi_arready_next = 1'b0;
-		m_axi_araddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_reg[11:0]};
                 if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
+		    m_axi_araddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_reg[11:0]};
                     m_axi_arvalid_next = 1'b1;
                     n_state = STATE_IDLE;
                 end 
@@ -195,36 +195,37 @@ assign s_axi_rvalid = m_axi_rvalid;
             p_state <= n_state;
             m_axi_arvalid_reg <= m_axi_arvalid_next;
             s_axi_arready_reg <= s_axi_arready_next;
+
+	   if(hawk_cpu_ovrd_pkt.allow_access) begin
+	      allow_cpu_access<=1'b1;
+	   end
+	   else begin 
+	      allow_cpu_access<=allow_cpu_access_next;
+	   end
         end
+           //if(s_read_access_vld)
+	   //s_read_access_vld_reg<=1'b1;
+	   //else if(hawk_cpu_ovrd_pkt.allow_access)
+	   //s_read_access_vld_reg<=1'b0;
+           
+	   m_axi_arid_reg <= m_axi_arid_next;
 
-	if(hawk_cpu_ovrd_pkt.allow_access)
-	   allow_cpu_access<=1'b1;
-	else 
-	   allow_cpu_access<=allow_cpu_access_next;
+	   //if(allow_cpu_access & !hawk_inactive) begin
+           //   m_axi_araddr_reg <= {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]};
+	   //end
+	   //else begin
+              m_axi_araddr_reg <= m_axi_araddr_next;
+	   //end
 
-        //if(s_read_access_vld)
-	//s_read_access_vld_reg<=1'b1;
-	//else if(hawk_cpu_ovrd_pkt.allow_access)
-	//s_read_access_vld_reg<=1'b0;
-        
-	m_axi_arid_reg <= m_axi_arid_next;
-
-	//if(allow_cpu_access & !hawk_inactive) begin
-        //   m_axi_araddr_reg <= {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]};
-	//end
-	//else begin
-           m_axi_araddr_reg <= m_axi_araddr_next;
-	//end
-
-        m_axi_arlen_reg <= m_axi_arlen_next;
-        m_axi_arsize_reg <= m_axi_arsize_next;
-        m_axi_arburst_reg <= m_axi_arburst_next;
-        m_axi_arlock_reg <= m_axi_arlock_next;
-        m_axi_arcache_reg <= m_axi_arcache_next;
-        m_axi_arprot_reg <= m_axi_arprot_next;
-        m_axi_arqos_reg <= m_axi_arqos_next;
-        m_axi_arregion_reg <= m_axi_arregion_next;
-        m_axi_aruser_reg <= m_axi_aruser_next;
+           m_axi_arlen_reg <= m_axi_arlen_next;
+           m_axi_arsize_reg <= m_axi_arsize_next;
+           m_axi_arburst_reg <= m_axi_arburst_next;
+           m_axi_arlock_reg <= m_axi_arlock_next;
+           m_axi_arcache_reg <= m_axi_arcache_next;
+           m_axi_arprot_reg <= m_axi_arprot_next;
+           m_axi_arqos_reg <= m_axi_arqos_next;
+           m_axi_arregion_reg <= m_axi_arregion_next;
+           m_axi_aruser_reg <= m_axi_aruser_next;
     end
 
     assign m_axi_arid = m_axi_arid_reg;
@@ -244,6 +245,8 @@ assign s_axi_rvalid = m_axi_rvalid;
 
     //hawk req packet
     assign cpu_reqpkt.hppa  = m_axi_araddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
-    assign cpu_reqpkt.valid = (p_state==STATE_WAIT);//s_read_access_vld_reg;
+    wire lookup;
+    assign lookup= (p_state==STATE_WAIT) && !(hawk_cpu_ovrd_pkt.allow_access | allow_cpu_access);
+    assign cpu_reqpkt.valid = lookup;
 
 endmodule

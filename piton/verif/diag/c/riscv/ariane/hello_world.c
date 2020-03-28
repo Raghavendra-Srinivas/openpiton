@@ -17,8 +17,8 @@
 
 #define HACD_BASE    0xfff5100000ULL
 
-#define HPPA_BASE 0xfff6140000ULL
-#define PPA_BASE  0xfff6120000ULL
+#define HPPA_BASE 0xfff6300000ULL
+#define PPA_BASE  0xfff6200000ULL
 
 #define FOURKB 0x1000
 int main(int argc, char ** argv) {
@@ -64,14 +64,16 @@ int main(int argc, char ** argv) {
   //HAWK should have performed redirection, so write shoudl have happened on PPA_BASE 
 
   //Read from HPPA Base
+  addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
+  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
   addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa1
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-  addr = (uint64_t*)(HPPA_BASE+(2*FOURKB)); //hppa2
-  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-  addr = (uint64_t*)(HPPA_BASE+(3*FOURKB)); //hppa3
-  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-  addr = (uint64_t*)(HPPA_BASE+(4*FOURKB)); //hppa4
-  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //addr = (uint64_t*)(HPPA_BASE+(2*FOURKB)); //hppa2
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //addr = (uint64_t*)(HPPA_BASE+(3*FOURKB)); //hppa3
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //addr = (uint64_t*)(HPPA_BASE+(4*FOURKB)); //hppa4
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
  
 
   printf("Done!\n");

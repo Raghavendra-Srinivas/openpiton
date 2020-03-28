@@ -19,11 +19,11 @@ package hacd_pkg;
 
     //default values for page tables start and end
     parameter bit [63:0] HAWK_ATT_START=  64'hFFF6100000; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START= 64'hFFF6110000; 
-    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6120000;
+    parameter bit [63:0] HAWK_LIST_START= 64'hFFF6101000; 
+    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6200000;
 
     parameter bit [63:0] DDR_START_ADDR=  64'h80000000;
-    parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6140000; //for DV //DDR_START_ADDR;
+    parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6300000; //for DV //DDR_START_ADDR;
 
     parameter int BLK_SIZE=64;
     parameter int ATT_ENTRY_SIZE=8;
@@ -189,7 +189,10 @@ function bit [511:0] get_8byte_byteswap;
 			swappedEightByte[8*j+:8] = eightByte[(63-8*j)-:8];
 		end
 		get_8byte_byteswap[(64*i)+:64]=swappedEightByte;
-	end	
+	end
+	
+	//For hawk byteswap does not matter
+		get_8byte_byteswap=data;
 endfunction
 function bit [63:0] get_strb_swap;
 	input bit [63:0] data;
@@ -204,7 +207,9 @@ function bit [63:0] get_strb_swap;
 			swappedEightByte[1*j+:1] = eightByte[(7-1*j)-:1];
 		end
 		get_strb_swap[(8*i)+:8]=swappedEightByte;
-	end	
+	end
+	//For hawk byteswap does not matter
+	get_strb_swap=data;	
 endfunction
  
   //generic helper functions

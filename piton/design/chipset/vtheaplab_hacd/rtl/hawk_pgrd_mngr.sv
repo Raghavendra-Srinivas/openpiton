@@ -183,7 +183,7 @@ always@* begin
 		WAIT_ATT_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
 				if(rresp =='d0) begin
-				     n_rdata=get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
+				     n_rdata= rdata; //get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
 				     n_state = DECODE_ATT_ENTRY;
 				end
 				else n_state = BUS_ERROR;
@@ -217,7 +217,7 @@ always@* begin
 		end
 		WAIT_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
-				     n_rdata=get_8byte_byteswap(rdata); 
+				     n_rdata=rdata; //get_8byte_byteswap(rdata); 
 				     n_state = ALLOCATE_PPA;
 			  end
 		end

@@ -65,18 +65,20 @@ typedef logic [`FSM_WID-1:0] state_t;
 state_t n_state;
 state_t p_state;
 //states
-localparam IDLE			='d0,
-	   INIT_ATT		='d1,
-	   WAIT_ATT		='d2,
-	   INIT_LIST		='d3,
-	   WAIT_LIST		='d4,
-	   ATT_UPDATE		='d5,
-	   WAIT_ATT_UPDATE	='d6,
-	   TOL_SLST_UPDATE	='d7,
-	   WAIT_TOL_SLST_UPDATE ='d8,
-	   TOL_DLST_UPDATE	='d9,
-	   WAIT_TOL_DLST_UPDATE ='d10,
-	   TBL_UPDATE_WAIT_RESP ='d11;
+localparam IDLE			     ='d0,
+	   INIT_ATT		     ='d1,
+	   WAIT_ATT		     ='d2,
+	   INIT_LIST		     ='d3,
+	   WAIT_LIST		     ='d4,
+	   ATT_UPDATE		     ='d5,
+	   WAIT_ATT_UPDATE	     ='d6,
+	   TOL_SLST_UPDATE	     ='d7,
+	   WAIT_TOL_SLST_UPDATE      ='d8,
+	   TOL_DLST_UPDATE1	     ='d9,
+	   WAIT_TOL_DLST_UPDATE1     ='d10,
+	   TOL_DLST_UPDATE2	     ='d11,
+	   WAIT_TOL_DLST_UPDATE2     ='d12,
+	   TBL_UPDATE_WAIT_RESP      ='d13;
 
 
 //helper functions
@@ -96,11 +98,11 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	get_axi_wr_pkt.data ='d0;
 	lst_entry.rsvd = 'd0;
 
-        if(etry_cnt=='d0) begin
+        if(etry_cnt=='d1) begin
 	   ppa = (HAWK_PPA_START>>12);
 	end
 	else begin	
-	   ppa = (HAWK_PPA_START>>12)+ etry_cnt; //incremnt by 4KB for ppa
+	   ppa = (HAWK_PPA_START>>12)+ etry_cnt-1; //incremnt by 4KB for ppa
 	end
 	//optimization, 
 	//if we are in Init mode, we can send entire wstrb once, as we know
@@ -174,8 +176,8 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input state_t p_state;
         input hacd_pkg::hawk_tol_ht_t tol_HT;
 	integer i;
-	bit [511:0] data;
-	bit [63:0] wstrb;
+	bit [511:0] data='d0;
+	bit [63:0] wstrb='d0;
         AttEntry att_entry='d0;
 	ListEntry next_lst_entry='d0; //for pop
 	ListEntry my_lst_entry='d0; //for push
@@ -184,6 +186,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	att_entry.sts=STS_DALLOC;
 	get_tbl_axi_wrpkt.data='d0;
 	get_tbl_axi_wrpkt.strb='d0;
+        wstrb[63:0]= {64{1'b0}};
 	
 	if (p_state==ATT_UPDATE) begin
 		get_tbl_axi_wrpkt.addr=HAWK_ATT_START + (((tbl_updat_pkt.attEntryId-1) >> 3) << 6);
@@ -213,7 +216,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
 		wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
 	end
-	else if (p_state==TOL_DLST_UPDATE) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+	else if (p_state==TOL_DLST_UPDATE1) begin //PUSH BACK on tail of UNCOMPRESSED LIST
 		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 	
 		my_lst_entry.prev= tol_HT.uncompListTail;	
@@ -222,8 +225,15 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
 		wstrb[16*i+:8]={8{1'b1}};
 	end
- 	get_tbl_axi_wrpkt.data = get_8byte_byteswap(data); //511'h0123456789ABCDEF;
-	get_tbl_axi_wrpkt.strb = get_strb_swap(wstrb);		
+	else if (p_state==TOL_DLST_UPDATE2) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.uncompListTail-1) >> 2) << 6);
+	
+		i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
+		data[128*i+:32]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
+		wstrb[16*i+:4]={4{1'b1}};
+	end
+ 	get_tbl_axi_wrpkt.data = data; //get_8byte_byteswap(data); //511'h0123456789ABCDEF;
+	get_tbl_axi_wrpkt.strb = wstrb;//get_strb_swap(wstrb);		
 endfunction
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
@@ -352,28 +362,50 @@ always@* begin
 					n_freeListHead=p_tol_updpkt.lstEntry.next; //my next will become head 	
 				     end //handle other cases later
 				     n_req_wvalid = 1'b1;
-				     n_state = TOL_DLST_UPDATE;
+				     n_state = TOL_DLST_UPDATE1;
 			  end
 		end
-		TOL_DLST_UPDATE: begin
+		TOL_DLST_UPDATE1: begin
 			  if(awready && !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
 				     n_req_awvalid = 1'b1;
-				     n_state = WAIT_TOL_DLST_UPDATE;
+				     n_state = WAIT_TOL_DLST_UPDATE1;
 			  end
 		end
-		WAIT_TOL_DLST_UPDATE: begin
+		WAIT_TOL_DLST_UPDATE1: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     //Update DLST HEAD/TAIL
-				     if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
-					if   (uncompListHead == uncompListTail) begin//If I was null, update both , tail and head to first entry
-						n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
-						n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
-					end
-					else begin
+					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
+					   if   (uncompListTail=='d0) begin//If tail was null, update both , tail and head to first entry
+					   	n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
+					   	n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
+					   end
+				        end	
+				     
+				     n_req_wvalid = 1'b1;
+					//We need update2 for push to change
+					//next of previous entry,I I am not
+					//head
+				     if(uncompListTail!='d0) begin
+				        n_state = TOL_DLST_UPDATE2;
+				     end
+				     else begin
+				        n_state = TBL_UPDATE_WAIT_RESP;
+				     end
+			  end
+		end
+		TOL_DLST_UPDATE2: begin
+			  if(awready && !awvalid) begin
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_req_awvalid = 1'b1;
+				     n_state = WAIT_TOL_DLST_UPDATE2;
+			  end
+		end
+		WAIT_TOL_DLST_UPDATE2: begin
+			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
+					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
 						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
 					end
-				     end //handle other cases later
 				     n_req_wvalid = 1'b1;
 				     n_state = TBL_UPDATE_WAIT_RESP;
 			  end
