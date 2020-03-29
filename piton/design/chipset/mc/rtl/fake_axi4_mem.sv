@@ -198,6 +198,15 @@ bit [255:0] cacheline,reverseswap;
 AttEntry attentry[4];
 ListEntry lstentry[2];
 int att_cnt=cnt,lst_enry_id=cnt;
+
+//Print Current Head and Tail of lists
+$display("--------------------------ToL Head and Tails----------------------------------------------------");
+$display("FreeList HEAD : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListHead[17:0]);
+$display("FreeList TAIL : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListTail[17:0]);
+$display("UncompList HEAD : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListHead[17:0]);
+$display("UncompList TAIL : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListTail[17:0]);
+$display("------------------------------------------------------------------------------------------------");
+
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 

@@ -109,10 +109,13 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	//data for entire cache line 
 	if      (p_state == INIT_ATT) begin
 		   //increment address by 64 (8 entries)
-		   if (etry_cnt[2:0] == 3'b001) begin
-		   	get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+		   if (etry_cnt == 'd1) begin
+		   	get_axi_wr_pkt.addr = HAWK_ATT_START; 
+		   end
+		   else if (etry_cnt[2:0] == 3'b001) begin
+		   	get_axi_wr_pkt.addr = addr + 64'd64; 
 		   end else begin
-		   	get_axi_wr_pkt.addr = addr; //;get_att_addr()
+		   	get_axi_wr_pkt.addr = addr;
 		   end
 		   	
 		   if (p_etry_cnt <= LIST_ENTRY_CNT && PWRUP_UNCOMP==1) begin
@@ -136,10 +139,13 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		   //wstrb = {64{1'b1}};
         end
 	else if (p_state == INIT_LIST ) begin
-		   if (etry_cnt[1:0] == 2'b01) begin
-		   	get_axi_wr_pkt.addr = addr + 64'd64; //;get_att_addr()
+		   if (etry_cnt == 'd1) begin
+		   	get_axi_wr_pkt.addr = HAWK_LIST_START;
+		   end 
+		   else if (etry_cnt[1:0] == 2'b01) begin
+		   	get_axi_wr_pkt.addr = addr + 64'd64; 
 		   end else begin
-		   	get_axi_wr_pkt.addr = addr; //;get_att_addr()
+		   	get_axi_wr_pkt.addr = addr; 
 		   end
 		   
 		   //lst entry
@@ -275,12 +281,12 @@ always@* begin
 			//needed //This handles only one mode at a time.
 			if      (init_att & !init_att_done) begin //wait in same state till table initialiation is done
 				n_state=INIT_ATT;
-				n_axireq.addr = HAWK_ATT_START-64'h40;  
+				n_axireq.addr = HAWK_ATT_START;  
 				n_etry_cnt = 'd1;
 			end
 			else if (init_list & !init_list_done) begin
 				n_state=INIT_LIST;
-				n_axireq.addr = HAWK_LIST_START-64'h40; //We can change this to any address if list tbael does not follow att immediately
+				n_axireq.addr = HAWK_LIST_START; //We can change this to any address if list tbael does not follow att immediately
 				n_etry_cnt = 'd1;
 				n_freeListHead = 'd1;
 			end
@@ -379,19 +385,13 @@ always@* begin
 					   if   (uncompListTail=='d0) begin//If tail was null, update both , tail and head to first entry
 					   	n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
 					   	n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
+				                n_state = TBL_UPDATE_WAIT_RESP;
 					   end
+					   else begin
+				                 n_state = TOL_DLST_UPDATE2;
+				           end
 				        end	
-				     
 				     n_req_wvalid = 1'b1;
-					//We need update2 for push to change
-					//next of previous entry,I I am not
-					//head
-				     if(uncompListTail!='d0) begin
-				        n_state = TOL_DLST_UPDATE2;
-				     end
-				     else begin
-				        n_state = TBL_UPDATE_WAIT_RESP;
-				     end
 			  end
 		end
 		TOL_DLST_UPDATE2: begin
@@ -429,7 +429,7 @@ begin
 		p_etry_cnt <= 'd0;
 
 		//Axi signals
-		p_axireq.addr <= HAWK_ATT_START-64'h40; //'d0;
+		p_axireq.addr <= HAWK_ATT_START; //'d0;
 		p_axireq.data <= 'd0;
 		p_axireq.strb <= 'd0;
 		//p_axireq.bready<=1'b1;
