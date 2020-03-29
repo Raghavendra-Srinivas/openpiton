@@ -37,8 +37,10 @@ package hacd_pkg;
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
-    parameter int ATT_ENTRY_CNT=8; // lower count for verification //update later
-    parameter int LIST_ENTRY_CNT=8; // update later
+    parameter int ATT_ENTRY_CNT=8;  //ATT_ENTRY_MAX // lower count for verification //update later
+    parameter int LIST_ENTRY_CNT=8; //LST_ENTRY_MAX // lower count for verification //update later
+
+    localparam [clogb2(LST_ENTRY_MAX)-1:0] NULL='d0;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
@@ -140,7 +142,7 @@ package hacd_pkg;
  typedef struct packed {
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 	logic [1:0] sts;
-	logic allow_access;
+	bit allow_access;
  } trnsl_reqpkt_t;
 
 	

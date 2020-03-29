@@ -150,8 +150,14 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		   
 		   //lst entry
 		    lst_entry.way = ppa; //(ppa>>12) + 1;
-		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL
-		    lst_entry.next = etry_cnt + 1;
+		    lst_entry.prev = etry_cnt - 1; //entry_count = 0 is initilizaed to 0 and equivalent to NULL (for first entry)
+
+		    if (etry_cnt == LIST_ENTRY_CNT) begin
+		    	lst_entry.next = NULL;
+		    end else begin
+		    	lst_entry.next = etry_cnt + 1;
+		    end
+
 		    if (etry_cnt[1:0] == 2'b01) begin
 		    	data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
 		        wstrb[15:0] ={16{1'b1}};

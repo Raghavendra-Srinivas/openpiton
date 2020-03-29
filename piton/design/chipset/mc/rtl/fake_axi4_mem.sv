@@ -194,19 +194,26 @@ endfunction
 `define LSTSIZE1 128
 function automatic bit dump_mem_func();
 input int cnt;
+input [17:0] freeListHead;
+input [17:0] freeListTail;
+input [17:0] uncompListHead;
+input [17:0] uncompListTail;
+
 bit [255:0] cacheline,reverseswap;
 AttEntry attentry[4];
 ListEntry lstentry[2];
 int att_cnt=cnt,lst_enry_id=cnt;
 
+string listentry_name;
+bit [17:0] prev_free_next,prev_uncomp_next;
+
 //Print Current Head and Tail of lists
 $display("--------------------------ToL Head and Tails----------------------------------------------------");
-$display("FreeList HEAD : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListHead[17:0]);
-$display("FreeList TAIL : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListTail[17:0]);
-$display("UncompList HEAD : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListHead[17:0]);
-$display("UncompList TAIL : %d" ,cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListTail[17:0]);
+$display("  FreeList HEAD : %0d" ,freeListHead);
+$display("  FreeList TAIL : %0d" ,freeListTail);
+$display("UncompList HEAD : %0d" ,uncompListHead);
+$display("UncompList TAIL : %0d" ,uncompListTail);
 $display("------------------------------------------------------------------------------------------------");
-
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
@@ -230,7 +237,13 @@ foreach(MEM[addr]) begin
        attentry[3].way=cacheline[`SIZE3+56:`SIZE3+2];
        attentry[3].sts=cacheline[`SIZE3+1:`SIZE3+0];
      for (int j=0;j<4;j++) begin
-       $display("CACHE/DRAM ADDR: %h ATT_ENTRY->%d || zpd_cnt:%h || way:%h || sts:%h", addr,att_cnt/*4*i+j*/,attentry[j].zpd_cnt,attentry[j].way,attentry[j].sts); //cacheline[(i+1)*64-1:i*64]); 
+        case(attentry[j].sts)
+ 	2'b00: listentry_name="FREE     ";
+ 	2'b01: listentry_name="UCMP     ";
+ 	2'b10: listentry_name="COMP     ";
+ 	2'b11: listentry_name="ICMP     ";
+	endcase
+       $display("CACHE/DRAM ADDR: %h ATT_ENTRY->%s: %0d || zpd_cnt:%0h || way:%0h || sts:%0h", addr,listentry_name,att_cnt/*4*i+j*/,attentry[j].zpd_cnt,attentry[j].way,attentry[j].sts); //cacheline[(i+1)*64-1:i*64]); 
 	att_cnt = att_cnt + 1;
      end //for
     end //for
@@ -250,11 +263,59 @@ foreach(MEM[addr]) begin
        lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
        lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
-       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%d || way:%h || prev:%h || next:%h", addr,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+
+	///Initialize 
+        if (freeListHead==lst_enry_id) begin
+	   prev_free_next=lstentry[j].next;
+	end else if (uncompListHead==lst_enry_id) begin
+	   prev_uncomp_next=lstentry[j].next;
+	end
+	//detect head/tails or head-tail or middle entries
+	if(lstentry[j].prev=='d0 && lstentry[j].next=='d0) begin
+        	if (freeListHead==lst_enry_id) begin
+			listentry_name="FREE_HEAL";
+		end else if  (uncompListHead==lst_enry_id) begin
+			listentry_name="UCMP_HEAL";
+		end
+	end
+	else if(lstentry[j].prev=='d0) begin
+        	if (freeListHead==lst_enry_id) begin
+			listentry_name="FREE_HEAD";
+		        prev_free_next=lstentry[j].next;
+		end else if  (uncompListHead==lst_enry_id) begin
+			listentry_name="UCMP_HEAD";
+		        prev_uncomp_next=lstentry[j].next;
+		end
+        end 
+	else if (lstentry[j].next=='d0) begin
+		if  (freeListTail==lst_enry_id) begin
+			listentry_name="FREE_TAIL";
+		end else if  (uncompListTail==lst_enry_id) begin
+			listentry_name="UCMP_TAIL";
+		end
+        end
+        else begin //middle entries
+		if(prev_free_next==lst_enry_id) begin
+			listentry_name="FREE     ";
+	   		prev_free_next=lstentry[j].next; //update my next
+		end else if(prev_uncomp_next==lst_enry_id) begin
+			listentry_name="UCMP     ";
+	   		prev_uncomp_next=lstentry[j].next; //update my next
+		end
+	end
+
+	 		
+       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%s: %0d || way:%0h || prev: %0d || next:%0d", addr,listentry_name,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+
 	lst_enry_id = lst_enry_id + 1;
      end //for
    end //for 
   end //if
+  else begin //normal data
+    //for (int i=0;i<2;i++) begin
+      //cacheline=MEM[addr][i];
+      $display("CACHE/DRAM ADDR: %0h , Data=%0h", addr, {MEM[addr][1], MEM[addr][0]});
+  end
 end //foreach
   return 1;
 endfunction
@@ -262,11 +323,22 @@ logic dump_mem_dly;
 always@(posedge clk) 
 	dump_mem_dly <= dump_mem;
 
+wire [17:0] freeListHead;
+wire [17:0] freeListTail;
+wire [17:0] uncompListHead;
+wire [17:0] uncompListTail;
+
+assign freeListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListHead[17:0];
+assign freeListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListTail[17:0];
+assign uncompListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListHead[17:0];
+assign uncompListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListTail[17:0];
+
+
 initial
 begin
 forever begin
 	@(posedge clk);
-		if(!dump_mem_dly && dump_mem) dump_mem_func(1);
+		if(!dump_mem_dly && dump_mem) dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail);
 end
 
 end
@@ -275,7 +347,7 @@ end
 
 final begin
   $display("FINAL STATE of DRAM");
-  dump_mem_func(1);
+  dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail);
 end
 
 

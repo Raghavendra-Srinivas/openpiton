@@ -51,6 +51,14 @@ module hawk_ctrl_unit #()
 );
 
 
+//
+wire [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
+wire [1:0] sts;
+wire allow_access;
+
+assign ppa=trnsl_reqpkt.ppa;
+assign sts=trnsl_reqpkt.sts;
+assign allow_access=trnsl_reqpkt.allow_access;
 
 //local variables
 att_lkup_reqpkt_t n_lkup_reqpkt;

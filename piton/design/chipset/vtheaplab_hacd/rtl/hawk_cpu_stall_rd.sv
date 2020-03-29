@@ -203,19 +203,10 @@ assign s_axi_rvalid = m_axi_rvalid;
 	      allow_cpu_access<=allow_cpu_access_next;
 	   end
         end
-           //if(s_read_access_vld)
-	   //s_read_access_vld_reg<=1'b1;
-	   //else if(hawk_cpu_ovrd_pkt.allow_access)
-	   //s_read_access_vld_reg<=1'b0;
            
 	   m_axi_arid_reg <= m_axi_arid_next;
 
-	   //if(allow_cpu_access & !hawk_inactive) begin
-           //   m_axi_araddr_reg <= {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_next[11:0]};
-	   //end
-	   //else begin
-              m_axi_araddr_reg <= m_axi_araddr_next;
-	   //end
+           m_axi_araddr_reg <= m_axi_araddr_next;
 
            m_axi_arlen_reg <= m_axi_arlen_next;
            m_axi_arsize_reg <= m_axi_arsize_next;

@@ -68,6 +68,16 @@ int main(int argc, char ** argv) {
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
   addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa2
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //*addr=(uint64_t) 0xABCDABCD12345678;	
+  //addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa2
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+
+  //addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa2
+  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
 
   //addr = (uint64_t*)(HPPA_BASE+(2*FOURKB)); //hppa2
   //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);

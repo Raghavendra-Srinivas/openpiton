@@ -48,14 +48,13 @@ state_t p_state;
 localparam IDLE			='d0,
 	   LOOKUP_ATT	  	='d1,
 	   WAIT_ATT_ENTRY 	='d2,
-	   CHECK_ATT_ENTRY 	='d3,
-	   DECODE_ATT_ENTRY	='d4,
-	   POP_FREE_LST 	='d5,
-	   WAIT_LST_ENTRY	='d6,
-	   ALLOCATE_PPA 	='d7,
-	   TBL_UPDATE		='d8,
-	   UNCOMPRESS		='d9,
-	   BUS_ERROR		='d10;
+	   DECODE_ATT_ENTRY	='d3,
+	   POP_FREE_LST 	='d4,
+	   WAIT_LST_ENTRY	='d5,
+	   ALLOCATE_PPA 	='d6,
+	   TBL_UPDATE		='d7,
+	   UNCOMPRESS		='d8,
+	   BUS_ERROR		='d9;
 
 //helper functions
 function axi_rd_pld_t get_axi_rd_pkt;
@@ -85,24 +84,18 @@ endfunction
 //function  decode_AttEntry
 function trnsl_reqpkt_t decode_AttEntry;
 	input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
- 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
-	integer i;
-        AttEntry att_entry[8];
-	
-	for(i=0;i<8;i++) begin
-		att_entry[i]=rdata[64*i+:64];
-	end
-	//find which entry in cacheline and mask
-	case(hppa[2:0])
-	 3'b000: begin decode_AttEntry.ppa=att_entry[0].way[49:2];decode_AttEntry.sts=att_entry[0].sts;end
-	 3'b001: begin decode_AttEntry.ppa=att_entry[1].way[49:2];decode_AttEntry.sts=att_entry[1].sts;end
-	 3'b010: begin decode_AttEntry.ppa=att_entry[2].way[49:2];decode_AttEntry.sts=att_entry[2].sts;end
-	 3'b011: begin decode_AttEntry.ppa=att_entry[3].way[49:2];decode_AttEntry.sts=att_entry[3].sts;end
-	 3'b100: begin decode_AttEntry.ppa=att_entry[4].way[49:2];decode_AttEntry.sts=att_entry[4].sts;end
-	 3'b101: begin decode_AttEntry.ppa=att_entry[5].way[49:2];decode_AttEntry.sts=att_entry[5].sts;end
-	 3'b110: begin decode_AttEntry.ppa=att_entry[6].way[49:2];decode_AttEntry.sts=att_entry[6].sts;end
-	 3'b111: begin decode_AttEntry.ppa=att_entry[7].way[49:2];decode_AttEntry.sts=att_entry[7].sts;end
-	endcase	
+	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
+		integer i;
+        	AttEntry att_entry;
+		//defaults
+        	decode_AttEntry.ppa ='d0;
+ 		decode_AttEntry.sts ='d0;
+ 		decode_AttEntry.allow_access =1'b0;
+        	//decode
+		i=hppa[14:12];
+		att_entry=rdata[64*i+:64];
+		decode_AttEntry.ppa=att_entry.way;
+		decode_AttEntry.sts=att_entry.sts;
 endfunction 
 
 function tol_updpkt_t get_Tolpkt;
@@ -191,6 +184,9 @@ always@* begin
 		end
 		DECODE_ATT_ENTRY:begin
 			   n_trnsl_reqpkt=decode_AttEntry(lkup_reqpkt.hppa,p_rdata);
+			   //n_state = CHK_ATT_ENTRY;
+		//end
+	        //CHK_ATT_ENTRY: begin
 			   if     (n_trnsl_reqpkt.sts==STS_UNCOMP || n_trnsl_reqpkt.sts==STS_INCOMP) begin
 					n_state = IDLE; // att_hit: nothing to do 
 					n_trnsl_reqpkt.allow_access=1'b1;
@@ -288,7 +284,15 @@ assign rd_reqpkt.rready =p_rready;
 
 assign trnsl_reqpkt=p_trnsl_reqpkt;
 assign tol_updpkt=p_tol_updpkt;
+// just for debug
+wire [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
+wire [1:0] sts;
+wire debug_allow_access;
 
+assign ppa=trnsl_reqpkt.ppa;
+assign sts=trnsl_reqpkt.sts;
+assign debug_allow_access=trnsl_reqpkt.allow_access;
+//
 wire bus_error;
 assign bus_error = p_state == BUS_ERROR;
 
