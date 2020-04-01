@@ -3,6 +3,7 @@
 //
 `include "hacd_define.vh"
 import hacd_pkg::*;
+import hawk_rd_pkg::*;
 `define FSM_WID_PGRD 4
 module hawk_pgrd_mngr (
 
@@ -34,9 +35,14 @@ module hawk_pgrd_mngr (
 
   wire [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;	
   wire [clogb2(LST_ENTRY_MAX)-1:0] freeLstTail;
+  wire [clogb2(LST_ENTRY_MAX)-1:0] uncompLstHead;	
+  wire [clogb2(LST_ENTRY_MAX)-1:0] uncompLstTail;
 	
   assign freeLstHead=tol_HT.freeListHead;
   assign freeLstTail=tol_HT.freeListTail;
+
+  assign uncompLstHead=tol_HT.uncompListHead;
+  assign uncompLstTail=tol_HT.uncompListTail;
 
 //fsm variables  
 logic p_req_arvalid,n_req_arvalid,p_rready,n_rready;
@@ -53,83 +59,16 @@ localparam IDLE			='d0,
 	   WAIT_LST_ENTRY	='d5,
 	   ALLOCATE_PPA 	='d6,
 	   TBL_UPDATE		='d7,
-	   UNCOMPRESS		='d8,
-	   BUS_ERROR		='d9;
+	   COMPRESS		='d8,
+	   UNCOMPRESS		='d9,
+	   BUS_ERROR		='d10;
 
-//helper functions
-function axi_rd_pld_t get_axi_rd_pkt;
-	input [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;
-	input state_t p_state;
-	input [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
-	integer i;
-        AttEntry att_entry;
-	ListEntry lst_entry;
 
-	if      (p_state == LOOKUP_ATT) begin
-		   //(hppa-HPPA_BASE_ADDR) isn ATT entry ID
-		   //It is hppa adderss minus hppa_base gives AttEntryID. divide by (>>3) as 8 entries can fit in one cache,
-		   //we get incremnt of 1 for every 8 incrments of hppa.
-		   //and we need to multiply that quantity by 64(<<6) (as cacheline
-		   //size is 64bytes
-		 get_axi_rd_pkt.addr = HAWK_ATT_START + (((attEntryId-1) >> 3) << 6);//map hppa to att cache line address
-        end
-	else if (p_state == POP_FREE_LST ) begin
-		 //generate address which does pop from free list referenced
-		 //from free list head
-		 get_axi_rd_pkt.addr = HAWK_LIST_START + (((freeLstHead-1) >> 2) << 6);
-	end
-	//handle other modes later
-endfunction
 
-//function  decode_AttEntry
-function trnsl_reqpkt_t decode_AttEntry;
-	input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
-	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
-		integer i;
-        	AttEntry att_entry;
-		//defaults
-        	decode_AttEntry.ppa ='d0;
- 		decode_AttEntry.sts ='d0;
- 		decode_AttEntry.allow_access =1'b0;
-        	//decode
-		i=hppa[14:12];
-		att_entry=rdata[64*i+:64];
-		decode_AttEntry.ppa=att_entry.way;
-		decode_AttEntry.sts=att_entry.sts;
-endfunction 
-
-function tol_updpkt_t get_Tolpkt;
-	input [clogb2(LST_ENTRY_MAX)-1:0] freeLstHead;
-	input [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
- 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
-	input state_t p_state;
-	ListEntry list_entry;
-
-	if(p_state == ALLOCATE_PPA) begin 
-		//allocate_ppa: we have picked entry from freelist and moving it to uncompressed list
-		 get_Tolpkt.attEntryId=attEntryId;
-		 get_Tolpkt.tolEntryId=freeLstHead;
-		 get_Tolpkt.src_list=FREE;
-		 get_Tolpkt.dst_list=UNCOMP;
-		 //one block contains 4 lsit entries, we need to pcik the one
-		 //pointed by freeLstHead
-		 case(freeLstHead[1:0])
-			2'b01:	list_entry = rdata[127:0];
-			2'b10:	list_entry = rdata[255:128];
-			2'b11:	list_entry = rdata[383:256];
-			2'b00:	list_entry = rdata[511:384];
-		 endcase
-		 get_Tolpkt.lstEntry=list_entry;
-	
-	end
-	//handle other table update later
-
-endfunction
-
-wire arready,rready;
+wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
-assign arvalid=rd_reqpkt.arvalid;
+assign arvalid=p_req_arvalid;
 
 logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -140,8 +79,20 @@ assign rresp =  rd_resppkt.rresp;
 
 axi_rd_pld_t p_axireq,n_axireq;
 trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
+trnsl_reqpkt_t n_comp_trnsl_reqpkt;
+
 logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
+tol_updpkt_t n_comp_tol_updpkt;
+
+
+//handshakes with comp_manager
+wire cmpresn_done;
+wire logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay;
+axi_rd_pld_t n_comp_axireq;
+logic n_comp_req_arvalid,n_comp_rready;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] n_comp_rdata;
+//
 
 //logic to handle different modes
 always@* begin
@@ -168,7 +119,7 @@ always@* begin
 		end
 		LOOKUP_ATT:begin
 			  if(arready && !arvalid) begin
-				     n_axireq = get_axi_rd_pkt(freeLstHead,p_state,p_attEntryId); //, first arguemnt is not useful, for this state
+				     n_axireq = get_axi_rd_pkt(freeLstHead,p_attEntryId,AXI_RD_ATT); //, first arguemnt is not useful, for this state
 				     n_req_arvalid = 1'b1;
 				     n_state = WAIT_ATT_ENTRY;
 			  end 
@@ -199,19 +150,20 @@ always@* begin
 			   end
 	        end
 		POP_FREE_LST: begin 
-			  if(freeLstHead!=freeLstTail) begin 
-			             n_axireq=get_axi_rd_pkt(freeLstHead,p_state,freeLstHead);		
+			  if(freeLstHead!=NULL) begin 
+			             n_axireq=get_axi_rd_pkt(freeLstHead,'d0,AXI_RD_TOL);		
 				     n_req_arvalid = 1'b1;
 				     n_state = WAIT_LST_ENTRY;
 			  end
 			  else begin
-				    //Add here to look for victim of
-				    //uncompressed list , moving to idle for
-				    //now
-				    n_state = IDLE; //not handling for now
+				    if(uncompLstTail!=uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
+				    n_state = COMPRESS;
+				    end else begin  //handle other cases later, moving to IDLE for now
+				    n_state = IDLE;
+				    end 
 			  end
 		end
-		WAIT_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
+		WAIT_LST_ENTRY: begin 
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
 				     n_rdata=rdata; //get_8byte_byteswap(rdata); 
 				     n_state = ALLOCATE_PPA;
@@ -219,7 +171,7 @@ always@* begin
 		end
 
 		ALLOCATE_PPA: begin //this stae, we get ppa from freelist and also prepare att & tol updte packet taht is sent pgwr_manager
-				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,p_rdata,p_state); //freelisthead tells, which tol entry we need
+				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,p_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
 			   	     if(pgwr_mngr_ready) begin
 				     	n_tol_updpkt.tbl_update=1'b1;
 				     	n_state = IDLE;
@@ -233,10 +185,19 @@ always@* begin
 				     n_state = IDLE;
 			   end
 		end
+	  	COMPRESS:begin
+				if(cmpresn_done) begin //get the freeway from comp_mnger
+					n_trnsl_reqpkt.ppa=cmpresn_freeWay;
+					n_trnsl_reqpkt.sts=UNCOMP;
+					n_trnsl_reqpkt.allow_access=1'b1;
+				end		
+		end
 		UNCOMPRESS: begin
 			   n_state = UNCOMPRESS; //Trigger Burst mode engine //not handling this for phase1
 		end
-		//TBL_UPDATE_DONE:
+		//TBL_UPDATE_DONE: let control unit monitors table update done,
+		//I would continue servicing other lookup requests for better
+		//pipelining
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets
@@ -244,6 +205,7 @@ always@* begin
 		end
 	endcase
 end
+
 
 
 //state register/output flops
@@ -256,25 +218,33 @@ begin
 		p_req_arvalid <= 1'b0;
 		p_rready <= 1'b0;
 		p_rdata <='d0;
-
-		p_trnsl_reqpkt<='d0;
-		p_tol_updpkt <='d0;
 	end
 	else begin
  		p_state <= n_state;	
 		p_attEntryId <= n_attEntryId;		
 
 		//Axi signals
-		p_axireq.addr <= n_axireq.addr;
-		p_req_arvalid <= n_req_arvalid ;
-		p_rready <= n_rready;
-		p_rdata <=n_rdata;
-
-		//Tranalstion Request : It can be att hit or tbl update
-		p_trnsl_reqpkt<=n_trnsl_reqpkt;
-		p_tol_updpkt <= n_tol_updpkt;
+		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : n_axireq.addr;
+		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid : n_req_arvalid;
+		p_rready <= (p_state==COMPRESS) ? n_comp_rready : n_rready;
+		p_rdata <= (p_state==COMPRESS) ? n_comp_rdata : n_rdata;
 	end
 end
+
+//table packets
+always @(posedge clk_i or negedge rst_ni)
+begin
+	if(!rst_ni) begin
+		p_trnsl_reqpkt<='d0;
+		p_tol_updpkt <='d0;
+	end
+	else begin
+		//Tranalstion Request : It can be att hit or tbl update
+		p_trnsl_reqpkt<= (p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
+		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : n_tol_updpkt;
+	end
+end
+
 
 //Output combo signals
 assign rd_reqpkt.addr = p_axireq.addr;
@@ -310,5 +280,14 @@ end
 
 //Add State machine to handle burst mode of to read compressed page and fill AXI RD
 //MASTER FIFO directly 
+
+
+//Compression Manager
+
+//wire cmpresn_done;
+//wire logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay;
+wire cmpresn_trigger;
+assign cmpresn_trigger=(p_state==COMPRESS);
+hawk_cmpresn_mngr u_cmpresn_mngr (.*);
 
 endmodule

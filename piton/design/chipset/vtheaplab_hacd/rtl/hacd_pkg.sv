@@ -170,7 +170,7 @@ package hacd_pkg;
 	logic allow_access;
  } hawk_cpu_ovrd_pkt_t;
 
- 
+  
 
 
 
@@ -226,6 +226,7 @@ endfunction
   endfunction
 
 
+//////////
 //ToL HEAD and TAILS
  typedef struct packed {
   logic [clogb2(LST_ENTRY_MAX)-1:0] freeListHead;	

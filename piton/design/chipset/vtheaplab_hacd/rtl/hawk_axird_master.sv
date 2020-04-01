@@ -13,11 +13,11 @@ module hawk_axird_master #
     // Width of ID signal
     parameter ID_WIDTH = `HACD_AXI4_ID_WIDTH,
     // Propagate aruser signal
-    parameter ARUSER_ENABLE = 1,
+    parameter ARUSER_ENABLE = 0,
     // Width of aruser signal
     parameter ARUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     // Propagate ruser signal
-    parameter RUSER_ENABLE = 1,
+    parameter RUSER_ENABLE = 0,
     // Width of ruser signal
     parameter RUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     // Read data FIFO depth (cycles)
@@ -29,6 +29,11 @@ module hawk_axird_master #
     input  wire                     clk,
     input  wire                     rst,
 
+    //compressor control on FIFO	
+    input wire rdfifo_rdptr_rst, //this would reset read pointer to zero
+    output wire rdfifo_empty,
+    output wire rdfifo_full,
+   
     /*
      * AXI slave interface
      */
@@ -100,18 +105,18 @@ wire [RWIDTH-1:0] m_axi_r;
 reg [RWIDTH-1:0] s_axi_r_reg;
 reg s_axi_rvalid_reg = 1'b0, s_axi_rvalid_next;
 
-// full when first MSB different but rest same
-wire full = ((wr_ptr_reg[FIFO_ADDR_WIDTH] != rd_ptr_reg[FIFO_ADDR_WIDTH]) &&
+// rdfifo_full when first MSB different but rest same
+assign rdfifo_full = ((wr_ptr_reg[FIFO_ADDR_WIDTH] != rd_ptr_reg[FIFO_ADDR_WIDTH]) &&
              (wr_ptr_reg[FIFO_ADDR_WIDTH-1:0] == rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]));
-// empty when pointers match exactly
-wire empty = wr_ptr_reg == rd_ptr_reg;
+// rdfifo_empty when pointers match exactly
+assign rdfifo_empty = wr_ptr_reg == rd_ptr_reg;
 
 // control signals
 reg write;
 reg read;
 reg store_output;
 
-assign m_axi_rready = !full;
+assign m_axi_rready = !rdfifo_full;
 
 generate
     assign m_axi_r[DATA_WIDTH-1:0] = m_axi_rdata;
@@ -124,7 +129,7 @@ endgenerate
 generate
 
 if (FIFO_DELAY) begin
-    // store AR channel value until there is enough space to store R channel burst in FIFO or FIFO is empty
+    // store AR channel value until there is enough space to store R channel burst in FIFO or FIFO is rdfifo_empty
 
     localparam COUNT_WIDTH = (FIFO_ADDR_WIDTH > 8 ? FIFO_ADDR_WIDTH : 8) + 1;
 
@@ -295,8 +300,8 @@ always @* begin
 
     if (m_axi_rvalid) begin
         // input data valid
-        if (!full) begin
-            // not full, perform write
+        if (!rdfifo_full) begin
+            // not rdfifo_full, perform write
             write = 1'b1;
             wr_ptr_next = wr_ptr_reg + 1;
         end
@@ -327,13 +332,13 @@ always @* begin
 
     if (store_output || !mem_read_data_valid_reg) begin
         // output data not valid OR currently being transferred
-        if (!empty) begin
-            // not empty, perform read
+        if (!rdfifo_empty) begin
+            // not rdfifo_empty, perform read
             read = 1'b1;
             mem_read_data_valid_next = 1'b1;
             rd_ptr_next = rd_ptr_reg + 1;
         end else begin
-            // empty, invalidate
+            // rdfifo_empty, invalidate
             mem_read_data_valid_next = 1'b0;
         end
     end
@@ -341,6 +346,9 @@ end
 
 always @(posedge clk) begin
     if (rst) begin
+        rd_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+        mem_read_data_valid_reg <= 1'b0;
+    end else if (rdfifo_rdptr_rst) begin //this is required for compressor unit
         rd_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
         mem_read_data_valid_reg <= 1'b0;
     end else begin

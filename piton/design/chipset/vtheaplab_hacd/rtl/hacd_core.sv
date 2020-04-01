@@ -192,11 +192,23 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bvalid(stall_axi_wr_bus.axi_bvalid),
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
+//
+wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
+hawk_comdecomp u_hawk_comdecomp(
+     .rdfifo_rdptr_rst(),
+     .rdfifo_empty(),
+     .rdfifo_full()
+);
 //////Hawk Read Master
     hawk_axird_master u_hawk_axird_mstr (
       .clk(clk_i),
       .rst(!rst_ni),
-    
+   
+      //compressoer interface
+     .rdfifo_rdptr_rst(),
+     .rdfifo_empty(),
+     .rdfifo_full(),
+     
      .s_axi_arid(6'd0),//in-order for now
      .s_axi_araddr(rd_reqpkt.addr),
      .s_axi_arlen(8'd0), //fix to 1 beat always for hawk now
