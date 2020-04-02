@@ -52,6 +52,12 @@ module hacd_core (
 
    wire pgrd_mngr_ready;
    wire pgwr_mngr_ready;
+
+   wire [13:0] comp_size;
+   wire comp_start;
+   wire comp_done;
+   wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
+
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
@@ -193,7 +199,6 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
 //
-wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
 hawk_comdecomp u_hawk_comdecomp(
      .rdfifo_rdptr_rst(),
      .rdfifo_empty(),

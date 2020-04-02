@@ -95,4 +95,15 @@ function tol_updpkt_t get_Tolpkt;
 
 endfunction
 
+//ZSpage Identity Way
+typedef struct packed {
+	bit [7:0] size; //1byte
+	bit [47:0] way1;//6 byte
+	bit way_valid;
+	bit [47:0] page0;//6 byte
+	bit page_valid;
+} ZsPg_Md_t;
+
+
+
 endpackage

@@ -4,9 +4,21 @@ import hacd_pkg::*;
 import hawk_rd_pkg::*;
 `define FSM_WID_CMP_MNGR 4
 module hawk_cmpresn_mngr (
+    input clk_i,
+    input rst_ni,
+
     input cmpresn_trigger,
     input [clogb2(LST_ENTRY_MAX)-1:0] uncompLstTail,
     input logic [clogb2(ATT_ENTRY_MAX)-1:0] p_attEntryId,
+
+    //from compressor
+    input logic [13:0] comp_size,
+    output logic comp_start,
+    input comp_done,
+    
+    //from AXI FIFO
+    input wire rdfifo_full,
+    input wire rdfifo_empty,
 
     //AXI inputs  
     input hacd_pkg::axi_rd_rdypkt_t rd_rdypkt,
@@ -46,30 +58,48 @@ typedef logic [`FSM_WID_CMP_MNGR-1:0] state_t;
 `undef FSM_WID_CMP_MNGR
 state_t n_state,p_state;
 localparam IDLE			='d0,
-	   POP_UCMP_TAIL	='d1;
+	   POP_UCMP_TAIL	='d1,
+	   WAIT_UCMP_TAIL	='d2,
+	   DECODE_LST_ENTRY	='d3,
+	   BURST_READ		='d4,
+	   COMP_WAIT		='d5,
+	   PREP_ZSPAGE_MD	='d6,
+	   MIGRATE_TO_ZSPAGE	='d7,
+	   BUS_ERROR		='d8;
 
+
+localparam bit[13:0] suprted_comp_size[0]=128; //supportable compressed sizes in bytes, just one for now
+logic [13:0] n_comp_size,p_comp_size;
 ListEntry n_listEntry;
+logic [1:0] n_burst_cnt,p_burst_cnt;
+logic n_comp_start;
+ZsPg_Md_t n_ZsPg_Md,p_ZsPg_Md;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLst_Head[1],IfLst_Head[1];
+integer i;
 
 always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
-	n_axireq= p_axireq;
+	n_axireq.addr= p_axireq.addr;
+	n_axireq.awlen = 'd0; //by default, one beat
 	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
 	n_rdata=p_rdata;
 	n_comp_trnsl_reqpkt.allow_access=1'b0;
 	n_comp_tol_updpkt.tbl_update=1'b0;
+	n_comp_start=1'b0;
+
 	case(p_state)
 		IDLE: begin
-			if(cmpresn_trigger && ) begin
+			if(cmpresn_trigger) begin
 				n_state=POP_UCMP_TAIL;
 			end
 		end
 		POP_UCMP_TAIL: begin
 			if(arready && !arvalid) begin
-			           n_axireq = get_axi_rd_pkt(uncompTail,p_attEntryId,AXI_RD_TOL); //, first arguemnt is not useful, for this state
+			           n_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); //, first arguemnt is not useful, for this state
 			           n_req_arvalid = 1'b1;
-			           n_state = WAIT_ATT_ENTRY;
+			           n_state = WAIT_UCMP_TAIL;
 			end 
 		end
 		WAIT_UCMP_TAIL: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
@@ -82,17 +112,58 @@ always@* begin
 			  end
 		end
 		DECODE_LST_ENTRY: begin
-			   n_listEntry=decode_LstEntry(lkup_reqpkt.hppa,p_rdata);
+			   n_listEntry=decode_LstEntry(uncompLstTail,p_rdata);
 			   //n_trnsl_reqpkt
-			   //get address for
-			
+			   n_state=BURST_READ;
+			   n_burst_cnt='d0;	
+			   	
 		end
-		PREP_ZSPAGE_MD:begin
+		BURST_READ:begin
+			   //n_state	
+			if(arready && !arvalid && p_burst_cnt=='d0 && rdfifo_empty) begin
+			           n_axireq.addr = (p_listEntry.way<<12);
+				   n_axireq.awlen = 'd4; //4 corresponds for 16 beats
+			           n_req_arvalid = 1'b1;
+				   n_burst_cnt = 'd1;
+			end
+			else if(arready && !arvalid && (p_burst_cnt !=0) && !rdfifo_full && p_burst_cnt<4) begin
+			           n_axireq.addr = p_axireq.addr + 64'h40; 
+				   n_axireq.awlen = 'd4; //4 corresponds for 16 beats
+			           n_req_arvalid = 1'b1;
+				   n_burst_cnt = p_burst_cnt+'d1;
+			end 
+			if(rdfifo_full) begin
+				n_comp_start=1'b1;
+				n_state=COMP_WAIT;
+			end
 		
 		end
-
-
-
+		COMP_WAIT:begin
+			if(comp_done) begin
+				//lookup IF list for corresponding size
+				if(IfLst_Head[i]!=NULL) begin
+					n_state=MIGRATE_TO_ZSPAGE; 
+				end else begin
+					n_state=PREP_ZSPAGE_MD;
+				end
+			end
+		end
+		PREP_ZSPAGE_MD:begin
+				//ZSPage Identiy way takes one cache line
+				n_ZsPg_Md.size=comp_size;
+				n_Zspg_Md.way1=n_listEntry.way; //myself is way to store compressed page
+				n_Zspg_Md.way_vld=1'b1;	
+				n_Zspg_Md.page0=n_listEntry.way; //myself is the page
+				n_Zspg_Md.pg_vld=1'b1;	
+				//send this packet pg write to write compressed page
+		end
+		MIGRATE_TO_ZSPAGE:begin //not handling now
+		end
+		BUS_ERROR: begin
+			   //assert trigger, connect it to spare LED.
+			   //Stay here forever unless, user resets
+			   n_state = BUS_ERROR;
+		end
 	endcase
 end
 //state register/output flops
@@ -100,25 +171,48 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
+		p_burst_cnt <= 1'b0;
+		comp_start <=1'b0;
+		p_ZsPg_Md<='d0;
 	end
 	else begin
  		p_state <= n_state;	
+		p_burst_cnt <= n_burst_cnt;
+		comp_start<=n_comp_start;
+		p_ZsPg_Md<=n_ZsPg_Md;
 	end
 end
 
-localparam bit[13:0] suprted_comp_size[0]=512; //supportable compressed sizes in bytes, just one for now
-integer i;
-logic [47:0] ifLst_iWay[1];
+
+
+//logic [clogb2(LST_ENTRY_MAX)-1:0] IfLst_Tail[1];
+genvar if_h;
+generate 
+for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
+	always @(posedge clk_i or negedge rst_ni)
+	begin
+		if(!rst_ni) begin
+			IfLst_Head[i]<='d0;
+		end
+		else begin
+			IfLst_Head[i]<=n_IfLst_Head[i];
+		end
+	end
+end
+
+
+integer fl;
+logic [47:0] ifLst_iWay[IFLST_COUNT];
 
 genvar fl;
 generate
-for(fl=0;fl<1;fl=fl+1) begin : ifLST_IWAY
+for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
 	always @(posedge clk_i or negedge rst_ni) begin
 		if(!rst_ni) begin
 			ifLst_iWay[fl]<='d0; //0 corresponds for NULL
 		end else begin
-			if(suprted_comp_size[fl]==comp_size)
-				ifLst_iWay[fl]<=n_ifLst_iWay;
+			if(suprted_comp_size[fl]==comp_size  && p_state==PREP_ZSPAGE_MD) //Save page iWay of page under construction
+				ifLst_iWay[fl]<=p_listEntry.way;
 		end
 	end
 end : ifLST_IWAY

@@ -41,6 +41,7 @@ package hacd_pkg;
     parameter int LIST_ENTRY_CNT=8; //LST_ENTRY_MAX // lower count for verification //update later
 
     localparam [clogb2(LST_ENTRY_MAX)-1:0] NULL='d0;
+    parameter int IFLST_COUNT=1;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
@@ -118,6 +119,7 @@ package hacd_pkg;
 
   typedef struct packed {
  	logic [63:0]  addr;
+    	logic [`HACD_AXI4_LEN_WIDTH-1:0] awlen;
  } axi_rd_pld_t; 
 
  typedef struct packed {

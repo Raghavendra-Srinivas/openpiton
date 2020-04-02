@@ -11,6 +11,15 @@ module hawk_pgrd_mngr (
   input rst_ni,
 
   input hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
+  
+  //from compressor
+  input logic [13:0] comp_size,
+  output logic comp_start,
+  input comp_done,
+  
+  //from AXI FIFO
+  input wire rdfifo_full,
+  input wire rdfifo_empty,
 
  //with PWM
   input pgwr_mngr_ready,
