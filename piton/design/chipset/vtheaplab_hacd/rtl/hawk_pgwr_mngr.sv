@@ -361,10 +361,17 @@ always@* begin
 			  end
 		end
 		TOL_SLST_UPDATE: begin
-			  if(awready && !awvalid) begin
-				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
-				     n_req_awvalid = 1'b1;
-				     n_state = WAIT_TOL_SLST_UPDATE;
+			  if((p_tol_updpkt.src_list==FREE && freeListHead!=freeListTail) || (freeListTail==NULL)) begin
+			  	if(awready && !awvalid) begin
+			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+			  	           n_req_awvalid = 1'b1;
+			  	           n_state = WAIT_TOL_SLST_UPDATE;
+			  	end
+			  end
+			  else begin
+				n_freeListHead = NULL;
+				n_freeListTail = NULL;
+				n_state = TOL_DLST_UPDATE1;
 			  end
 		end
 		WAIT_TOL_SLST_UPDATE: begin

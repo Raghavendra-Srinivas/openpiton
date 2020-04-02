@@ -37,8 +37,8 @@ package hacd_pkg;
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
-    parameter int ATT_ENTRY_CNT=8;  //ATT_ENTRY_MAX // lower count for verification //update later
-    parameter int LIST_ENTRY_CNT=8; //LST_ENTRY_MAX // lower count for verification //update later
+    parameter int ATT_ENTRY_CNT=4;  //ATT_ENTRY_MAX // lower count for verification //update later
+    parameter int LIST_ENTRY_CNT=4; //LST_ENTRY_MAX // lower count for verification //update later
 
     localparam [clogb2(LST_ENTRY_MAX)-1:0] NULL='d0;
     parameter int IFLST_COUNT=1;

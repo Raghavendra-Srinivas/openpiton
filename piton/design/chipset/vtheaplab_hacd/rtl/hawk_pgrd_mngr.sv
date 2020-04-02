@@ -199,6 +199,7 @@ always@* begin
 					n_trnsl_reqpkt.ppa=cmpresn_freeWay;
 					n_trnsl_reqpkt.sts=UNCOMP;
 					n_trnsl_reqpkt.allow_access=1'b1;
+				     	n_state = IDLE;
 				end		
 		end
 		UNCOMPRESS: begin

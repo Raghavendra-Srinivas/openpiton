@@ -7,5 +7,8 @@ module hawk_comdecomp (
     input wire  rdfifo_empty,
     input wire  rdfifo_full
 );
+ assign comp_size = 128;
+ assign comp_done = comp_start;
+
 
 endmodule

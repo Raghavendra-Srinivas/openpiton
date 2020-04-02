@@ -95,15 +95,29 @@ function tol_updpkt_t get_Tolpkt;
 
 endfunction
 
+
 //ZSpage Identity Way
 typedef struct packed {
 	bit [7:0] size; //1byte
 	bit [47:0] way1;//6 byte
-	bit way_valid;
+	bit way_vld;
 	bit [47:0] page0;//6 byte
-	bit page_valid;
+	bit [47:0] page1;//6 byte
+	bit [1:0] pg_vld;
 } ZsPg_Md_t;
 
+typedef packed struct{
+	bit iWayORcPage; //packet type
+	//where to write
+	logic [47:0] iWay_start;
+	//content
+	ZsPg_Md_t zsPgMd;
+	logic [47:0] iWay_ptr; //4KB aligned address
+	logic [47:0] nxtWay_ptr; //4KB aligned address
+	//page start-where to write compressed page
+	logic [47:0] cPage_byteStart; // if (iWayORcPage==0) = > Byte address = iWay_start+ $size(zsPgMd)+3*(6bytes) else 
+	logic [13:0] cpage_size;
+} wr_iWayORcPagePkt_t;
 
 
 endpackage

@@ -27,6 +27,7 @@ module hawk_cmpresn_mngr (
     //previous AXI commands
     input hacd_pkg::axi_rd_pld_t p_axireq,
     input logic [`HACD_AXI4_DATA_WIDTH-1:0] p_rdata,
+    input logic p_req_arvalid,
 
     output hacd_pkg::axi_rd_pld_t n_comp_axireq,
     output logic n_comp_rready,
@@ -38,8 +39,6 @@ module hawk_cmpresn_mngr (
     output logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay	
 );
 
-axi_rd_pld_t n_axireq;
-logic p_req_arvalid,n_req_arvalid,p_rready,n_rready;
 wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
@@ -68,26 +67,41 @@ localparam IDLE			='d0,
 	   BUS_ERROR		='d8;
 
 
-localparam bit[13:0] suprted_comp_size[0]=128; //supportable compressed sizes in bytes, just one for now
+localparam bit[13:0] suprted_comp_size[2]={128,64}; //supportable compressed sizes in bytes, just one for now
+
+function logic [7:0] get_idx;
+	input [13:0] size;
+	integer i; 
+	for(i=0;i<256;i=i+1) begin
+		if(suprted_comp_size[i]==size) begin
+			get_idx=i;	
+		end
+	end
+endfunction
+
+logic [7:0] size_idx;
+
 logic [13:0] n_comp_size,p_comp_size;
-ListEntry n_listEntry;
+ListEntry p_listEntry,n_listEntry;
 logic [1:0] n_burst_cnt,p_burst_cnt;
 logic n_comp_start;
 ZsPg_Md_t n_ZsPg_Md,p_ZsPg_Md;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLst_Head[1],IfLst_Head[1];
 integer i;
+logic n_cmpresn_done;
 
 always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
-	n_axireq.addr= p_axireq.addr;
-	n_axireq.awlen = 'd0; //by default, one beat
-	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
-        n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
-	n_rdata=p_rdata;
+	n_comp_axireq.addr= p_axireq.addr;
+	n_comp_axireq.awlen = 'd0; //by default, one beat
+	n_comp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
+        n_comp_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
+	n_comp_rdata=p_rdata;
 	n_comp_trnsl_reqpkt.allow_access=1'b0;
 	n_comp_tol_updpkt.tbl_update=1'b0;
 	n_comp_start=1'b0;
+	n_cmpresn_done=1'b0;
 
 	case(p_state)
 		IDLE: begin
@@ -97,15 +111,15 @@ always@* begin
 		end
 		POP_UCMP_TAIL: begin
 			if(arready && !arvalid) begin
-			           n_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); //, first arguemnt is not useful, for this state
-			           n_req_arvalid = 1'b1;
+			           n_comp_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); //, first arguemnt is not useful, for this state
+			           n_comp_req_arvalid = 1'b1;
 			           n_state = WAIT_UCMP_TAIL;
 			end 
 		end
 		WAIT_UCMP_TAIL: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
 				if(rresp =='d0) begin
-				     n_rdata= rdata; //get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
+				     n_comp_rdata= rdata; //get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
 				     n_state = DECODE_LST_ENTRY;
 				end
 				else n_state = BUS_ERROR;
@@ -121,15 +135,15 @@ always@* begin
 		BURST_READ:begin
 			   //n_state	
 			if(arready && !arvalid && p_burst_cnt=='d0 && rdfifo_empty) begin
-			           n_axireq.addr = (p_listEntry.way<<12);
-				   n_axireq.awlen = 'd4; //4 corresponds for 16 beats
-			           n_req_arvalid = 1'b1;
+			           n_comp_axireq.addr = (p_listEntry.way<<12);
+				   n_comp_axireq.awlen = 'd4; //4 corresponds for 16 beats
+			           n_comp_req_arvalid = 1'b1;
 				   n_burst_cnt = 'd1;
 			end
 			else if(arready && !arvalid && (p_burst_cnt !=0) && !rdfifo_full && p_burst_cnt<4) begin
-			           n_axireq.addr = p_axireq.addr + 64'h40; 
-				   n_axireq.awlen = 'd4; //4 corresponds for 16 beats
-			           n_req_arvalid = 1'b1;
+			           n_comp_axireq.addr = p_axireq.addr + 64'h40; 
+				   n_comp_axireq.awlen = 'd4; //4 corresponds for 16 beats
+			           n_comp_req_arvalid = 1'b1;
 				   n_burst_cnt = p_burst_cnt+'d1;
 			end 
 			if(rdfifo_full) begin
@@ -141,9 +155,11 @@ always@* begin
 		COMP_WAIT:begin
 			if(comp_done) begin
 				//lookup IF list for corresponding size
-				if(IfLst_Head[i]!=NULL) begin
+				size_idx=get_idx(comp_size);
+				if(IfLst_Head[size_idx]!=NULL) begin
 					n_state=MIGRATE_TO_ZSPAGE; 
 				end else begin
+					n_IfLst_Head[size_idx]=uncompLstTail;
 					n_state=PREP_ZSPAGE_MD;
 				end
 			end
@@ -151,13 +167,23 @@ always@* begin
 		PREP_ZSPAGE_MD:begin
 				//ZSPage Identiy way takes one cache line
 				n_ZsPg_Md.size=comp_size;
-				n_Zspg_Md.way1=n_listEntry.way; //myself is way to store compressed page
-				n_Zspg_Md.way_vld=1'b1;	
-				n_Zspg_Md.page0=n_listEntry.way; //myself is the page
-				n_Zspg_Md.pg_vld=1'b1;	
-				//send this packet pg write to write compressed page
+				n_ZsPg_Md.way1=p_listEntry.way; //myself is way to store compressed page
+				n_ZsPg_Md.way_vld=1'b1;	
+				n_ZsPg_Md.page0=p_listEntry.way; //myself is the page
+				n_ZsPg_Md.pg_vld=1'b1;	
+				//send this packet and way_addr pg write to write compressed page, 
+				//send tol_update packet to PWM to update uncompressTail 
+				//and push entry to compressed list
+				
+				//We have not created free way yet, pop at-least
+				//one more uncompressed
+				n_state=POP_UCMP_TAIL;
 		end
 		MIGRATE_TO_ZSPAGE:begin //not handling now
+				//send 
+		end
+		DONE: begin
+				n_cmpresn_done=1'b1;
 		end
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
@@ -171,15 +197,19 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
+		p_listEntry <= 'd0;
 		p_burst_cnt <= 1'b0;
 		comp_start <=1'b0;
 		p_ZsPg_Md<='d0;
+		cmpresn_done<=1'b0;
 	end
 	else begin
  		p_state <= n_state;	
+		p_listEntry <= n_listEntry;
 		p_burst_cnt <= n_burst_cnt;
 		comp_start<=n_comp_start;
 		p_ZsPg_Md<=n_ZsPg_Md;
+		cmpresn_done<=n_cmpresn_done;
 	end
 end
 
@@ -199,11 +229,9 @@ for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
 		end
 	end
 end
+endgenerate
 
-
-integer fl;
 logic [47:0] ifLst_iWay[IFLST_COUNT];
-
 genvar fl;
 generate
 for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
@@ -216,5 +244,6 @@ for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
 		end
 	end
 end : ifLST_IWAY
+endgenerate
 
 endmodule
