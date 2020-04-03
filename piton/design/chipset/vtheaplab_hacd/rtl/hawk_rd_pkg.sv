@@ -94,30 +94,61 @@ function tol_updpkt_t get_Tolpkt;
 	//handle other table update later
 
 endfunction
+localparam bit[13:0] suprted_comp_size[2]={128,64}; //supportable compressed sizes in bytes, just one for now
+function logic [7:0] get_idx;
+	input [13:0] size;
+	integer i; 
+	for(i=0;i<256;i=i+1) begin
+		if(suprted_comp_size[i]==size) begin
+			get_idx=i;	
+		end
+	end
+endfunction
 
+function logic [13:0] get_cpage_size;
+	input [7:0] idx;
+	get_cpage_size=suprted_comp_size[idx];
+endfunction
 
-//ZSpage Identity Way
-typedef struct packed {
-	bit [7:0] size; //1byte
-	bit [47:0] way1;//6 byte
-	bit way_vld;
-	bit [47:0] page0;//6 byte
-	bit [47:0] page1;//6 byte
-	bit [1:0] pg_vld;
-} ZsPg_Md_t;
-
-typedef packed struct{
-	bit iWayORcPage; //packet type
-	//where to write
-	logic [47:0] iWay_start;
-	//content
-	ZsPg_Md_t zsPgMd;
-	logic [47:0] iWay_ptr; //4KB aligned address
-	logic [47:0] nxtWay_ptr; //4KB aligned address
-	//page start-where to write compressed page
-	logic [47:0] cPage_byteStart; // if (iWayORcPage==0) = > Byte address = iWay_start+ $size(zsPgMd)+3*(6bytes) else 
+function iWayORcPagePkt_t decode_ZsPageiWay;
+	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
+	iWayORcPagePkt_t pkt;
+	ZsPg_Md_t md;
+	logic [47:0] iway_ptr,nxtway_ptr;
 	logic [13:0] cpage_size;
-} wr_iWayORcPagePkt_t;
 
+	iway_ptr=rdata[(50*8)+48+48-1:(50*8)+48];
+	nxtway_ptr=rdata[(50*8)+48-1:(50*8)];
+	md=rdata[(50*8)-1 : 0]; //50 bytes on LSB 
+
+	//size
+	cpage_size=suprted_comp_size[md.size];
+	
+	//cpage byte start
+	if(md.way_vld[0]) begin
+		if          (!md.pg_vld[0]) begin
+				pkt.cPage_byteStart=iway_ptr+62; //first page
+				md.page0=iway_ptr+62;
+			//chk for 4KB crossover
+		end else if (!md.pg_vld[1]) begin
+				if (md.page0+cpage_size<4096) begin
+					pkt.cPage_byteStart=md.page0+cpage_size;
+					md.page1=md.page0+cpage_size;
+				end //not handling other cases for now 
+				//nxtway_ptr has to be valid in below case
+		end
+	end //not handling other ways for now
+
+
+        //cpage size
+	pkt.cpage_size=cpage_size;
+
+	
+	pkt.update=1'b0;
+	pkt.iWay_ptr=iway_ptr;
+	pkt.nxtWay_ptr=nxtway_ptr;
+	pkt.zsPgMd=md;
+
+endfunction
 
 endpackage

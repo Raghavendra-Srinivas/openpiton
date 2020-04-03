@@ -21,6 +21,9 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   //to rd manager
   output hacd_pkg::hawk_tol_ht_t tol_HT,
 
+  //handshake with compress manager
+  output zspg_updated,
+
   //table update request pgrd_mangr
   input hacd_pkg::tol_updpkt_t tol_updpkt,
   //status handshake to main comntroller

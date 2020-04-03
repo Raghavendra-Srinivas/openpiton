@@ -56,6 +56,7 @@ module hacd_core (
    wire [13:0] comp_size;
    wire comp_start;
    wire comp_done;
+   wire zspg_updated;
    wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
 
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  

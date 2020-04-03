@@ -12,6 +12,9 @@ module hawk_pgrd_mngr (
 
   input hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
   
+  //handshake with PWM
+  input zspg_updated,
+	
   //from compressor
   input logic [13:0] comp_size,
   output logic comp_start,
@@ -88,7 +91,6 @@ assign rresp =  rd_resppkt.rresp;
 
 axi_rd_pld_t p_axireq,n_axireq;
 trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
-trnsl_reqpkt_t n_comp_trnsl_reqpkt;
 
 logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
@@ -250,7 +252,7 @@ begin
 	end
 	else begin
 		//Tranalstion Request : It can be att hit or tbl update
-		p_trnsl_reqpkt<= (p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
+		p_trnsl_reqpkt<= n_trnsl_reqpkt; //(p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
 		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : n_tol_updpkt;
 	end
 end

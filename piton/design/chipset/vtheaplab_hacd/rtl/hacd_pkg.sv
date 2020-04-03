@@ -69,16 +69,16 @@ package hacd_pkg;
  parameter [1:0] STS_COMP=2'b10;
  parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
-	bit [63:54] zpd_cnt; //zero page detection count
-	bit [53:2]  way;      //technically it is start address of physical page
-	bit [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
+	logic [63:54] zpd_cnt; //zero page detection count
+	logic [53:2]  way;      //technically it is start address of physical page
+	logic [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  	} AttEntry;
 	
  typedef struct packed {
-	bit [127:114] rsvd; 
-	bit [113:64] way;
-	bit [63:32] prev;
-	bit [31:0] next;
+	logic [127:114] rsvd; 
+	logic [113:64] way;
+	logic [63:32] prev;
+	logic [31:0] next;
  } ListEntry;
 
  //Below packet is between hawk_axiwr_master and hawk_pgwr_mngr
@@ -144,7 +144,7 @@ package hacd_pkg;
  typedef struct packed {
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 	logic [1:0] sts;
-	bit allow_access;
+	logic allow_access;
  } trnsl_reqpkt_t;
 
 	
@@ -180,10 +180,10 @@ package hacd_pkg;
 
 
 //helper fucntins
-function bit [511:0] get_8byte_byteswap;
-	input bit [511:0] data;
+function logic [511:0] get_8byte_byteswap;
+	input logic [511:0] data;
 	integer i,j;
-	bit [63:0] eightByte,swappedEightByte;
+	logic [63:0] eightByte,swappedEightByte;
 
   	for(i=0;i<8;i=i+1) begin //8*8bytes = 64bytes per cacheline
 		//Take first 8byte
@@ -198,10 +198,10 @@ function bit [511:0] get_8byte_byteswap;
 	//For hawk byteswap does not matter
 		get_8byte_byteswap=data;
 endfunction
-function bit [63:0] get_strb_swap;
-	input bit [63:0] data;
+function logic [63:0] get_strb_swap;
+	input logic [63:0] data;
 	integer i,j;
-	bit [7:0] eightByte,swappedEightByte;
+	logic [7:0] eightByte,swappedEightByte;
 
   	for(i=0;i<8;i=i+1) begin //8*8bytes = 64bytes per cacheline
 		//Take first 8byte
@@ -236,6 +236,37 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListHead;	
   logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListTail;	
  } hawk_tol_ht_t;
+
+
+//Zspage
+//ZSpage Identity Way
+typedef struct packed {
+	logic [47:0] page4;//6 byte
+	logic [47:0] page3;//6 byte
+	logic [47:0] page2;//6 byte
+	logic [47:0] page1;//6 byte
+	logic [47:0] page0;//6 byte
+	logic [47:0] way2;//6 byte
+	logic [47:0] way1;//6 byte
+	logic [47:0] way0;//6 byte
+	logic [4:0] pg_vld; //5 pages
+	logic [2:0] way_vld; //3 sways
+	logic [7:0] size; //1byte
+} ZsPg_Md_t;
+
+parameter int ZS_MD_SIZE=50; //size+valids+3 ways+5 pages=50bytes 
+
+//typedef enum {IWAY,CPAGE} CTYPE;
+typedef struct packed{
+	logic update;
+	//CTYPE iWayORcPage; //packet type iWay type serves either while creating new ZsPage or Updating existing zsPage 
+	logic [47:0] cPage_byteStart;//page start-where to write compressed page if (iWayORcPage==0) = > iWay_start+ Byte address(62bytes) = $size(zsPgMd)=50bytes+ iwayptr(6bytes) + nxtwayptr(6bytes) else 
+	logic [13:0] cpage_size;
+	//payload content
+	logic [47:0] iWay_ptr;  //6B  
+	logic [47:0] nxtWay_ptr; //6B 
+	ZsPg_Md_t zsPgMd; //50bytes
+} iWayORcPagePkt_t;
 
 endpackage
 

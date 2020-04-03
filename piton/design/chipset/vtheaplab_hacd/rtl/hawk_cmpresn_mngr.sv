@@ -11,6 +11,10 @@ module hawk_cmpresn_mngr (
     input [clogb2(LST_ENTRY_MAX)-1:0] uncompLstTail,
     input logic [clogb2(ATT_ENTRY_MAX)-1:0] p_attEntryId,
 
+
+    //handshake with PWM
+    input zspg_updated,	
+
     //from compressor
     input logic [13:0] comp_size,
     output logic comp_start,
@@ -33,12 +37,12 @@ module hawk_cmpresn_mngr (
     output logic n_comp_rready,
     output logic n_comp_req_arvalid,
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] n_comp_rdata,
-    output hacd_pkg::trnsl_reqpkt_t n_comp_trnsl_reqpkt,
     output hacd_pkg::tol_updpkt_t n_comp_tol_updpkt,
     output logic cmpresn_done,
     output logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay	
 );
 
+logic [`HACD_AXI4_ADDR_WIDTH-1:12] n_cmpresn_freeWay;
 wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
@@ -62,30 +66,29 @@ localparam IDLE			='d0,
 	   DECODE_LST_ENTRY	='d3,
 	   BURST_READ		='d4,
 	   COMP_WAIT		='d5,
-	   PREP_ZSPAGE_MD	='d6,
-	   MIGRATE_TO_ZSPAGE	='d7,
-	   BUS_ERROR		='d8;
+	   FETCH_ZSPAGE		='d6,
+	   WAIT_ZSPAGE		='d7,	
+	   PREP_ZSPAGE_MD	='d8,
+	   SEND_TO_ZSPG		='d9,
+	   MIGRATE_TO_ZSPAGE	='d10,
+	   DONE			='d11,	
+	   COMP_MNGR_ERROR	='d12,
+	   BUS_ERROR		='d13;
 
 
-localparam bit[13:0] suprted_comp_size[2]={128,64}; //supportable compressed sizes in bytes, just one for now
 
-function logic [7:0] get_idx;
-	input [13:0] size;
-	integer i; 
-	for(i=0;i<256;i=i+1) begin
-		if(suprted_comp_size[i]==size) begin
-			get_idx=i;	
-		end
-	end
-endfunction
+
 
 logic [7:0] size_idx;
 
+logic [47:0] UC_ifLst_iWay[IFLST_COUNT],n_UC_ifLst_iWay[IFLST_COUNT];
+logic UC_ifLst_iWay_valid[IFLST_COUNT],n_UC_ifLst_iWay_valid[IFLST_COUNT];
 logic [13:0] n_comp_size,p_comp_size;
 ListEntry p_listEntry,n_listEntry;
 logic [1:0] n_burst_cnt,p_burst_cnt;
 logic n_comp_start;
-ZsPg_Md_t n_ZsPg_Md,p_ZsPg_Md;
+ZsPg_Md_t ZsPg_Md;
+iWayORcPagePkt_t p_iWayORcPagePkt,n_iWayORcPagePkt;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLst_Head[1],IfLst_Head[1];
 integer i;
 logic n_cmpresn_done;
@@ -98,10 +101,11 @@ always@* begin
 	n_comp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_comp_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
 	n_comp_rdata=p_rdata;
-	n_comp_trnsl_reqpkt.allow_access=1'b0;
 	n_comp_tol_updpkt.tbl_update=1'b0;
 	n_comp_start=1'b0;
 	n_cmpresn_done=1'b0;
+	n_iWayORcPagePkt=p_iWayORcPagePkt;
+	n_iWayORcPagePkt.update=1'b0;
 
 	case(p_state)
 		IDLE: begin
@@ -111,7 +115,7 @@ always@* begin
 		end
 		POP_UCMP_TAIL: begin
 			if(arready && !arvalid) begin
-			           n_comp_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); //, first arguemnt is not useful, for this state
+			           n_comp_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); 
 			           n_comp_req_arvalid = 1'b1;
 			           n_state = WAIT_UCMP_TAIL;
 			end 
@@ -119,7 +123,7 @@ always@* begin
 		WAIT_UCMP_TAIL: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
 				if(rresp =='d0) begin
-				     n_comp_rdata= rdata; //get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
+				     n_comp_rdata= rdata;  
 				     n_state = DECODE_LST_ENTRY;
 				end
 				else n_state = BUS_ERROR;
@@ -158,32 +162,112 @@ always@* begin
 				size_idx=get_idx(comp_size);
 				if(IfLst_Head[size_idx]!=NULL) begin
 					n_state=MIGRATE_TO_ZSPAGE; 
-				end else begin
-					n_IfLst_Head[size_idx]=uncompLstTail;
+				end else if (UC_ifLst_iWay_valid[size_idx]) begin
+					//get underconstruction iWay from
+					//memory
+			    		n_comp_axireq = UC_ifLst_iWay[size_idx]; 
+					n_state=FETCH_ZSPAGE; 
+				end
+				else begin
+					//n_IfLst_Head[size_idx]=uncompLstTail; this shudl happen during uncompression
 					n_state=PREP_ZSPAGE_MD;
+					//record this IWay in Under Construction table
+					n_UC_ifLst_iWay[size_idx]=p_listEntry.way; 
+					n_UC_ifLst_iWay_valid[size_idx]=1'b1;
 				end
 			end
 		end
+		FETCH_ZSPAGE:begin
+			if(arready && !arvalid) begin
+			    n_comp_axireq = UC_ifLst_iWay[size_idx]; //moved to previous state
+			    n_comp_req_arvalid = 1'b1;
+			    n_state = WAIT_ZSPAGE;
+			end
+		end
+		WAIT_ZSPAGE:begin
+			if(rvalid && rlast) begin 
+			      if(rresp =='d0) begin
+			           //n_comp_rdata= rdata; 
+				   n_iWayORcPagePkt=decode_ZsPageiWay(rdata);
+			           n_state = MIGRATE_TO_ZSPAGE ;
+			      end
+			      else n_state = BUS_ERROR;
+			end
+		end
 		PREP_ZSPAGE_MD:begin
-				//ZSPage Identiy way takes one cache line
-				n_ZsPg_Md.size=comp_size;
-				n_ZsPg_Md.way1=p_listEntry.way; //myself is way to store compressed page
-				n_ZsPg_Md.way_vld=1'b1;	
-				n_ZsPg_Md.page0=p_listEntry.way; //myself is the page
-				n_ZsPg_Md.pg_vld=1'b1;	
+				//ZSPage Identiy Metadata
+				//defaults
+				ZsPg_Md='d0;
+
+				ZsPg_Md.size=comp_size;
+				ZsPg_Md.way0=p_listEntry.way; //myself is way to store compressed page
+				ZsPg_Md.way_vld[0]=1'b1;	
+				ZsPg_Md.page0=p_listEntry.way+62; //myself is the page plus offset of metadata &  2 pointers
+				ZsPg_Md.pg_vld[0]=1'b1;	
 				//send this packet and way_addr pg write to write compressed page, 
 				//send tol_update packet to PWM to update uncompressTail 
 				//and push entry to compressed list
-				
-				//We have not created free way yet, pop at-least
-				//one more uncompressed
-				n_state=POP_UCMP_TAIL;
+			        //n_iWayORcPagePkt.iWayORcPage=IWAY;
+				n_iWayORcPagePkt.cPage_byteStart=p_listEntry.way+ZS_MD_SIZE;
+				n_iWayORcPagePkt.cpage_size=comp_size;
+				//payload
+				n_iWayORcPagePkt.iWay_ptr=p_listEntry.way;
+				n_iWayORcPagePkt.nxtWay_ptr='d0; //this is valid once we add new ways
+				n_iWayORcPagePkt.zsPgMd=ZsPg_Mdu;
+				//we can send update only if comp_size plus
+				//payload of zspg can fit in 4KB that is
+				//comp_size+62 bytes
+				if((comp_size+62) < 4096) begin
+					n_iWayORcPagePkt.update=1'b1;
+			        	n_state=SEND_TO_ZSPG;
+				end
+				else begin
+			        	n_state=COMP_MNGR_ERROR;
+				end
 		end
-		MIGRATE_TO_ZSPAGE:begin //not handling now
-				//send 
+		
+		SEND_TO_ZSPG:begin //wait till Zspage is written
+				if(zspg_updated) begin
+					//We have not created free way yet, pop uncompressed and keep compressing, till we find complete 4KB free way
+					n_state=UPDATE_ATT_TOL; //POP_UCMP_TAIL;
+				end
+		end
+		UPDATE_ATT_TOL:begin
+				//we should update ATT with byte address for
+				//compressed page address and Update TOl by
+				//moving UNCOMP tail to IFT head then move
+				//again POP_UCMP_TAIL
+			
+		end
+		MIGRATE_TO_ZSPAGE:begin 
+				  //Decide where we can migrate this
+				  //compressed page : It can have 3 cases. 
+				  //(1) new cpage can fit in within Iway/Child way : Check 4KB boundary cross
+				  //(2) can partially fit
+				  //(3) there is no single byte extra space in iWay
+				  // For (2) and (3) we, need to make present
+				  // list_entry way as nxtWay_ptr in Iway
+				  // 
+			          if((p_iWayORcPagePkt.cPage_byteStart+comp_size)< ({p_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
+					n_iWayORcPagePkt.update=1'b1;
+					//n_cmpresn_freeWay=p_listEntry.way;
+					n_state = DONE;
+				  end
+				  else begin
+				  	n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way;
+					n_iWayORcPagePkt.update=1'b1;
+					n_state = UPDATE_ATT_TOL; //POP_UCMP_TAIL; //Keep repeating till I find oneFreeWay
+				  end
 		end
 		DONE: begin
-				n_cmpresn_done=1'b1;
+				if(zspg_updated) begin
+					n_cmpresn_done=1'b1;
+					n_cmpresn_freeWay=p_listEntry.way;
+					n_state = IDLE; //before movingto idle send packet to updae ATT_entryID table in question
+				end
+		end
+		COMP_MNGR_ERROR: begin
+			   n_state = COMP_MNGR_ERROR;
 		end
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
@@ -200,16 +284,18 @@ begin
 		p_listEntry <= 'd0;
 		p_burst_cnt <= 1'b0;
 		comp_start <=1'b0;
-		p_ZsPg_Md<='d0;
+		p_iWayORcPagePkt<='d0;
 		cmpresn_done<=1'b0;
+	        cmpresn_freeWay<='d0;
 	end
 	else begin
  		p_state <= n_state;	
 		p_listEntry <= n_listEntry;
 		p_burst_cnt <= n_burst_cnt;
 		comp_start<=n_comp_start;
-		p_ZsPg_Md<=n_ZsPg_Md;
+		p_iWayORcPagePkt<=n_iWayORcPagePkt;
 		cmpresn_done<=n_cmpresn_done;
+	        cmpresn_freeWay<=n_cmpresn_freeWay;
 	end
 end
 
@@ -231,16 +317,16 @@ for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
 end
 endgenerate
 
-logic [47:0] ifLst_iWay[IFLST_COUNT];
+//Under Construction Tables
 genvar fl;
 generate
 for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
 	always @(posedge clk_i or negedge rst_ni) begin
 		if(!rst_ni) begin
-			ifLst_iWay[fl]<='d0; //0 corresponds for NULL
+			UC_ifLst_iWay[fl]<='d0; //0 corresponds for NULL
 		end else begin
-			if(suprted_comp_size[fl]==comp_size  && p_state==PREP_ZSPAGE_MD) //Save page iWay of page under construction
-				ifLst_iWay[fl]<=p_listEntry.way;
+			UC_ifLst_iWay[fl]<=n_UC_ifLst_iWay[fl];
+			UC_ifLst_iWay_valid[fl]<=n_UC_ifLst_iWay_valid[fl];
 		end
 	end
 end : ifLST_IWAY
