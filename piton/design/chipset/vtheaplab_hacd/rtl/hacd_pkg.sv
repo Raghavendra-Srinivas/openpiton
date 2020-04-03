@@ -149,13 +149,13 @@ package hacd_pkg;
 
 	
  //typedef enum {FREE,UNCOMP,COMP,INCOMP} LIST_NAME;
- localparam [1:0] FREE='d0, UNCOMP='d1,COMP='d2,INCOMP='d3;
+ localparam [1:0] NULLIFY='d0,FREE='d1, UNCOMP='d2,INCOMP='d3,IFL_SIZE1='d4; //There are 256 Irregular free list 
  typedef struct packed {
 	logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 	logic [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
 	ListEntry lstEntry;
-	logic [1:0] src_list; //from which source we are removing this entry
-	logic [1:0] dst_list; //to which list , we are moving this entry
+	logic [2:0] src_list; //from which source we are removing this entry
+	logic [2:0] dst_list; //to which list , we are moving this entry
 	//logic [47:0] ppa;
 	logic tbl_update;
  } tol_updpkt_t;

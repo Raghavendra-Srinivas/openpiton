@@ -57,6 +57,7 @@ module hacd_core (
    wire comp_start;
    wire comp_done;
    wire zspg_updated;
+   hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt;
    wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
 
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  

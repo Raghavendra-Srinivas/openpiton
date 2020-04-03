@@ -14,6 +14,7 @@ module hawk_pgrd_mngr (
   
   //handshake with PWM
   input zspg_updated,
+  output hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
 	
   //from compressor
   input logic [13:0] comp_size,

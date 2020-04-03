@@ -23,6 +23,7 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
 
   //handshake with compress manager
   output zspg_updated,
+  input hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
 
   //table update request pgrd_mangr
   input hacd_pkg::tol_updpkt_t tol_updpkt,

@@ -10,7 +10,7 @@ module hawk_cmpresn_mngr (
     input cmpresn_trigger,
     input [clogb2(LST_ENTRY_MAX)-1:0] uncompLstTail,
     input logic [clogb2(ATT_ENTRY_MAX)-1:0] p_attEntryId,
-
+    input pgwr_mngr_ready,
 
     //handshake with PWM
     input zspg_updated,	
@@ -19,7 +19,8 @@ module hawk_cmpresn_mngr (
     input logic [13:0] comp_size,
     output logic comp_start,
     input comp_done,
-    
+    output hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
+  
     //from AXI FIFO
     input wire rdfifo_full,
     input wire rdfifo_empty,
@@ -60,20 +61,21 @@ logic [`HACD_AXI4_DATA_WIDTH-1:0] n_rdata;
 typedef logic [`FSM_WID_CMP_MNGR-1:0] state_t;
 `undef FSM_WID_CMP_MNGR
 state_t n_state,p_state;
-localparam IDLE			='d0,
-	   POP_UCMP_TAIL	='d1,
-	   WAIT_UCMP_TAIL	='d2,
-	   DECODE_LST_ENTRY	='d3,
-	   BURST_READ		='d4,
-	   COMP_WAIT		='d5,
-	   FETCH_ZSPAGE		='d6,
-	   WAIT_ZSPAGE		='d7,	
-	   PREP_ZSPAGE_MD	='d8,
-	   SEND_TO_ZSPG		='d9,
-	   MIGRATE_TO_ZSPAGE	='d10,
-	   DONE			='d11,	
-	   COMP_MNGR_ERROR	='d12,
-	   BUS_ERROR		='d13;
+localparam IDLE			     ='d0,
+	   PEEK_UCMP_TAIL	     ='d1,
+	   WAIT_UCMP_TAIL	     ='d2,
+	   DECODE_LST_ENTRY	     ='d3,
+	   BURST_READ		     ='d4,
+	   COMP_WAIT		     ='d5,
+	   FETCH_ZSPAGE		     ='d6,
+	   WAIT_ZSPAGE		     ='d7,	
+	   PREP_ZSPAGE_MD	     ='d8,
+	   UPDATE_ATT_POP_UCMP_TAIL  ='d9,
+	   MIGRATE_TO_ZSPAGE	     ='d10,
+	   DO_FINAL_TOL_UPDATE	     ='d11,
+	   DONE			     ='d11,	
+	   COMP_MNGR_ERROR	     ='d12,
+	   BUS_ERROR		     ='d13;
 
 
 
@@ -88,7 +90,7 @@ ListEntry p_listEntry,n_listEntry;
 logic [1:0] n_burst_cnt,p_burst_cnt;
 logic n_comp_start;
 ZsPg_Md_t ZsPg_Md;
-iWayORcPagePkt_t p_iWayORcPagePkt,n_iWayORcPagePkt;
+iWayORcPagePkt_t n_iWayORcPagePkt;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLst_Head[1],IfLst_Head[1];
 integer i;
 logic n_cmpresn_done;
@@ -110,10 +112,10 @@ always@* begin
 	case(p_state)
 		IDLE: begin
 			if(cmpresn_trigger) begin
-				n_state=POP_UCMP_TAIL;
+				n_state=PEEK_UCMP_TAIL;
 			end
 		end
-		POP_UCMP_TAIL: begin
+		PEEK_UCMP_TAIL: begin
 			if(arready && !arvalid) begin
 			           n_comp_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); 
 			           n_comp_req_arvalid = 1'b1;
@@ -179,7 +181,7 @@ always@* begin
 		end
 		FETCH_ZSPAGE:begin
 			if(arready && !arvalid) begin
-			    n_comp_axireq = UC_ifLst_iWay[size_idx]; //moved to previous state
+			    //n_comp_axireq = UC_ifLst_iWay[size_idx]; //moved to previous state
 			    n_comp_req_arvalid = 1'b1;
 			    n_state = WAIT_ZSPAGE;
 			end
@@ -195,75 +197,95 @@ always@* begin
 			end
 		end
 		PREP_ZSPAGE_MD:begin
-				//ZSPage Identiy Metadata
-				//defaults
-				ZsPg_Md='d0;
+			   	if(pgwr_mngr_ready) begin
+					//ZSPage Identiy Metadata
+					//defaults
+					ZsPg_Md='d0;
 
-				ZsPg_Md.size=comp_size;
-				ZsPg_Md.way0=p_listEntry.way; //myself is way to store compressed page
-				ZsPg_Md.way_vld[0]=1'b1;	
-				ZsPg_Md.page0=p_listEntry.way+62; //myself is the page plus offset of metadata &  2 pointers
-				ZsPg_Md.pg_vld[0]=1'b1;	
-				//send this packet and way_addr pg write to write compressed page, 
-				//send tol_update packet to PWM to update uncompressTail 
-				//and push entry to compressed list
-			        //n_iWayORcPagePkt.iWayORcPage=IWAY;
-				n_iWayORcPagePkt.cPage_byteStart=p_listEntry.way+ZS_MD_SIZE;
-				n_iWayORcPagePkt.cpage_size=comp_size;
-				//payload
-				n_iWayORcPagePkt.iWay_ptr=p_listEntry.way;
-				n_iWayORcPagePkt.nxtWay_ptr='d0; //this is valid once we add new ways
-				n_iWayORcPagePkt.zsPgMd=ZsPg_Mdu;
-				//we can send update only if comp_size plus
-				//payload of zspg can fit in 4KB that is
-				//comp_size+62 bytes
-				if((comp_size+62) < 4096) begin
-					n_iWayORcPagePkt.update=1'b1;
-			        	n_state=SEND_TO_ZSPG;
-				end
-				else begin
-			        	n_state=COMP_MNGR_ERROR;
+					ZsPg_Md.size=comp_size;
+					ZsPg_Md.way0=p_listEntry.way; //myself is way to store compressed page
+					ZsPg_Md.way_vld[0]=1'b1;	
+					ZsPg_Md.page0=p_listEntry.way+62; //myself is the page plus offset of metadata &  2 pointers
+					ZsPg_Md.pg_vld[0]=1'b1;	
+					//send this packet and way_addr pg write to write compressed page, 
+					//send tol_update packet to PWM to update uncompressTail 
+					//and push entry to compressed list
+			        	//n_iWayORcPagePkt.iWayORcPage=IWAY;
+					n_iWayORcPagePkt.cPage_byteStart=p_listEntry.way+ZS_MD_SIZE;
+					n_iWayORcPagePkt.cpage_size=comp_size;
+					//payload
+					n_iWayORcPagePkt.iWay_ptr=p_listEntry.way;
+					n_iWayORcPagePkt.nxtWay_ptr='d0; //this is valid once we add new ways
+					n_iWayORcPagePkt.zsPgMd=ZsPg_Md;
+					//we can send update only if comp_size plus
+					//payload of zspg can fit in 4KB that is
+					//comp_size+62 bytes
+					if((comp_size+62) < 4096) begin
+						n_iWayORcPagePkt.update=1'b1;
+					
+						n_comp_tol_updpkt.dst_list=IFL_SIZE1; //for ZS identiy way, we need to push on Identity Way
+			        		n_state=UPDATE_ATT_POP_UCMP_TAIL;
+					end
+					else begin
+			        		n_state=COMP_MNGR_ERROR;
+					end
 				end
 		end
-		
-		SEND_TO_ZSPG:begin //wait till Zspage is written
-				if(zspg_updated) begin
+		UPDATE_ATT_POP_UCMP_TAIL:begin //wait till Zspage is written
+				if(/*zspg_updated ||*/ pgwr_mngr_ready) begin //update ATT and TOL then 
+					n_comp_tol_updpkt.attEntryId=uncompLstTail;
+					n_comp_tol_updpkt.tolEntryId=uncompLstTail;
+				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
+					n_comp_tol_updpkt.lstEntry.way=p_iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
+					n_comp_tol_updpkt.src_list=UNCOMP;
+					//n_comp_tol_updpkt.dst_list= ; This
+					//will be set by calling states
+					n_comp_tol_updpkt.tbl_update=1'b1;
 					//We have not created free way yet, pop uncompressed and keep compressing, till we find complete 4KB free way
-					n_state=UPDATE_ATT_TOL; //POP_UCMP_TAIL;
+					n_state= PEEK_UCMP_TAIL;
 				end
-		end
-		UPDATE_ATT_TOL:begin
-				//we should update ATT with byte address for
-				//compressed page address and Update TOl by
-				//moving UNCOMP tail to IFT head then move
-				//again POP_UCMP_TAIL
-			
 		end
 		MIGRATE_TO_ZSPAGE:begin 
-				  //Decide where we can migrate this
-				  //compressed page : It can have 3 cases. 
-				  //(1) new cpage can fit in within Iway/Child way : Check 4KB boundary cross
-				  //(2) can partially fit
-				  //(3) there is no single byte extra space in iWay
-				  // For (2) and (3) we, need to make present
-				  // list_entry way as nxtWay_ptr in Iway
-				  // 
-			          if((p_iWayORcPagePkt.cPage_byteStart+comp_size)< ({p_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
-					n_iWayORcPagePkt.update=1'b1;
-					//n_cmpresn_freeWay=p_listEntry.way;
-					n_state = DONE;
-				  end
-				  else begin
-				  	n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way;
-					n_iWayORcPagePkt.update=1'b1;
-					n_state = UPDATE_ATT_TOL; //POP_UCMP_TAIL; //Keep repeating till I find oneFreeWay
-				  end
+			   	if(pgwr_mngr_ready) begin
+				  	//Decide where we can migrate this
+				  	//compressed page : It can have 3 cases. 
+				  	//(1) new cpage can fit in within Iway/Child way : Check 4KB boundary cross
+				  	//(2) can partially fit
+				  	//(3) there is no single byte extra space in iWay
+				  	// For (2) and (3) we, need to make present
+				  	// list_entry way as nxtWay_ptr in Iway
+				  	// 
+			          	if((p_iWayORcPagePkt.cPage_byteStart+comp_size)< ({p_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
+				  	      n_iWayORcPagePkt.update=1'b1;
+				  	      n_state = DO_FINAL_TOL_UPDATE;
+				  	end
+				  	else begin
+				  	      n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way;
+				  	      n_iWayORcPagePkt.update=1'b1;
+
+				  	      //Update ATT and TOL
+					      n_comp_tol_updpkt.dst_list=NULLIFY; //for ZS identiy way, we need to push on Identity Way
+			        	      n_state=UPDATE_ATT_POP_UCMP_TAIL;
+				  	end
+				end
+		end
+		DO_FINAL_TOL_UPDATE:begin
+			   	if(/*zspg_updated ||*/pgwr_mngr_ready) begin
+					n_comp_tol_updpkt.attEntryId=uncompLstTail;
+					n_comp_tol_updpkt.tolEntryId=uncompLstTail;
+				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
+					n_comp_tol_updpkt.lstEntry.way=p_listEntry.way;//now ATT way if freeway
+					n_comp_tol_updpkt.src_list=UNCOMP;
+					n_comp_tol_updpkt.dst_list=UNCOMP; //I got freeway, list entry remain in same staet
+					n_comp_tol_updpkt.tbl_update=1'b1;		
+					n_state = DONE; 
+				end
 		end
 		DONE: begin
-				if(zspg_updated) begin
+				if(pgwr_mngr_ready) begin  //this idicates previous assigned operation to PWM is complete 
 					n_cmpresn_done=1'b1;
 					n_cmpresn_freeWay=p_listEntry.way;
-					n_state = IDLE; //before movingto idle send packet to updae ATT_entryID table in question
+					n_state = IDLE; //we are done  
 				end
 		end
 		COMP_MNGR_ERROR: begin
