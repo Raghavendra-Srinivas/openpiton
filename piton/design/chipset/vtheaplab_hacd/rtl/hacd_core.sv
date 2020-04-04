@@ -57,7 +57,7 @@ module hacd_core (
    wire comp_start;
    wire comp_done;
    wire zspg_updated;
-   hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt;
+   hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
    wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
 
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
@@ -314,7 +314,6 @@ hawk_comdecomp u_hawk_comdecomp(
     	//pg_writer handshake
 	.init_att_done,
 	.init_list_done,
-	.tbl_update_done,
 
         //pg_rdmanager
     	.pgrd_mngr_ready,

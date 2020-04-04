@@ -1,4 +1,3 @@
-//If it is fresh Zspage creation, we need min 2 uncomp pages
 `include "hacd_define.vh"
 import hacd_pkg::*;
 import hawk_rd_pkg::*;
@@ -8,7 +7,7 @@ module hawk_cmpresn_mngr (
     input rst_ni,
 
     input cmpresn_trigger,
-    input [clogb2(LST_ENTRY_MAX)-1:0] uncompLstTail,
+    input hacd_pkg::hawk_tol_ht_t tol_HT,
     input logic [clogb2(ATT_ENTRY_MAX)-1:0] p_attEntryId,
     input pgwr_mngr_ready,
 
@@ -19,7 +18,7 @@ module hawk_cmpresn_mngr (
     input logic [13:0] comp_size,
     output logic comp_start,
     input comp_done,
-    output hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
+    output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
   
     //from AXI FIFO
     input wire rdfifo_full,
@@ -62,7 +61,7 @@ typedef logic [`FSM_WID_CMP_MNGR-1:0] state_t;
 `undef FSM_WID_CMP_MNGR
 state_t n_state,p_state;
 localparam IDLE			     ='d0,
-	   PEEK_UCMP_TAIL	     ='d1,
+	   PEEK_UCMP_HEAD	     ='d1,
 	   WAIT_UCMP_TAIL	     ='d2,
 	   DECODE_LST_ENTRY	     ='d3,
 	   BURST_READ		     ='d4,
@@ -91,7 +90,6 @@ logic [1:0] n_burst_cnt,p_burst_cnt;
 logic n_comp_start;
 ZsPg_Md_t ZsPg_Md;
 iWayORcPagePkt_t n_iWayORcPagePkt;
-logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLst_Head[1],IfLst_Head[1];
 integer i;
 logic n_cmpresn_done;
 
@@ -106,18 +104,18 @@ always@* begin
 	n_comp_tol_updpkt.tbl_update=1'b0;
 	n_comp_start=1'b0;
 	n_cmpresn_done=1'b0;
-	n_iWayORcPagePkt=p_iWayORcPagePkt;
+	n_iWayORcPagePkt=iWayORcPagePkt;
 	n_iWayORcPagePkt.update=1'b0;
 
 	case(p_state)
 		IDLE: begin
-			if(cmpresn_trigger) begin
-				n_state=PEEK_UCMP_TAIL;
+			if(cmpresn_trigger && !cmpresn_done) begin
+				n_state=PEEK_UCMP_HEAD;
 			end
 		end
-		PEEK_UCMP_TAIL: begin
+		PEEK_UCMP_HEAD: begin
 			if(arready && !arvalid) begin
-			           n_comp_axireq = get_axi_rd_pkt(uncompLstTail,p_attEntryId,AXI_RD_TOL); 
+			           n_comp_axireq = get_axi_rd_pkt(tol_HT.uncompListHead,p_attEntryId,AXI_RD_TOL); 
 			           n_comp_req_arvalid = 1'b1;
 			           n_state = WAIT_UCMP_TAIL;
 			end 
@@ -132,7 +130,7 @@ always@* begin
 			  end
 		end
 		DECODE_LST_ENTRY: begin
-			   n_listEntry=decode_LstEntry(uncompLstTail,p_rdata);
+			   n_listEntry=decode_LstEntry(tol_HT.uncompListHead,p_rdata);
 			   //n_trnsl_reqpkt
 			   n_state=BURST_READ;
 			   n_burst_cnt='d0;	
@@ -162,16 +160,15 @@ always@* begin
 			if(comp_done) begin
 				//lookup IF list for corresponding size
 				size_idx=get_idx(comp_size);
-				if(IfLst_Head[size_idx]!=NULL) begin
-					n_state=MIGRATE_TO_ZSPAGE; 
-				end else if (UC_ifLst_iWay_valid[size_idx]) begin
+				if (UC_ifLst_iWay_valid[size_idx]) begin
 					//get underconstruction iWay from
 					//memory
 			    		n_comp_axireq = UC_ifLst_iWay[size_idx]; 
 					n_state=FETCH_ZSPAGE; 
-				end
-				else begin
-					//n_IfLst_Head[size_idx]=uncompLstTail; this shudl happen during uncompression
+				end else if(tol_HT.IfLstHead[size_idx]!=NULL) begin
+					n_state=MIGRATE_TO_ZSPAGE; 
+				end else begin
+					//n_IfLst_Head[size_idx]=tol_HT.uncompListHead; this shudl happen during uncompression
 					n_state=PREP_ZSPAGE_MD;
 					//record this IWay in Under Construction table
 					n_UC_ifLst_iWay[size_idx]=p_listEntry.way; 
@@ -232,17 +229,18 @@ always@* begin
 				end
 		end
 		UPDATE_ATT_POP_UCMP_TAIL:begin //wait till Zspage is written
-				if(/*zspg_updated ||*/ pgwr_mngr_ready) begin //update ATT and TOL then 
-					n_comp_tol_updpkt.attEntryId=uncompLstTail;
-					n_comp_tol_updpkt.tolEntryId=uncompLstTail;
+				if(zspg_updated && pgwr_mngr_ready) begin //update ATT and TOL then 
+					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
+					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
-					n_comp_tol_updpkt.lstEntry.way=p_iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
+					n_comp_tol_updpkt.lstEntry.way=iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
 					n_comp_tol_updpkt.src_list=UNCOMP;
+					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
 					//n_comp_tol_updpkt.dst_list= ; This
 					//will be set by calling states
 					n_comp_tol_updpkt.tbl_update=1'b1;
 					//We have not created free way yet, pop uncompressed and keep compressing, till we find complete 4KB free way
-					n_state= PEEK_UCMP_TAIL;
+					n_state= PEEK_UCMP_HEAD;
 				end
 		end
 		MIGRATE_TO_ZSPAGE:begin 
@@ -255,7 +253,7 @@ always@* begin
 				  	// For (2) and (3) we, need to make present
 				  	// list_entry way as nxtWay_ptr in Iway
 				  	// 
-			          	if((p_iWayORcPagePkt.cPage_byteStart+comp_size)< ({p_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
+			          	if((iWayORcPagePkt.cPage_byteStart+comp_size)< ({iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
 				  	      n_iWayORcPagePkt.update=1'b1;
 				  	      n_state = DO_FINAL_TOL_UPDATE;
 				  	end
@@ -270,19 +268,20 @@ always@* begin
 				end
 		end
 		DO_FINAL_TOL_UPDATE:begin
-			   	if(/*zspg_updated ||*/pgwr_mngr_ready) begin
-					n_comp_tol_updpkt.attEntryId=uncompLstTail;
-					n_comp_tol_updpkt.tolEntryId=uncompLstTail;
+			   	if(zspg_updated && pgwr_mngr_ready) begin//zspg_updated is level signal till next reqeust
+					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
+					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
 					n_comp_tol_updpkt.lstEntry.way=p_listEntry.way;//now ATT way if freeway
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.dst_list=UNCOMP; //I got freeway, list entry remain in same staet
+					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
 					n_comp_tol_updpkt.tbl_update=1'b1;		
 					n_state = DONE; 
 				end
 		end
 		DONE: begin
-				if(pgwr_mngr_ready) begin  //this idicates previous assigned operation to PWM is complete 
+				if(zspg_updated) begin   
 					n_cmpresn_done=1'b1;
 					n_cmpresn_freeWay=p_listEntry.way;
 					n_state = IDLE; //we are done  
@@ -306,7 +305,7 @@ begin
 		p_listEntry <= 'd0;
 		p_burst_cnt <= 1'b0;
 		comp_start <=1'b0;
-		p_iWayORcPagePkt<='d0;
+		iWayORcPagePkt<='d0;
 		cmpresn_done<=1'b0;
 	        cmpresn_freeWay<='d0;
 	end
@@ -315,7 +314,7 @@ begin
 		p_listEntry <= n_listEntry;
 		p_burst_cnt <= n_burst_cnt;
 		comp_start<=n_comp_start;
-		p_iWayORcPagePkt<=n_iWayORcPagePkt;
+		iWayORcPagePkt<=n_iWayORcPagePkt;
 		cmpresn_done<=n_cmpresn_done;
 	        cmpresn_freeWay<=n_cmpresn_freeWay;
 	end
@@ -324,20 +323,7 @@ end
 
 
 //logic [clogb2(LST_ENTRY_MAX)-1:0] IfLst_Tail[1];
-genvar if_h;
-generate 
-for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
-	always @(posedge clk_i or negedge rst_ni)
-	begin
-		if(!rst_ni) begin
-			IfLst_Head[i]<='d0;
-		end
-		else begin
-			IfLst_Head[i]<=n_IfLst_Head[i];
-		end
-	end
-end
-endgenerate
+
 
 //Under Construction Tables
 genvar fl;

@@ -23,7 +23,7 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
 
   //handshake with compress manager
   output zspg_updated,
-  input hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
+  input hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
 
   //table update request pgrd_mangr
   input hacd_pkg::tol_updpkt_t tol_updpkt,
@@ -41,6 +41,7 @@ logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListHead,freeListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListTail,freeListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListHead,uncompListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListTail,uncompListTail;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstHead[IFLST_COUNT],IfLstHead[IFLST_COUNT];
 
 wire tbl_update;
 wire [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
@@ -82,7 +83,8 @@ localparam IDLE			     ='d0,
 	   WAIT_TOL_DLST_UPDATE1     ='d10,
 	   TOL_DLST_UPDATE2	     ='d11,
 	   WAIT_TOL_DLST_UPDATE2     ='d12,
-	   TBL_UPDATE_WAIT_RESP      ='d13;
+	   CMPDCMP		     ='d13,
+	   WAIT_BRESP      ='d14;
 
 
 //helper functions
@@ -186,12 +188,13 @@ function axi_wr_pld_t get_axi_wr_pkt;
 endfunction
 
 
-
+localparam [1:0] PUSH_HEAD='d0, POP_HEAD='d1, PUSH_TAIL='d2,POP_TAIL='d3;
 function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input tol_updpkt_t tbl_updat_pkt;
 	input state_t p_state;
         input hacd_pkg::hawk_tol_ht_t tol_HT;
-	integer i;
+	input logic [1:0] OPCODE;
+	integer i,j;
 	bit [511:0] data='d0;
 	bit [63:0] wstrb='d0;
         AttEntry att_entry='d0;
@@ -211,6 +214,9 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		
 		if(tbl_updat_pkt.dst_list==UNCOMP) begin
 			att_entry.sts=STS_UNCOMP;
+		end //handl others: by default it goes to COMP as there are too many dst lists
+		else begin
+			att_entry.sts=STS_COMP;
 		end
 		
 		//Which 64 bit we need to send this.
@@ -221,36 +227,79 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	end
 	else if (p_state==TOL_SLST_UPDATE) begin  //POP FREE LIST , POP entry from head is same as updating prev of next entry to head, then update head to that
 
-		//Original: freehead=Entry-1    -> ||prev=0,Entry=1,next=2||prev=1,Entry=2,next=3||
-		//AfterUpdate:freehead->Entry-2 -> ||prev=0,Entry=2,next=3||..
-		
-		//Change next entries content
-		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.next-1) >> 2) << 6);
+		if	(OPCODE == POP_HEAD) begin
+			//Original: freehead=Entry-1    -> ||prev=0,Entry=1,next=2||prev=1,Entry=2,next=3||
+			//AfterUpdate:freehead->Entry-2 -> ||prev=0,Entry=2,next=3||..
+			
+			//Change next entries content
+			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.next-1) >> 2) << 6);
 	
-		//Which entry we shoudl change in cacheline
-		i= (tbl_updat_pkt.lstEntry.next[1:0] == 2'b00 ) ? 3 : (tbl_updat_pkt.lstEntry.next[1:0]-1);
-		data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
-		wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+			//Which entry we shoudl change in cacheline
+			i= (tbl_updat_pkt.lstEntry.next[1:0] == 2'b00 ) ? 3 : (tbl_updat_pkt.lstEntry.next[1:0]-1);
+			data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
+			wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+		end
+		else if (OPCODE == POP_TAIL ) begin  //if it is UNCMP , we always do POP_BACK
+			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.prev-1) >> 2) << 6);
+			my_lst_entry.next= tbl_updat_pkt.lstEntry.next; ///'d0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
+			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			data[128*i+:32]=my_lst_entry.next; 
+			wstrb[16*i+:4]={4{1'b1}};
+		end
 	end
 	else if (p_state==TOL_DLST_UPDATE1) begin //PUSH BACK on tail of UNCOMPRESSED LIST
-		get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
+		
+
+
+		if	(OPCODE == PUSH_TAIL) begin
+			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 	
-		my_lst_entry.prev= tol_HT.uncompListTail;	
-		my_lst_entry.next= 'd0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
-		i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-		data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-		wstrb[16*i+:8]={8{1'b1}};
+			my_lst_entry.prev= tol_HT.uncompListTail;	
+			my_lst_entry.next= 'd0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
+			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+			wstrb[16*i+:8]={8{1'b1}};
+		end
+		else if (OPCODE == PUSH_HEAD  ) begin 
+			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
+			my_lst_entry.prev= 'd0;
+			j=tbl_updat_pkt.ifl_idx;
+			my_lst_entry.next= tol_HT.IfLstHead[j]; //I am pointing to head now, update IfLSTHead in next cycle	
+			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
+			wstrb[16*i+:8]={8{1'b1}};
+		end 
 	end
 	else if (p_state==TOL_DLST_UPDATE2) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+		
+			
+		if	(OPCODE == PUSH_TAIL) begin
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.uncompListTail-1) >> 2) << 6);
-	
-		i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
-		data[128*i+:32]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
-		wstrb[16*i+:4]={4{1'b1}};
+		 i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
+		 data[128*i+:32]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
+		 wstrb[16*i+:4]={4{1'b1}};
+		end
+		else if (OPCODE == PUSH_HEAD  ) begin 
+		 j=tbl_updat_pkt.ifl_idx;
+		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.IfLstHead[j]-1) >> 2) << 6);
+		 i=(tol_HT.IfLstHead[j][1:0]==2'b00)? 3 : (tol_HT.IfLstHead[j][1:0]-1);
+		 data[(128*i+32)+:32]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
+		 wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+		end 
 	end
  	get_tbl_axi_wrpkt.data = data; //get_8byte_byteswap(data); //511'h0123456789ABCDEF;
 	get_tbl_axi_wrpkt.strb = wstrb;//get_strb_swap(wstrb);		
 endfunction
+
+function axi_wr_pld_t get_zspg_axi_wrpkt;
+	input iWayORcPagePkt_t zs_pkt;
+	get_zspg_axi_wrpkt.addr={{16{1'b0}},zs_pkt.iWay_ptr};
+	get_zspg_axi_wrpkt.data={{112{1'b0}},zs_pkt.zsPgMd}; //MD is 50 bytes=50*8=400bit -> fits in same cacheline
+	get_zspg_axi_wrpkt.strb={{14{1'b0}},{50{1'b1}}}; 
+endfunction
+
+//
+logic cmpdcmp_trigger;
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
 //For birngup phase, we always work only hawk_master if both addr and data channels are ready and at cache line granularity always
@@ -265,6 +314,8 @@ assign wvalid = wr_reqpkt.wvalid; // & vldpkt.wvalid;
 
 axi_wr_pld_t p_axireq,n_axireq;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
+logic [1:0] OPC;
+integer k;
 //logic to handle different modes
 always@* begin
 //default
@@ -304,6 +355,9 @@ always@* begin
 				n_state=ATT_UPDATE;
 			 	n_tol_updpkt=tol_updpkt;	
 			end
+			else if (iWayORcPagePkt.update) begin
+				n_state=CMPDCMP;
+			end
 
 		end
 		INIT_ATT:begin
@@ -322,7 +376,7 @@ always@* begin
 
 			  end 
 		end
-		WAIT_ATT: begin //we can hve multipel beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
+		WAIT_ATT: begin 
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     n_req_wvalid = 1'b1;
 				     n_state = INIT_ATT;
@@ -353,7 +407,7 @@ always@* begin
 		end
 		ATT_UPDATE : begin
 			  if(awready && !awvalid) begin
-				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,'d0); //prepare next packet//lst argument is don't care
 				     n_req_awvalid = 1'b1;
 				     n_state = WAIT_ATT_UPDATE;
 			  end
@@ -361,36 +415,52 @@ always@* begin
 		WAIT_ATT_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     n_req_wvalid = 1'b1;
-				     n_state = TOL_SLST_UPDATE;
+				    
+				     //If SRC is free list and is exhausted, then set
+				     //freelisthead and tail as null and skip
+				     //SRC list Update
+			  	     if (p_tol_updpkt.src_list==FREE) begin
+					 if ((freeListHead!=freeListTail) || (freeListTail==NULL)) begin
+				     		n_state = TOL_SLST_UPDATE;
+			  		 end
+			  	         else begin
+				     	  n_freeListHead = NULL;
+				     	  n_freeListTail = NULL;
+				     	  n_state = TOL_DLST_UPDATE1;
+			  	         end
+				     end
 			  end
 		end
 		TOL_SLST_UPDATE: begin
-			  if((p_tol_updpkt.src_list==FREE && freeListHead!=freeListTail) || (freeListTail==NULL)) begin
-			  	if(awready && !awvalid) begin
-			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+					case(p_tol_updpkt.src_list)
+					 FREE  : OPC=POP_HEAD;
+					 UNCOMP: OPC=POP_HEAD;
+					endcase
+			  		if(awready && !awvalid) begin
+			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 			  	           n_req_awvalid = 1'b1;
 			  	           n_state = WAIT_TOL_SLST_UPDATE;
-			  	end
-			  end
-			  else begin
-				n_freeListHead = NULL;
-				n_freeListTail = NULL;
-				n_state = TOL_DLST_UPDATE1;
-			  end
+			  		end
 		end
 		WAIT_TOL_SLST_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     //Update SLST HEAD/TAIL
-				     if(p_tol_updpkt.src_list==FREE) begin //for free list as source, it is pop_front
-					n_freeListHead=p_tol_updpkt.lstEntry.next; //my next will become head 	
-				     end //handle other cases later
+					case(p_tol_updpkt.src_list)
+					 FREE  : n_freeListHead=p_tol_updpkt.lstEntry.next; //pop_front->my next will become head 	
+					 UNCOMP  : n_uncompListHead=p_tol_updpkt.lstEntry.next; //pop_back =>my prev will become tail	
+				        endcase 
 				     n_req_wvalid = 1'b1;
 				     n_state = TOL_DLST_UPDATE1;
 			  end
 		end
 		TOL_DLST_UPDATE1: begin
+					case(p_tol_updpkt.dst_list)
+					 //FREE  : OPC=POP_HEAD;
+					 UNCOMP    : OPC=PUSH_TAIL;
+					 IFL_SIZE1 : OPC=PUSH_HEAD;
+					endcase
 			  if(awready && !awvalid) begin
-				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 				     n_req_awvalid = 1'b1;
 				     n_state = WAIT_TOL_DLST_UPDATE1;
 			  end
@@ -402,18 +472,23 @@ always@* begin
 					   if   (uncompListTail=='d0) begin//If tail was null, update both , tail and head to first entry
 					   	n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
 					   	n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
-				                n_state = TBL_UPDATE_WAIT_RESP;
+				                n_state = WAIT_BRESP;
 					   end
 					   else begin
 				                 n_state = TOL_DLST_UPDATE2;
 				           end
-				        end	
+				        end
 				     n_req_wvalid = 1'b1;
 			  end
 		end
 		TOL_DLST_UPDATE2: begin
+					case(p_tol_updpkt.dst_list)
+					 //FREE  : OPC=POP_HEAD;
+					 UNCOMP    : OPC=PUSH_TAIL;
+					 IFL_SIZE1 : OPC=PUSH_HEAD;
+					endcase
 			  if(awready && !awvalid) begin
-				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT); //prepare next packet
+				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 				     n_req_awvalid = 1'b1;
 				     n_state = WAIT_TOL_DLST_UPDATE2;
 			  end
@@ -423,11 +498,20 @@ always@* begin
 					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
 						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
 					end
+					else begin //by default we consdier as irregualr free list
+						k=p_tol_updpkt.ifl_idx;
+						n_IfLstHead[k]=p_tol_updpkt.tolEntryId;
+					end	
 				     n_req_wvalid = 1'b1;
-				     n_state = TBL_UPDATE_WAIT_RESP;
+				     n_state = WAIT_BRESP;
 			  end
 		end
-		TBL_UPDATE_WAIT_RESP: begin
+		CMPDCMP:begin
+			if(zspg_updated) begin
+				n_state=WAIT_BRESP;
+			end
+		end
+		WAIT_BRESP: begin
 			  if(bresp_cmplt) begin //data has been already set, in prev state, just assert wvalid
 				     n_state = IDLE;
 			  end
@@ -435,7 +519,7 @@ always@* begin
 	endcase
 end
 
-assign tbl_update_done = (p_state == TBL_UPDATE_WAIT_RESP) && bresp_cmplt;
+assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
 
 
 //state register/output flops
@@ -489,12 +573,13 @@ always @(posedge clk_i or negedge rst_ni)
 	  init_list_done <= 1'b1;
 	end
 
+hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt;
 //Output combo signals
-assign wr_reqpkt.addr = p_axireq.addr;
-assign wr_reqpkt.data = p_axireq.data;
-assign wr_reqpkt.strb = p_axireq.strb;
-assign wr_reqpkt.awvalid = p_req_awvalid;
-assign wr_reqpkt.wvalid =  p_req_wvalid;
+assign wr_reqpkt.addr 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.addr   : p_axireq.addr;
+assign wr_reqpkt.data 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.data   : p_axireq.data;
+assign wr_reqpkt.strb 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.strb   : p_axireq.strb;
+assign wr_reqpkt.awvalid =(p_state==CMPDCMP) ? int_wr_reqpkt.awvalid: p_req_awvalid;
+assign wr_reqpkt.wvalid  =(p_state==CMPDCMP) ? int_wr_reqpkt.wvalid : p_req_wvalid;
 
 //Write Response are posted : Check
 //For now, we support only in-order support: so no need to check ID
@@ -539,6 +624,22 @@ always @(posedge clk_i or negedge rst_ni) begin
 		uncompListTail<=n_uncompListTail;
 	end
 end
+genvar if_h;
+generate 
+for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
+	always @(posedge clk_i or negedge rst_ni)
+	begin
+		if(!rst_ni) begin
+			IfLstHead[if_h]<='d0;
+		end
+		else begin
+			IfLstHead[if_h]<=n_IfLstHead[if_h];
+		end
+	end
+assign tol_HT.IfLstHead[if_h]=IfLstHead[if_h];
+end
+endgenerate
+
 //share with pgrd manager
 assign tol_HT.freeListHead=freeListHead;
 assign tol_HT.freeListTail=freeListTail;
@@ -549,4 +650,5 @@ assign tol_HT.uncompListTail=uncompListTail;
 //For DV
 assign dump_mem = pgwr_mngr_ready;  //dump memory after operation is complete , dump mem is sensitive to only edge, we can give level signal
 //
+//hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
 endmodule

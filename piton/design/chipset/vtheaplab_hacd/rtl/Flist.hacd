@@ -1,5 +1,6 @@
 hacd_pkg.sv
 hawk_rd_pkg.sv
+hawk_axiwr.sv
 hawk_pgwr_mngr.sv
 hawk_comdecomp.sv
 hawk_cmpresn_mngr.sv

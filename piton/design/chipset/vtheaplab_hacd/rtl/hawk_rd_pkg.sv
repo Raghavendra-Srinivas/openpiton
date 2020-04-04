@@ -94,11 +94,11 @@ function tol_updpkt_t get_Tolpkt;
 	//handle other table update later
 
 endfunction
-localparam bit[13:0] suprted_comp_size[2]={128,64}; //supportable compressed sizes in bytes, just one for now
+localparam bit[13:0] suprted_comp_size[IFLST_COUNT]={128}; //supportable compressed sizes in bytes, just one for now
 function logic [7:0] get_idx;
 	input [13:0] size;
 	integer i; 
-	for(i=0;i<256;i=i+1) begin
+	for(i=0;i<IFLST_COUNT;i=i+1) begin
 		if(suprted_comp_size[i]==size) begin
 			get_idx=i;	
 		end

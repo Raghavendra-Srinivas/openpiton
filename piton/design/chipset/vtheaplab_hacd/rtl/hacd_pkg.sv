@@ -41,7 +41,6 @@ package hacd_pkg;
     parameter int LIST_ENTRY_CNT=4; //LST_ENTRY_MAX // lower count for verification //update later
 
     localparam [clogb2(LST_ENTRY_MAX)-1:0] NULL='d0;
-    parameter int IFLST_COUNT=1;
 
     //parameter bit [63:0] HAWK_ATT_END=  64'hFFF6101000;    //64'h80001000;//32'h80800000
     //One memory block init data for ATT
@@ -157,6 +156,7 @@ package hacd_pkg;
 	logic [2:0] src_list; //from which source we are removing this entry
 	logic [2:0] dst_list; //to which list , we are moving this entry
 	//logic [47:0] ppa;
+	logic [7:0] ifl_idx; //this is needed for irregular free list
 	logic tbl_update;
  } tol_updpkt_t;
 
@@ -229,12 +229,14 @@ endfunction
 
 
 //////////
+    parameter int IFLST_COUNT=1;
 //ToL HEAD and TAILS
- typedef struct packed {
+ typedef struct {
   logic [clogb2(LST_ENTRY_MAX)-1:0] freeListHead;	
   logic [clogb2(LST_ENTRY_MAX)-1:0] freeListTail;	
   logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListHead;	
-  logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListTail;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListTail;
+  logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstHead[IFLST_COUNT];	
  } hawk_tol_ht_t;
 
 

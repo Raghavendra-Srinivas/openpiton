@@ -29,7 +29,6 @@ module hawk_ctrl_unit #()
     //pg_writer handshake
     input init_att_done,
     input init_list_done,
-    input tbl_update_done,
 
     //pg_rdmanager
     input pgrd_mngr_ready,
@@ -74,9 +73,7 @@ localparam [`FSM_WID-1:0] IDLE			='d0,
 	      		  RD_LKP_REQ		='d3,
 	      		  WR_LKP_REQ		='d4,
 	      		  RD_LOOKUP_ALLOCATE	='d5,
-	      		  WR_LOOKUP_ALLOCATE	='d6,
-	      		  RD_TBL_UPDATE		='d7,
-	      		  WR_TBL_UPDATE		='d8;
+	      		  WR_LOOKUP_ALLOCATE	='d6;
 
 //fsm
 always@* 
@@ -145,11 +142,6 @@ begin
 	 
 				      n_state<=CHK_WR_ACTIVE;
 				end
-				else if (tol_updpkt.tbl_update) begin
-				      n_hawk_cpu_ovrd_rdpkt.ppa=tol_updpkt.lstEntry.way;
-				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b0;
-				      n_state=RD_TBL_UPDATE;
-				end
 				//handle inflation later
 				//else if (infl)
 		end
@@ -164,29 +156,8 @@ begin
 
 				      n_state<=CHK_RD_ACTIVE;
 				end
-				else if (tol_updpkt.tbl_update) begin
-				      n_hawk_cpu_ovrd_wrpkt.ppa=tol_updpkt.lstEntry.way;
-				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b0;
-				      n_state=WR_TBL_UPDATE;
-				end
 				//handle inflation later
 				//else if (infl)
-		end
-		//The below can be moved to hawk_pgrd_manager, but later it helps
-		//to pipeline : look up for pending transactions can be
-		//carried out while update table action is pending, move below to other tiny state machine
-		//to pipeline 
-		RD_TBL_UPDATE:begin
-				if(tbl_update_done) begin
-				      	n_hawk_cpu_ovrd_rdpkt.allow_access=1'b1;
-					n_state<=CHK_WR_ACTIVE;
-				end
-		end
-		WR_TBL_UPDATE:begin
-				if(tbl_update_done) begin
-				        n_hawk_cpu_ovrd_wrpkt.allow_access=1'b1;
-					n_state<=CHK_RD_ACTIVE;
-				end
 		end
 	endcase
 end

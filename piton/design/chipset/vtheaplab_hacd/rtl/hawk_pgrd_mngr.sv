@@ -14,7 +14,8 @@ module hawk_pgrd_mngr (
   
   //handshake with PWM
   input zspg_updated,
-  output hacd_pkg::iWayORcPagePkt_t p_iWayORcPagePkt,
+  input tbl_update_done,
+  output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
 	
   //from compressor
   input logic [13:0] comp_size,
@@ -72,9 +73,10 @@ localparam IDLE			='d0,
 	   WAIT_LST_ENTRY	='d5,
 	   ALLOCATE_PPA 	='d6,
 	   TBL_UPDATE		='d7,
-	   COMPRESS		='d8,
-	   UNCOMPRESS		='d9,
-	   BUS_ERROR		='d10;
+	   TBL_UPDATE_DONE	='d8,
+	   COMPRESS		='d9,
+	   UNCOMPRESS		='d10,
+	   BUS_ERROR		='d11;
 
 
 
@@ -186,7 +188,7 @@ always@* begin
 				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,p_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
 			   	     if(pgwr_mngr_ready) begin
 				     	n_tol_updpkt.tbl_update=1'b1;
-				     	n_state = IDLE;
+				     	n_state = TBL_UPDATE_DONE;
 				     end
 				     else n_state = TBL_UPDATE;	
 		end
@@ -194,8 +196,16 @@ always@* begin
 			   //we can deliver packet to PWM only if it's ready
 			   if(pgwr_mngr_ready) begin
 				     n_tol_updpkt.tbl_update=1'b1;
-				     n_state = IDLE;
+				     n_state = TBL_UPDATE_DONE;
 			   end
+		end
+		TBL_UPDATE_DONE:begin
+				if(tbl_update_done) begin
+					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way;
+					n_trnsl_reqpkt.sts=UNCOMP;
+					n_trnsl_reqpkt.allow_access=1'b1;
+				     	n_state = IDLE;
+				end
 		end
 	  	COMPRESS:begin
 				if(cmpresn_done) begin //get the freeway from comp_mnger
