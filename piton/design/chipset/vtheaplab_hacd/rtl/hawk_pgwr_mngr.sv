@@ -188,7 +188,7 @@ function axi_wr_pld_t get_axi_wr_pkt;
 endfunction
 
 
-localparam [1:0] PUSH_HEAD='d0, POP_HEAD='d1, PUSH_TAIL='d2,POP_TAIL='d3;
+localparam [2:0] NULLIFY='d0,PUSH_HEAD='d1, POP_HEAD='d2, PUSH_TAIL='d3,POP_TAIL='d4;
 function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input tol_updpkt_t tbl_updat_pkt;
 	input state_t p_state;
@@ -214,7 +214,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		
 		if(tbl_updat_pkt.dst_list==UNCOMP) begin
 			att_entry.sts=STS_UNCOMP;
-		end //handl others: by default it goes to COMP as there are too many dst lists
+		end //handl others: by default I make it do to to COMP as there are too many irregular free lists and so no need to compare
 		else begin
 			att_entry.sts=STS_COMP;
 		end
@@ -249,13 +249,19 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	end
 	else if (p_state==TOL_DLST_UPDATE1) begin //PUSH BACK on tail of UNCOMPRESSED LIST
 		
-
-
-		if	(OPCODE == PUSH_TAIL) begin
+		if	(OPCODE == NULLIFY) begin
+			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
+			my_lst_entry.prev= NULL;	
+			my_lst_entry.next= NULL;	
+			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+			wstrb[16*i+:8]={8{1'b1}};
+		end 
+		else if	(OPCODE == PUSH_TAIL) begin
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 	
 			my_lst_entry.prev= tol_HT.uncompListTail;	
-			my_lst_entry.next= 'd0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
+			my_lst_entry.next= NULL; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
 			wstrb[16*i+:8]={8{1'b1}};
@@ -291,15 +297,11 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	get_tbl_axi_wrpkt.strb = wstrb;//get_strb_swap(wstrb);		
 endfunction
 
-function axi_wr_pld_t get_zspg_axi_wrpkt;
-	input iWayORcPagePkt_t zs_pkt;
-	get_zspg_axi_wrpkt.addr={{16{1'b0}},zs_pkt.iWay_ptr};
-	get_zspg_axi_wrpkt.data={{112{1'b0}},zs_pkt.zsPgMd}; //MD is 50 bytes=50*8=400bit -> fits in same cacheline
-	get_zspg_axi_wrpkt.strb={{14{1'b0}},{50{1'b1}}}; 
-endfunction
+
 
 //
 logic cmpdcmp_trigger;
+logic cmpdcmp_done;
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
 //For birngup phase, we always work only hawk_master if both addr and data channels are ready and at cache line granularity always
@@ -458,6 +460,7 @@ always@* begin
 					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
+					 NULLIFY   : OPC=NULLIFY;
 					endcase
 			  if(awready && !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
@@ -478,6 +481,9 @@ always@* begin
 				                 n_state = TOL_DLST_UPDATE2;
 				           end
 				        end
+					else if (p_tol_updpkt.dst_list==NULLIFY) begin //we don't need second UPDATE for nullify entry
+				                n_state = WAIT_BRESP;
+					end
 				     n_req_wvalid = 1'b1;
 			  end
 		end
@@ -486,6 +492,7 @@ always@* begin
 					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
+					 NULLIFY   : OPC=NULLIFY;
 					endcase
 			  if(awready && !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
@@ -507,7 +514,7 @@ always@* begin
 			  end
 		end
 		CMPDCMP:begin
-			if(zspg_updated) begin
+			if(cmpdcmp_done) begin
 				n_state=WAIT_BRESP;
 			end
 		end
@@ -520,7 +527,7 @@ always@* begin
 end
 
 assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
-
+assign zspg_updated = (p_state == WAIT_BRESP) && bresp_cmplt;
 
 //state register/output flops
 always @(posedge clk_i or negedge rst_ni)
@@ -650,5 +657,6 @@ assign tol_HT.uncompListTail=uncompListTail;
 //For DV
 assign dump_mem = pgwr_mngr_ready;  //dump memory after operation is complete , dump mem is sensitive to only edge, we can give level signal
 //
-//hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
+assign cmpdcmp_trigger = p_state == CMPDCMP;
+hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
 endmodule

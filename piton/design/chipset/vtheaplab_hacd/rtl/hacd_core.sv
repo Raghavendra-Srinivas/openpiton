@@ -58,7 +58,7 @@ module hacd_core (
    wire comp_done;
    wire zspg_updated;
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
-   wire rdfifo_rdptr_rst,rdfifo_empty,rdfifo_full;
+   wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full;
 
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
@@ -201,10 +201,18 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
 //
+logic [13:0] comp_size;
+wire compdecomp_rready,comp_start;
 hawk_comdecomp u_hawk_comdecomp(
-     .rdfifo_rdptr_rst(),
-     .rdfifo_empty(),
-     .rdfifo_full()
+     .clk_i,
+     .rst_ni,
+     .comp_size,
+     .comp_start,
+     .comp_done,
+     //.rdfifo_rdptr_rst,
+     .rdfifo_empty(rdfifo_empty),
+     .rdfifo_full(rdfifo_full),
+     .compdecomp_rready(compdecomp_rready)
 );
 //////Hawk Read Master
     hawk_axird_master u_hawk_axird_mstr (
@@ -212,13 +220,14 @@ hawk_comdecomp u_hawk_comdecomp(
       .rst(!rst_ni),
    
       //compressoer interface
-     .rdfifo_rdptr_rst(),
-     .rdfifo_empty(),
-     .rdfifo_full(),
+     .rdfifo_rdptr_rst(rdfifo_rdptr_rst),
+     .rdfifo_wrptr_rst(rdfifo_wrptr_rst),
+     .rdfifo_empty(rdfifo_empty),
+     .rdfifo_full(rdfifo_full),
      
      .s_axi_arid(6'd0),//in-order for now
      .s_axi_araddr(rd_reqpkt.addr),
-     .s_axi_arlen(8'd0), //fix to 1 beat always for hawk now
+     .s_axi_arlen(rd_reqpkt.arlen), //fix to 1 beat always for hawk now
      .s_axi_arsize(`HACD_AXI4_BURST_SIZE),
      .s_axi_arburst(`HACD_AXI4_BURST_TYPE),
      .s_axi_arlock(1'd0),
@@ -235,7 +244,7 @@ hawk_comdecomp u_hawk_comdecomp(
      .s_axi_rlast(rd_resppkt.rlast),
      .s_axi_ruser(), //not used for now
      .s_axi_rvalid(rd_resppkt.rvalid),
-     .s_axi_rready(rd_reqpkt.rready),
+     .s_axi_rready(rd_reqpkt.rready || (comp_start & compdecomp_rready)),
 
      .m_axi_arid(hawk_axi_rd_bus.axi_arid),
      .m_axi_araddr(hawk_axi_rd_bus.axi_araddr),

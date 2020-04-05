@@ -111,6 +111,7 @@ package hacd_pkg;
  //Axi Read Packets betwenn hawk_axird_master and hawk_pgrd_mngr
   typedef struct packed {
  	logic [63:0]  addr;
+    	logic [`HACD_AXI4_LEN_WIDTH-1:0] arlen;
 	logic arvalid;
 	logic rready;
  } axi_rd_reqpkt_t;
@@ -118,7 +119,7 @@ package hacd_pkg;
 
   typedef struct packed {
  	logic [63:0]  addr;
-    	logic [`HACD_AXI4_LEN_WIDTH-1:0] awlen;
+    	logic [`HACD_AXI4_LEN_WIDTH-1:0] arlen;
  } axi_rd_pld_t; 
 
  typedef struct packed {
@@ -256,7 +257,7 @@ typedef struct packed {
 	logic [7:0] size; //1byte
 } ZsPg_Md_t;
 
-parameter int ZS_MD_SIZE=50; //size+valids+3 ways+5 pages=50bytes 
+parameter int ZS_OFFSET=48'd64; //size+valids+3 ways+5 pages=50bytes 
 
 //typedef enum {IWAY,CPAGE} CTYPE;
 typedef struct packed{

@@ -26,6 +26,7 @@ function axi_rd_pld_t get_axi_rd_pkt;
 		 //from free list head
 		 get_axi_rd_pkt.addr = HAWK_LIST_START + (((lstEntryId-1) >> 2) << 6);
 	end
+		get_axi_rd_pkt.arlen=8'd0;
 	//handle other modes later
 endfunction
 
@@ -94,9 +95,9 @@ function tol_updpkt_t get_Tolpkt;
 	//handle other table update later
 
 endfunction
-localparam bit[13:0] suprted_comp_size[IFLST_COUNT]={128}; //supportable compressed sizes in bytes, just one for now
+localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd64}; //supportable compressed sizes in bytes, just one for now
 function logic [7:0] get_idx;
-	input [13:0] size;
+	input logic [13:0] size;
 	integer i; 
 	for(i=0;i<IFLST_COUNT;i=i+1) begin
 		if(suprted_comp_size[i]==size) begin
@@ -127,8 +128,8 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 	//cpage byte start
 	if(md.way_vld[0]) begin
 		if          (!md.pg_vld[0]) begin
-				pkt.cPage_byteStart=iway_ptr+62; //first page
-				md.page0=iway_ptr+62;
+				pkt.cPage_byteStart=iway_ptr+ZS_OFFSET; //first page
+				md.page0=iway_ptr+ZS_OFFSET;
 			//chk for 4KB crossover
 		end else if (!md.pg_vld[1]) begin
 				if (md.page0+cpage_size<4096) begin

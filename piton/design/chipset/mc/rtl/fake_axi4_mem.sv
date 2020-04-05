@@ -103,13 +103,13 @@ begin
 				if(rd_bus.axi_arvalid & rd_bus.axi_arready) begin
 					capt_addr = rd_bus.axi_araddr;
 					capt_id=rd_bus.axi_arid;
-					$display("AXI4_MEM:Observed RD TXN: ADDR:%h,",capt_addr);
 					if(!MEM.exists(capt_addr)) begin
 					    MEM[capt_addr][0] ='d0;	
 					    MEM[capt_addr][1] ='d0;	
 					end
 			  		rd_bus.axi_arready <=0;
 					rd_beat_cnt=rd_bus.axi_arlen+1;
+					$display("AXI4_MEM:Observed RD TXN: ADDR:%h, ARlen =; %d",capt_addr,rd_beat_cnt);
 					temp_beat_cnt=0;
 					while(temp_beat_cnt<rd_beat_cnt) begin
 						@(posedge clk); //add timeput if required later

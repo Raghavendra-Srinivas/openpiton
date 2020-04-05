@@ -17,12 +17,14 @@ module hawk_cmpresn_mngr (
     //from compressor
     input logic [13:0] comp_size,
     output logic comp_start,
-    input comp_done,
+    input wire comp_done,
     output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
   
     //from AXI FIFO
     input wire rdfifo_full,
     input wire rdfifo_empty,
+    output logic rdfifo_wrptr_rst, //this would reset read pointer to zero
+    output logic rdfifo_rdptr_rst, //this would reset read pointer to zero
 
     //AXI inputs  
     input hacd_pkg::axi_rd_rdypkt_t rd_rdypkt,
@@ -54,7 +56,7 @@ assign rvalid = rd_resppkt.rvalid;
 assign rlast = rd_resppkt.rlast;
 assign rdata = rd_resppkt.rdata;
 assign rresp =  rd_resppkt.rresp;
-
+logic n_rdfifo_wrptr_rst,n_rdfifo_rdptr_rst;
 
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_rdata;
 typedef logic [`FSM_WID_CMP_MNGR-1:0] state_t;
@@ -74,7 +76,8 @@ localparam IDLE			     ='d0,
 	   DO_FINAL_TOL_UPDATE	     ='d11,
 	   DONE			     ='d11,	
 	   COMP_MNGR_ERROR	     ='d12,
-	   BUS_ERROR		     ='d13;
+	   BUS_ERROR		     ='d13,
+	   RESET_FIFO_PTRS	     ='d14;
 
 
 
@@ -86,7 +89,7 @@ logic [47:0] UC_ifLst_iWay[IFLST_COUNT],n_UC_ifLst_iWay[IFLST_COUNT];
 logic UC_ifLst_iWay_valid[IFLST_COUNT],n_UC_ifLst_iWay_valid[IFLST_COUNT];
 logic [13:0] n_comp_size,p_comp_size;
 ListEntry p_listEntry,n_listEntry;
-logic [1:0] n_burst_cnt,p_burst_cnt;
+logic [5:0] n_burst_cnt,p_burst_cnt;
 logic n_comp_start;
 ZsPg_Md_t ZsPg_Md;
 iWayORcPagePkt_t n_iWayORcPagePkt;
@@ -97,16 +100,18 @@ always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_comp_axireq.addr= p_axireq.addr;
-	n_comp_axireq.awlen = 'd0; //by default, one beat
+	n_comp_axireq.arlen = 8'd0; //by default, one beat
 	n_comp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
-        n_comp_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
+        n_comp_rready=1'b1;     
 	n_comp_rdata=p_rdata;
 	n_comp_tol_updpkt.tbl_update=1'b0;
-	n_comp_start=1'b0;
+	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
 	n_iWayORcPagePkt=iWayORcPagePkt;
 	n_iWayORcPagePkt.update=1'b0;
-
+	n_burst_cnt=p_burst_cnt;	
+	n_rdfifo_rdptr_rst=1'b0;
+	n_rdfifo_wrptr_rst=1'b0;
 	case(p_state)
 		IDLE: begin
 			if(cmpresn_trigger && !cmpresn_done) begin
@@ -130,23 +135,33 @@ always@* begin
 			  end
 		end
 		DECODE_LST_ENTRY: begin
+        		   n_comp_rready=1'b0;     
 			   n_listEntry=decode_LstEntry(tol_HT.uncompListHead,p_rdata);
 			   //n_trnsl_reqpkt
-			   n_state=BURST_READ;
+			   n_state=RESET_FIFO_PTRS;
 			   n_burst_cnt='d0;	
 			   	
 		end
+		RESET_FIFO_PTRS:begin
+        		   n_comp_rready=1'b0;     
+			   n_rdfifo_rdptr_rst=1'b1;
+			   n_rdfifo_wrptr_rst=1'b1;
+			   n_state=BURST_READ;
+		end
 		BURST_READ:begin
+        		n_comp_rready=1'b0;     
 			   //n_state	
 			if(arready && !arvalid && p_burst_cnt=='d0 && rdfifo_empty) begin
 			           n_comp_axireq.addr = (p_listEntry.way<<12);
-				   n_comp_axireq.awlen = 'd4; //4 corresponds for 16 beats
+				   n_comp_axireq.arlen = 8'd0; //8'd15; //15 corresponds for 16 beats //fix memory model later to support burst
 			           n_comp_req_arvalid = 1'b1;
 				   n_burst_cnt = 'd1;
 			end
-			else if(arready && !arvalid && (p_burst_cnt !=0) && !rdfifo_full && p_burst_cnt<4) begin
-			           n_comp_axireq.addr = p_axireq.addr + 64'h40; 
-				   n_comp_axireq.awlen = 'd4; //4 corresponds for 16 beats
+			//else if(arready && !arvalid && (p_burst_cnt !=0) && !rdfifo_full && p_burst_cnt<4) begin
+			else if(arready && !arvalid && (p_burst_cnt !=0) && !rdfifo_full && p_burst_cnt<64) begin
+			           //n_comp_axireq.addr = p_axireq.addr + (p_burst_cnt << 4)<<6; //16beats per burst, each beat is 64 bytes part(cacheline) 
+			           n_comp_axireq.addr = p_axireq.addr + 64'd64; //16beats per burst, each beat is 64 bytes part(cacheline) 
+				   n_comp_axireq.arlen = 8'd0; //8'd15; //15 corresponds for 16 beats
 			           n_comp_req_arvalid = 1'b1;
 				   n_burst_cnt = p_burst_cnt+'d1;
 			end 
@@ -157,7 +172,9 @@ always@* begin
 		
 		end
 		COMP_WAIT:begin
+        		n_comp_rready=1'b0;     
 			if(comp_done) begin
+				n_comp_start=1'b0;
 				//lookup IF list for corresponding size
 				size_idx=get_idx(comp_size);
 				if (UC_ifLst_iWay_valid[size_idx]) begin
@@ -166,7 +183,7 @@ always@* begin
 			    		n_comp_axireq = UC_ifLst_iWay[size_idx]; 
 					n_state=FETCH_ZSPAGE; 
 				end else if(tol_HT.IfLstHead[size_idx]!=NULL) begin
-					n_state=MIGRATE_TO_ZSPAGE; 
+					n_state= IDLE;//Not handling for now :->Here, first we need fetch head of Ilist to get ptr to Zspage, then fetch Zspage. MIGRATE_TO_ZSPAGE; 
 				end else begin
 					//n_IfLst_Head[size_idx]=tol_HT.uncompListHead; this shudl happen during uncompression
 					n_state=PREP_ZSPAGE_MD;
@@ -202,13 +219,12 @@ always@* begin
 					ZsPg_Md.size=comp_size;
 					ZsPg_Md.way0=p_listEntry.way; //myself is way to store compressed page
 					ZsPg_Md.way_vld[0]=1'b1;	
-					ZsPg_Md.page0=p_listEntry.way+62; //myself is the page plus offset of metadata &  2 pointers
+					ZsPg_Md.page0=p_listEntry.way+ZS_OFFSET; //myself is the page plus offset of metadata &  2 pointers
 					ZsPg_Md.pg_vld[0]=1'b1;	
 					//send this packet and way_addr pg write to write compressed page, 
 					//send tol_update packet to PWM to update uncompressTail 
 					//and push entry to compressed list
-			        	//n_iWayORcPagePkt.iWayORcPage=IWAY;
-					n_iWayORcPagePkt.cPage_byteStart=p_listEntry.way+ZS_MD_SIZE;
+					n_iWayORcPagePkt.cPage_byteStart=p_listEntry.way+ZS_OFFSET;
 					n_iWayORcPagePkt.cpage_size=comp_size;
 					//payload
 					n_iWayORcPagePkt.iWay_ptr=p_listEntry.way;
@@ -216,8 +232,8 @@ always@* begin
 					n_iWayORcPagePkt.zsPgMd=ZsPg_Md;
 					//we can send update only if comp_size plus
 					//payload of zspg can fit in 4KB that is
-					//comp_size+62 bytes
-					if((comp_size+62) < 4096) begin
+					//comp_size+ZS_OFFSET bytes
+					if((comp_size+ZS_OFFSET) < 4096) begin
 						n_iWayORcPagePkt.update=1'b1;
 					
 						n_comp_tol_updpkt.dst_list=IFL_SIZE1; //for ZS identiy way, we need to push on Identity Way
@@ -262,7 +278,7 @@ always@* begin
 				  	      n_iWayORcPagePkt.update=1'b1;
 
 				  	      //Update ATT and TOL
-					      n_comp_tol_updpkt.dst_list=NULLIFY; //for ZS identiy way, we need to push on Identity Way
+					      n_comp_tol_updpkt.dst_list=NULLIFY; //for nullify ATT still get compression status but entry in list will be dangled 
 			        	      n_state=UPDATE_ATT_POP_UCMP_TAIL;
 				  	end
 				end
@@ -303,11 +319,13 @@ begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
 		p_listEntry <= 'd0;
-		p_burst_cnt <= 1'b0;
+		p_burst_cnt <= 'd0;
 		comp_start <=1'b0;
 		iWayORcPagePkt<='d0;
 		cmpresn_done<=1'b0;
 	        cmpresn_freeWay<='d0;
+		rdfifo_wrptr_rst<=1'b0;
+		rdfifo_rdptr_rst<=1'b0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -317,6 +335,8 @@ begin
 		iWayORcPagePkt<=n_iWayORcPagePkt;
 		cmpresn_done<=n_cmpresn_done;
 	        cmpresn_freeWay<=n_cmpresn_freeWay;
+		rdfifo_wrptr_rst<=n_rdfifo_wrptr_rst;
+		rdfifo_rdptr_rst<=n_rdfifo_rdptr_rst;
 	end
 end
 
@@ -332,6 +352,7 @@ for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
 	always @(posedge clk_i or negedge rst_ni) begin
 		if(!rst_ni) begin
 			UC_ifLst_iWay[fl]<='d0; //0 corresponds for NULL
+			UC_ifLst_iWay_valid[fl]<=1'b0;
 		end else begin
 			UC_ifLst_iWay[fl]<=n_UC_ifLst_iWay[fl];
 			UC_ifLst_iWay_valid[fl]<=n_UC_ifLst_iWay_valid[fl];

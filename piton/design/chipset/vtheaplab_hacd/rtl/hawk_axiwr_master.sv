@@ -22,15 +22,15 @@ module hawk_axiwr_master #
     // Width of ID signal
     parameter ID_WIDTH = `HACD_AXI4_ID_WIDTH,
     // Propagate awuser signal
-    parameter AWUSER_ENABLE = 1,
+    parameter AWUSER_ENABLE = 0,
     // Width of awuser signal
     parameter AWUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     // Propagate wuser signal
-    parameter WUSER_ENABLE = 1,
+    parameter WUSER_ENABLE = 0,
     // Width of wuser signal
     parameter WUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     // Propagate buser signal
-    parameter BUSER_ENABLE = 1,
+    parameter BUSER_ENABLE = 0,
     // Width of buser signal
     parameter BUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     //
@@ -39,7 +39,7 @@ module hawk_axiwr_master #
     parameter [1:0] BURST_TYPE=`HACD_AXI4_BURST_TYPE,
 
     // Write data FIFO depth (cycles)
-    parameter FIFO_DEPTH = `HACD_AXI_MASTER_FIFO_DEPTH,
+    parameter FIFO_DEPTH = 32, //`HACD_AXI_MASTER_FIFO_DEPTH,
     // Hold write address until write data in FIFO, if possible
     parameter FIFO_DELAY = 1
 )
@@ -173,26 +173,6 @@ wire hold;
 reg write;
 reg read;
 reg store_output;
-
-
-//CUSTOM LOGIC START
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//CUSTOM LOGIC END
-
 
 
 assign s_axi_wready = !full && !hold;

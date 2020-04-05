@@ -21,7 +21,7 @@ module hawk_axird_master #
     // Width of ruser signal
     parameter RUSER_WIDTH = `HACD_AXI4_USER_WIDTH,
     // Read data FIFO depth (cycles)
-    parameter FIFO_DEPTH = 32,
+    parameter FIFO_DEPTH = `HACD_AXI_MASTER_FIFO_DEPTH, //64,
     // Hold read address until space available in FIFO for data, if possible
     parameter FIFO_DELAY = 1
 )
@@ -31,6 +31,7 @@ module hawk_axird_master #
 
     //compressor control on FIFO	
     input wire rdfifo_rdptr_rst, //this would reset read pointer to zero
+    input wire rdfifo_wrptr_rst, //this would reset read pointer to zero
     output wire rdfifo_empty,
     output wire rdfifo_full,
    
@@ -89,7 +90,7 @@ parameter RESP_OFFSET  = ID_OFFSET + ID_WIDTH;
 parameter RUSER_OFFSET = RESP_OFFSET + 2;
 parameter RWIDTH       = RUSER_OFFSET + (RUSER_ENABLE ? RUSER_WIDTH : 0);
 
-parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
+parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH)+1;
 
 reg [FIFO_ADDR_WIDTH:0] wr_ptr_reg = {FIFO_ADDR_WIDTH+1{1'b0}}, wr_ptr_next;
 reg [FIFO_ADDR_WIDTH:0] wr_addr_reg = {FIFO_ADDR_WIDTH+1{1'b0}};
@@ -310,7 +311,9 @@ end
 
 always @(posedge clk) begin
     if (rst) begin
-        wr_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+        wr_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}}; 
+    end else if (rdfifo_wrptr_rst) begin
+        wr_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}}; 
     end else begin
         wr_ptr_reg <= wr_ptr_next;
     end
@@ -330,7 +333,8 @@ always @* begin
 
     mem_read_data_valid_next = mem_read_data_valid_reg;
 
-    if (store_output || !mem_read_data_valid_reg) begin
+    if (store_output) begin // || !mem_read_data_valid_reg) begin
+    //if (store_output && !mem_read_data_valid_reg) begin
         // output data not valid OR currently being transferred
         if (!rdfifo_empty) begin
             // not rdfifo_empty, perform read
@@ -369,7 +373,7 @@ always @* begin
 
     s_axi_rvalid_next = s_axi_rvalid_reg;
 
-    if (s_axi_rready || !s_axi_rvalid) begin
+    if (s_axi_rready) begin //  || !s_axi_rvalid) begin
         store_output = 1'b1;
         s_axi_rvalid_next = mem_read_data_valid_reg;
     end

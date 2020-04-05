@@ -20,11 +20,13 @@ module hawk_pgrd_mngr (
   //from compressor
   input logic [13:0] comp_size,
   output logic comp_start,
-  input comp_done,
+  input wire comp_done,
   
   //from AXI FIFO
   input wire rdfifo_full,
   input wire rdfifo_empty,
+  output wire rdfifo_wrptr_rst, //this would reset read pointer to zero
+  output wire rdfifo_rdptr_rst, //this would reset read pointer to zero
 
  //with PWM
   input pgwr_mngr_ready,
@@ -238,6 +240,7 @@ begin
 		p_state <= IDLE;
 		p_attEntryId <= 'd0;		
 		p_axireq.addr <= HAWK_ATT_START; 
+		p_axireq.arlen <= 8'd0;
 		p_req_arvalid <= 1'b0;
 		p_rready <= 1'b0;
 		p_rdata <='d0;
@@ -248,6 +251,7 @@ begin
 
 		//Axi signals
 		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : n_axireq.addr;
+		p_axireq.arlen <= (p_state==COMPRESS) ? n_comp_axireq.arlen : 'd0;
 		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid : n_req_arvalid;
 		p_rready <= (p_state==COMPRESS) ? n_comp_rready : n_rready;
 		p_rdata <= (p_state==COMPRESS) ? n_comp_rdata : n_rdata;
@@ -271,6 +275,7 @@ end
 
 //Output combo signals
 assign rd_reqpkt.addr = p_axireq.addr;
+assign rd_reqpkt.arlen = p_axireq.arlen;
 assign rd_reqpkt.arvalid = p_req_arvalid;
 
 assign rd_reqpkt.rready =p_rready;
