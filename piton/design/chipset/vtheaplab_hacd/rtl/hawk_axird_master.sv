@@ -140,7 +140,7 @@ if (FIFO_DELAY) begin
 
     reg [1:0] state_reg = STATE_IDLE, state_next;
 
-    reg [COUNT_WIDTH-1:0] count_reg = 0, count_next;
+    reg [COUNT_WIDTH-1:0] count_reg, count_next;
 
     reg [ID_WIDTH-1:0] m_axi_arid_reg = {ID_WIDTH{1'b0}}, m_axi_arid_next;
     reg [ADDR_WIDTH-1:0] m_axi_araddr_reg = {ADDR_WIDTH{1'b0}}, m_axi_araddr_next;
@@ -246,13 +246,14 @@ if (FIFO_DELAY) begin
             state_reg <= STATE_IDLE;
             m_axi_arvalid_reg <= 1'b0;
             s_axi_arready_reg <= 1'b0;
+            count_reg <= 'd0;
         end else begin
             state_reg <= state_next;
             m_axi_arvalid_reg <= m_axi_arvalid_next;
             s_axi_arready_reg <= s_axi_arready_next;
+            count_reg <= count_next;
         end
 
-        count_reg <= count_next;
 
         m_axi_arid_reg <= m_axi_arid_next;
         m_axi_araddr_reg <= m_axi_araddr_next;
@@ -346,6 +347,9 @@ always @* begin
             mem_read_data_valid_next = 1'b0;
         end
     end
+    //else begin
+      //      mem_read_data_valid_next = 1'b0;
+    //end
 end
 
 always @(posedge clk) begin

@@ -26,8 +26,8 @@ localparam IDLE	='d0,
 function axi_wr_pld_t get_zspg_axi_wrpkt;
 	input iWayORcPagePkt_t zs_pkt;
 	get_zspg_axi_wrpkt.addr={{16{1'b0}},zs_pkt.iWay_ptr};
-	get_zspg_axi_wrpkt.data={{112{1'b0}},zs_pkt.zsPgMd}; //MD is 50 bytes=50*8=400bit -> fits in same cacheline
-	get_zspg_axi_wrpkt.strb={{14{1'b0}},{50{1'b1}}}; 
+	get_zspg_axi_wrpkt.data={{16{1'b0}},zs_pkt.iWay_ptr,zs_pkt.nxtWay_ptr,zs_pkt.zsPgMd}; //MD is 50 bytes=50*8=400bit + 2 ptr = 12 bytes = 96 bits -> 496 bits fits in same cacheline
+	get_zspg_axi_wrpkt.strb={{2{1'b0}},{62{1'b1}}}; 
 endfunction
 
 always@* begin

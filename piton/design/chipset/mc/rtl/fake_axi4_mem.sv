@@ -198,6 +198,8 @@ input [17:0] freeListHead;
 input [17:0] freeListTail;
 input [17:0] uncompListHead;
 input [17:0] uncompListTail;
+input [17:0] ifLstHead1;
+input [17:0] ifLstTail1;
 
 bit [255:0] cacheline,reverseswap;
 AttEntry attentry[4];
@@ -205,14 +207,16 @@ ListEntry lstentry[2];
 int att_cnt=cnt,lst_enry_id=cnt;
 
 string listentry_name;
-bit [17:0] prev_free_next,prev_uncomp_next;
+bit [17:0] prev_free_next,prev_uncomp_next,prev_ifl64_next;
 
 //Print Current Head and Tail of lists
 $display("--------------------------ToL Head and Tails----------------------------------------------------");
-$display("  FreeList HEAD : %0d" ,freeListHead);
-$display("  FreeList TAIL : %0d" ,freeListTail);
-$display("UncompList HEAD : %0d" ,uncompListHead);
-$display("UncompList TAIL : %0d" ,uncompListTail);
+$display("         FreeList HEAD : %0d" ,freeListHead);
+$display("         FreeList TAIL : %0d" ,freeListTail);
+$display("       UncompList HEAD : %0d" ,uncompListHead);
+$display("       UncompList TAIL : %0d" ,uncompListTail);
+$display("IrglrFreeList-64B HEAD : %0d" ,ifLstHead1);
+$display("IrglrFreeList-64B TAIL : %0d" ,ifLstTail1);
 $display("------------------------------------------------------------------------------------------------");
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
@@ -269,6 +273,8 @@ foreach(MEM[addr]) begin
 	   prev_free_next=lstentry[j].next;
 	end else if (uncompListHead==lst_enry_id) begin
 	   prev_uncomp_next=lstentry[j].next;
+	end else if (ifLstHead1 ==lst_enry_id) begin
+	   prev_ifl64_next=lstentry[j].next;
 	end
 	//detect head/tails or head-tail or middle entries
 	if(lstentry[j].prev=='d0 && lstentry[j].next=='d0) begin
@@ -276,32 +282,32 @@ foreach(MEM[addr]) begin
 			listentry_name="FREE_HEAL";
 		end else if  (uncompListHead==lst_enry_id) begin
 			listentry_name="UCMP_HEAL";
-		end
+		end else if (ifLstHead1==lst_enry_id) begin
+			listentry_name="IF64_HEAL";
+		end else begin
+			listentry_name="NULL_ETRY";
+		end 
 	end
 	else if(lstentry[j].prev=='d0) begin
-        	if (freeListHead==lst_enry_id) begin
-			listentry_name="FREE_HEAD";
-		        prev_free_next=lstentry[j].next;
-		end else if  (uncompListHead==lst_enry_id) begin
-			listentry_name="UCMP_HEAD";
-		        prev_uncomp_next=lstentry[j].next;
-		end
+		case(lst_enry_id)
+			freeListHead:  begin listentry_name="FREE_HEAD"; prev_free_next=lstentry[j].next; end
+			uncompListHead:begin listentry_name="UCMP_HEAD"; prev_uncomp_next=lstentry[j].next; end
+			ifLstHead1    :begin listentry_name="IF64_HEAD"; prev_ifl64_next=lstentry[j].next; end
+		endcase
         end 
 	else if (lstentry[j].next=='d0) begin
-		if  (freeListTail==lst_enry_id) begin
-			listentry_name="FREE_TAIL";
-		end else if  (uncompListTail==lst_enry_id) begin
-			listentry_name="UCMP_TAIL";
-		end
+		case(lst_enry_id)
+			freeListTail:  begin listentry_name="FREE_TAIL"; end
+			uncompListTail:begin listentry_name="UCMP_TAIL"; end
+			ifLstTail1    :begin listentry_name="IF64_TAIL"; end
+		endcase
         end
         else begin //middle entries
-		if(prev_free_next==lst_enry_id) begin
-			listentry_name="FREE     ";
-	   		prev_free_next=lstentry[j].next; //update my next
-		end else if(prev_uncomp_next==lst_enry_id) begin
-			listentry_name="UCMP     ";
-	   		prev_uncomp_next=lstentry[j].next; //update my next
-		end
+		case(lst_enry_id)
+			prev_free_next:  begin listentry_name="FREE     "; prev_free_next=lstentry[j].next; end //update my next
+			prev_uncomp_next:begin listentry_name="UCMP     "; prev_uncomp_next=lstentry[j].next;end //update my next
+			prev_ifl64_next: begin listentry_name="If64     "; prev_ifl64_next=lstentry[j].next;end //update my next
+		endcase
 	end
 
 	 		
@@ -327,18 +333,21 @@ wire [17:0] freeListHead;
 wire [17:0] freeListTail;
 wire [17:0] uncompListHead;
 wire [17:0] uncompListTail;
-
+wire [17:0] ifLstHead1;
+wire [17:0] ifLstTail1;
 assign freeListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListHead[17:0];
 assign freeListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListTail[17:0];
 assign uncompListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListHead[17:0];
 assign uncompListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListTail[17:0];
+assign ifLstHead1=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.iflst_head;
+assign ifLstTail1=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.iflst_tail;
 
 
 initial
 begin
 forever begin
 	@(posedge clk);
-		if(!dump_mem_dly && dump_mem) dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail);
+		if(!dump_mem_dly && dump_mem) dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,ifLstHead1,ifLstTail1);
 end
 
 end
@@ -347,7 +356,7 @@ end
 
 final begin
   $display("FINAL STATE of DRAM");
-  dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail);
+  dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,ifLstHead1,ifLstTail1);
 end
 
 

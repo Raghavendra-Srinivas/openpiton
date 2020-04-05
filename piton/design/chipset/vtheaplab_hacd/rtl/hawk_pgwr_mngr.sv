@@ -22,7 +22,7 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   output hacd_pkg::hawk_tol_ht_t tol_HT,
 
   //handshake with compress manager
-  output zspg_updated,
+  output logic zspg_updated,
   input hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
 
   //table update request pgrd_mangr
@@ -42,12 +42,19 @@ logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListTail,freeListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListHead,uncompListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListTail,uncompListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstHead[IFLST_COUNT],IfLstHead[IFLST_COUNT];
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstTail[IFLST_COUNT],IfLstTail[IFLST_COUNT];
+
+//debug
+wire [clogb2(LST_ENTRY_MAX)-1:0] iflst_head;
+assign iflst_head=IfLstHead[0];
+assign iflst_tail=IfLstTail[0];
+//
 
 wire tbl_update;
 wire [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 wire [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
-wire [1:0] src_list; //from which source we are removing this entry
-wire [1:0] dst_list; //to which list , we are moving this entry
+wire [2:0] src_list; //from which source we are removing this entry
+wire [2:0] dst_list; //to which list , we are moving this entry
 wire [127:114] rsvd; 
 wire [113:64] way;
 wire [63:32] prev;
@@ -193,7 +200,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input tol_updpkt_t tbl_updat_pkt;
 	input state_t p_state;
         input hacd_pkg::hawk_tol_ht_t tol_HT;
-	input logic [1:0] OPCODE;
+	input logic [2:0] OPCODE;
 	integer i,j;
 	bit [511:0] data='d0;
 	bit [63:0] wstrb='d0;
@@ -212,7 +219,13 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		att_entry.zpd_cnt='d0;
 		att_entry.way=tbl_updat_pkt.lstEntry.way;  //list way would go into att_entry.way field for allocation
 		
-		if(tbl_updat_pkt.dst_list==UNCOMP) begin
+	        if(tbl_updat_pkt.ATT_UPDATE_ONLY) begin
+			att_entry.sts=tbl_updat_pkt.ATT_STS;
+		end	
+		else if(tbl_updat_pkt.src_list == UNCOMP && tbl_updat_pkt.dst_list==UNCOMP) begin //this entry must got compressed and provied freeway
+			att_entry.sts=STS_COMP;
+		end
+		else if(tbl_updat_pkt.src_list == FREE && tbl_updat_pkt.dst_list==UNCOMP) begin
 			att_entry.sts=STS_UNCOMP;
 		end //handl others: by default I make it do to to COMP as there are too many irregular free lists and so no need to compare
 		else begin
@@ -288,6 +301,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		else if (OPCODE == PUSH_HEAD  ) begin 
 		 j=tbl_updat_pkt.ifl_idx;
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.IfLstHead[j]-1) >> 2) << 6);
+		  $display("RAGHAV_DEBUG: j=%0d, addr=%0h" ,j,get_tbl_axi_wrpkt.addr);
 		 i=(tol_HT.IfLstHead[j][1:0]==2'b00)? 3 : (tol_HT.IfLstHead[j][1:0]-1);
 		 data[(128*i+32)+:32]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
 		 wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
@@ -336,6 +350,7 @@ always@* begin
 	n_freeListTail=freeListTail;
 	n_uncompListHead=uncompListHead;
 	n_uncompListTail=uncompListTail;
+	n_IfLstHead=IfLstHead;
 
 	case(p_state)
 		IDLE: begin
@@ -417,20 +432,32 @@ always@* begin
 		WAIT_ATT_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 				     n_req_wvalid = 1'b1;
-				    
+				   
+				
+	        		if(p_tol_updpkt.ATT_UPDATE_ONLY) begin
+					n_state=WAIT_BRESP;
+ 				end else begin
+	 
 				     //If SRC is free list and is exhausted, then set
 				     //freelisthead and tail as null and skip
 				     //SRC list Update
-			  	     if (p_tol_updpkt.src_list==FREE) begin
-					 if ((freeListHead!=freeListTail) || (freeListTail==NULL)) begin
+			  	     if (p_tol_updpkt.src_list==FREE && ((freeListHead!=freeListTail) || (freeListTail==NULL))) begin
 				     		n_state = TOL_SLST_UPDATE;
-			  		 end
-			  	         else begin
-				     	  n_freeListHead = NULL;
-				     	  n_freeListTail = NULL;
-				     	  n_state = TOL_DLST_UPDATE1;
-			  	         end
 				     end
+				     else if (p_tol_updpkt.src_list==UNCOMP &&((uncompListHead!=uncompListTail) || (uncompListHead==NULL))) begin
+				     		n_state = TOL_SLST_UPDATE;
+			  	     end
+			  	     else begin
+						if (p_tol_updpkt.src_list==FREE) begin
+				     	  		n_freeListHead = NULL;
+				     	  		n_freeListTail = NULL;
+						end else if (p_tol_updpkt.src_list==UNCOMP) begin
+				     	  		n_uncompListHead = NULL;
+				     	  		n_uncompListTail = NULL;
+						end
+				     	  		n_state = TOL_DLST_UPDATE1;
+			  	     end
+				end
 			  end
 		end
 		TOL_SLST_UPDATE: begin
@@ -470,19 +497,23 @@ always@* begin
 		end
 		WAIT_TOL_DLST_UPDATE1: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
+						k=p_tol_updpkt.ifl_idx;
 				     //Update DLST HEAD/TAIL
-					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
-					   if   (uncompListTail=='d0) begin//If tail was null, update both , tail and head to first entry
+					if (p_tol_updpkt.dst_list==UNCOMP && (uncompListTail==NULL)) begin //for uncomp list as destination, it is push back
 					   	n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
 					   	n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
 				                n_state = WAIT_BRESP;
-					   end
-					   else begin
-				                 n_state = TOL_DLST_UPDATE2;
-				           end
+					end
+					else if (p_tol_updpkt.dst_list==IFL_SIZE1 && (IfLstHead[k]==NULL)) begin
+					   	 n_IfLstHead[k]=p_tol_updpkt.tolEntryId; //I will become the Head	
+					   	 n_IfLstTail[k]=p_tol_updpkt.tolEntryId; //I will become the Head	
+				                 n_state = WAIT_BRESP;
 				        end
 					else if (p_tol_updpkt.dst_list==NULLIFY) begin //we don't need second UPDATE for nullify entry
-				                n_state = WAIT_BRESP;
+				                 n_state = WAIT_BRESP;
+					end
+					else begin
+				                 n_state = TOL_DLST_UPDATE2;
 					end
 				     n_req_wvalid = 1'b1;
 			  end
@@ -527,7 +558,7 @@ always@* begin
 end
 
 assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
-assign zspg_updated = (p_state == WAIT_BRESP) && bresp_cmplt;
+assign zspg_updated = iWayORcPagePkt.update && (p_state == WAIT_BRESP) && bresp_cmplt;
 
 //state register/output flops
 always @(posedge clk_i or negedge rst_ni)
@@ -637,13 +668,16 @@ for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
 	always @(posedge clk_i or negedge rst_ni)
 	begin
 		if(!rst_ni) begin
-			IfLstHead[if_h]<='d0;
+			IfLstHead[if_h]<=NULL;
+			IfLstTail[if_h]<=NULL;
 		end
 		else begin
 			IfLstHead[if_h]<=n_IfLstHead[if_h];
+			IfLstTail[if_h]<=n_IfLstTail[if_h];
 		end
 	end
 assign tol_HT.IfLstHead[if_h]=IfLstHead[if_h];
+assign tol_HT.IfLstTail[if_h]=IfLstTail[if_h];
 end
 endgenerate
 

@@ -123,6 +123,7 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 	md=rdata[(50*8)-1 : 0]; //50 bytes on LSB 
 
 	//size
+	
 	cpage_size=suprted_comp_size[md.size];
 	
 	//cpage byte start
@@ -130,11 +131,13 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 		if          (!md.pg_vld[0]) begin
 				pkt.cPage_byteStart=iway_ptr+ZS_OFFSET; //first page
 				md.page0=iway_ptr+ZS_OFFSET;
+				md.pg_vld[0]=1'b1;
 			//chk for 4KB crossover
 		end else if (!md.pg_vld[1]) begin
-				if (md.page0+cpage_size<4096) begin
+				if (md.page0+(2*cpage_size)< (iway_ptr+4096)) begin
 					pkt.cPage_byteStart=md.page0+cpage_size;
 					md.page1=md.page0+cpage_size;
+					md.pg_vld[1]=1'b1;
 				end //not handling other cases for now 
 				//nxtway_ptr has to be valid in below case
 		end
@@ -150,6 +153,21 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 	pkt.nxtWay_ptr=nxtway_ptr;
 	pkt.zsPgMd=md;
 
+	decode_ZsPageiWay=pkt;
+
+	$display ("RAGHAV DEBUG rdata- %0h",rdata );
+
+	$display ("RAGHAV DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+	$display ("RAGHAV DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+	$display ("RAGHAV DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+	$display ("RAGHAV DEBUG way0- %0h",pkt.zsPgMd.way0 );
+	$display ("RAGHAV DEBUG page0- %0h",pkt.zsPgMd.page0 );
+	$display ("RAGHAV DEBUG page1- %0h",pkt.zsPgMd.page1 );
+
+	$display ("RAGHAV DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+	$display ("RAGHAV DEBUG cpage_size - %0h",pkt.cpage_size );
+	$display ("RAGHAV DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+	$display ("RAGHAV DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
 endfunction
 
 endpackage

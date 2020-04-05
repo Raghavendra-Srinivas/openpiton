@@ -11,7 +11,8 @@ module hawk_pgrd_mngr (
   input rst_ni,
 
   input hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
-  
+  output logic rdm_reset,
+ 
   //handshake with PWM
   input zspg_updated,
   input tbl_update_done,
@@ -220,9 +221,6 @@ always@* begin
 		UNCOMPRESS: begin
 			   n_state = UNCOMPRESS; //Trigger Burst mode engine //not handling this for phase1
 		end
-		//TBL_UPDATE_DONE: let control unit monitors table update done,
-		//I would continue servicing other lookup requests for better
-		//pipelining
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets

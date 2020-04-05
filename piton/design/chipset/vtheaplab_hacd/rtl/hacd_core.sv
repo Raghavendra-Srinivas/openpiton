@@ -60,6 +60,7 @@ module hacd_core (
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
    wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full;
 
+   wire rdm_reset;
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
@@ -217,7 +218,7 @@ hawk_comdecomp u_hawk_comdecomp(
 //////Hawk Read Master
     hawk_axird_master u_hawk_axird_mstr (
       .clk(clk_i),
-      .rst(!rst_ni),
+      .rst(!rst_ni || rdm_reset),
    
       //compressoer interface
      .rdfifo_rdptr_rst(rdfifo_rdptr_rst),
