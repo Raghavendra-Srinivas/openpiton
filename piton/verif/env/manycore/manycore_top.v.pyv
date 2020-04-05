@@ -158,9 +158,11 @@ always #25000 spi_sys_clk = ~spi_sys_clk;                       // 20MHz
 initial
 begin
     //$dumpvars(0,cmp_top);
-    $fsdbDumpfile("hawk_test.fsdb");
-    $fsdbDumpvars(0,cmp_top);
- 	
+    //$fsdbDumpfile("hawk_test.fsdb");
+    //$fsdbDumpvars(0,cmp_top);
+    $dumpfile("hawk_struct_test.vcd");
+    $dumpvars(0,cmp_top);
+	
     // These are not referenced elsewhere in this module,
     // but are cross referenced from monitor.v.pyv.  Do not
     // delete

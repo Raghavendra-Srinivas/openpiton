@@ -72,7 +72,7 @@ int main(int argc, char ** argv) {
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
   addr = (uint64_t*)(HPPA_BASE+(3*FOURKB)); //hppa3
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-
+  //Below access should trigger compression
   addr = (uint64_t*)(HPPA_BASE+(4*FOURKB)); //hppa4
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
  
