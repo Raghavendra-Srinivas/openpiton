@@ -203,7 +203,9 @@ assign s_axi_rvalid = m_axi_rvalid;
 	      allow_cpu_access<=allow_cpu_access_next;
 	   end
         end
+    end
            
+    always @(posedge clk) begin
 	   m_axi_arid_reg <= m_axi_arid_next;
 
            m_axi_araddr_reg <= m_axi_araddr_next;

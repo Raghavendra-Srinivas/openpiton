@@ -14,19 +14,17 @@ module hawk_cmpresn_mngr (
 
     //handshake with PWM
     input zspg_updated,	
-    output logic rdm_reset,
+    output logic comp_rdm_reset,
 
     //from compressor
     input logic [13:0] comp_size,
     output logic comp_start,
     input wire comp_done,
-    output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
+    output hacd_pkg::iWayORcPagePkt_t c_iWayORcPagePkt,
   
     //from AXI FIFO
     input wire rdfifo_full,
     input wire rdfifo_empty,
-    output logic rdfifo_wrptr_rst, //this would reset read pointer to zero
-    output logic rdfifo_rdptr_rst, //this would reset read pointer to zero
 
     //AXI inputs  
     input hacd_pkg::axi_rd_rdypkt_t rd_rdypkt,
@@ -69,21 +67,21 @@ localparam IDLE			     ='d0,
 	   WAIT_UCMP_TAIL	     ='d2,
 	   DECODE_LST_ENTRY	     ='d3,
 	   RESET_FIFO_PTRS	     ='d4,
-	   BURST_READ		     ='d5,
-	   COMP_WAIT		     ='d6,
-	   FETCH_ZSPAGE		     ='d7,
-	   WAIT_ZSPAGE		     ='d8,	
-	   PREP_ZSPAGE_MD	     ='d9,
-	   UPDATE_ATT_POP_UCMP_TAIL  ='d10,
-	   MIGRATE_TO_ZSPAGE	     ='d11,
-	   TOL_UPDATE_FREEWAY_ENTRY  ='d12,
-	   DONE			     ='d13,	
-	   COMP_MNGR_ERROR	     ='d14,
-	   BUS_ERROR		     ='d15,
-	   DECODE_ZSPGE_IWAY	     ='d16,
-	   WAIT_RESET		     ='d17,
-	   COMP_DONE		     ='d18,
-	   ATT_UPDATE_FREEWAY_ENTRY  ='d19;
+	   WAIT_RESET		     ='d5,
+	   BURST_READ		     ='d6,
+	   COMP_WAIT		     ='d7,
+	   COMP_DONE		     ='d8,
+	   FETCH_ZSPAGE		     ='d9,
+	   WAIT_ZSPAGE		     ='d10,	
+	   DECODE_ZSPGE_IWAY	     ='d11,
+	   PREP_ZSPAGE_MD	     ='d12,
+	   UPDATE_ATT_POP_UCMP_TAIL  ='d13,
+	   MIGRATE_TO_ZSPAGE	     ='d14,
+	   TOL_UPDATE_FREEWAY_ENTRY  ='d15,
+	   ATT_UPDATE_FREEWAY_ENTRY  ='d16,
+	   DONE			     ='d17,	
+	   COMP_MNGR_ERROR	     ='d18,
+	   BUS_ERROR		     ='d19;
 
 logic [7:0] size_idx;
 
@@ -97,7 +95,7 @@ ZsPg_Md_t ZsPg_Md;
 iWayORcPagePkt_t n_iWayORcPagePkt;
 integer i;
 logic n_cmpresn_done;
-logic n_rdm_reset;
+logic n_comp_rdm_reset;
 always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
@@ -109,14 +107,15 @@ always@* begin
 	n_comp_tol_updpkt.tbl_update=1'b0;
 	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
-	n_iWayORcPagePkt=iWayORcPagePkt;
+	n_iWayORcPagePkt=c_iWayORcPagePkt;
+	n_iWayORcPagePkt.comp_decomp=1'b1;
 	//n_iWayORcPagePkt.update=1'b0;
 	n_burst_cnt=p_burst_cnt;	
 	n_rdfifo_rdptr_rst=1'b0;
 	n_rdfifo_wrptr_rst=1'b0;
 	n_UC_ifLst_iWay=UC_ifLst_iWay;
 	n_UC_ifLst_iWay_valid=UC_ifLst_iWay_valid;
-	n_rdm_reset=1'b0;
+	n_comp_rdm_reset=1'b0;
 
 	case(p_state)
 		IDLE: begin
@@ -149,11 +148,11 @@ always@* begin
 		RESET_FIFO_PTRS:begin
 			   //n_rdfifo_rdptr_rst=1'b1;
 			   //n_rdfifo_wrptr_rst=1'b1;
-			   n_rdm_reset = 1'b1;
+			   n_comp_rdm_reset = 1'b1;
 			   n_state=WAIT_RESET;
 		end
 		WAIT_RESET: begin
-			   n_rdm_reset = 1'b0;
+			   n_comp_rdm_reset = 1'b0;
 			   n_state=BURST_READ;
 		end
 		BURST_READ:begin
@@ -181,13 +180,13 @@ always@* begin
 		end
 		COMP_WAIT:begin
 			if(comp_done) begin
-			   n_rdm_reset = 1'b1;
+			   n_comp_rdm_reset = 1'b1;
 			   n_state=COMP_DONE;
 			end
 		end
 		COMP_DONE:begin
         		   n_comp_rready=1'b0;     
-			   n_rdm_reset = 1'b0;
+			   n_comp_rdm_reset = 1'b0;
 				n_comp_start=1'b0;
 				//lookup IF list for corresponding size
 				size_idx=get_idx(comp_size);
@@ -223,7 +222,7 @@ always@* begin
 			end
 		end
 		DECODE_ZSPGE_IWAY: begin
-			   n_iWayORcPagePkt=decode_ZsPageiWay(p_rdata);
+			   n_iWayORcPagePkt=getFreeCpage_ZsPageiWay(p_rdata);
 			   n_state=MIGRATE_TO_ZSPAGE;
 		end
 		PREP_ZSPAGE_MD:begin
@@ -267,7 +266,7 @@ always@* begin
 					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
-					n_comp_tol_updpkt.lstEntry.way=iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
+					n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
 					//n_comp_tol_updpkt.dst_list= ; This
@@ -276,7 +275,11 @@ always@* begin
 				end
 			        if(tbl_update_done) begin
 					//We have not created free way yet, pop uncompressed and keep compressing, till we find complete 4KB free way
-					n_state= PEEK_UCMP_HEAD;
+					//if(p_comp_tol_updpkt.dst_list == UNCOMP) begin// it means, it was freeway, else it would had been NULLIFY if IFL*
+					//	n_state= ATT_UPDATE_FREEWAY_ENTRY; //we are done here, 
+					//end else begin
+						n_state= PEEK_UCMP_HEAD;
+					//end
 				end	
 		end
 		MIGRATE_TO_ZSPAGE:begin 
@@ -289,7 +292,7 @@ always@* begin
 				  	// For (2) and (3) we, need to make present
 				  	// list_entry way as nxtWay_ptr in Iway
 				  	// 
-			          	if((iWayORcPagePkt.cPage_byteStart+comp_size)< (iWayORcPagePkt.iWay_ptr+4096) ) begin
+			          	if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< (c_iWayORcPagePkt.iWay_ptr+4096) ) begin
 				  	end
 				  	else begin
 				  	      n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way<<12;
@@ -298,7 +301,9 @@ always@* begin
 				end
 				if(zspg_updated) begin
 				  	      n_iWayORcPagePkt.update=1'b0;
-			          	      if((iWayORcPagePkt.cPage_byteStart+comp_size)< ({iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
+			          	      if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< ({c_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
+					      	      //n_comp_tol_updpkt.dst_list=UNCOMP;  
+			        	      	      //n_state=UPDATE_ATT_POP_UCMP_TAIL;
 				  		      n_state = TOL_UPDATE_FREEWAY_ENTRY;
 					      end else begin
 				  	      	      //Update ATT and TOL
@@ -312,7 +317,7 @@ always@* begin
 					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
-					n_comp_tol_updpkt.lstEntry.way=iWayORcPagePkt.cPage_byteStart; //p_listEntry.way;//now ATT way if freeway
+					n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart; //p_listEntry.way;//now ATT way if freeway
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.dst_list=UNCOMP; //I got freeway, list entry remain in same staet
 					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
@@ -331,6 +336,7 @@ always@* begin
 					n_comp_tol_updpkt.tbl_update=1'b1;		
 				end
 				if(tbl_update_done) begin   
+					n_comp_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
 					n_state = DONE; 
 				end
 		end
@@ -357,24 +363,20 @@ begin
 		p_listEntry <= 'd0;
 		p_burst_cnt <= 'd0;
 		comp_start <=1'b0;
-		iWayORcPagePkt<='d0;
+		c_iWayORcPagePkt<='d0;
 		cmpresn_done<=1'b0;
 	        cmpresn_freeWay<='d0;
-		rdfifo_wrptr_rst<=1'b0;
-		rdfifo_rdptr_rst<=1'b0;
-		rdm_reset<=1'b0;
+		comp_rdm_reset<=1'b0;
 	end
 	else begin
  		p_state <= n_state;	
 		p_listEntry <= n_listEntry;
 		p_burst_cnt <= n_burst_cnt;
 		comp_start<=n_comp_start;
-		iWayORcPagePkt<=n_iWayORcPagePkt;
+		c_iWayORcPagePkt<=n_iWayORcPagePkt;
 		cmpresn_done<=n_cmpresn_done;
 	        cmpresn_freeWay<=n_cmpresn_freeWay;
-		rdfifo_wrptr_rst<=n_rdfifo_wrptr_rst;
-		rdfifo_rdptr_rst<=n_rdfifo_rdptr_rst;
-		rdm_reset<=n_rdm_reset;
+		comp_rdm_reset<=n_comp_rdm_reset;
 	end
 end
 

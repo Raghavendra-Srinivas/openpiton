@@ -218,6 +218,38 @@ $display("       UncompList TAIL : %0d" ,uncompListTail);
 $display("IrglrFreeList-64B HEAD : %0d" ,ifLstHead1);
 $display("IrglrFreeList-64B TAIL : %0d" ,ifLstTail1);
 $display("------------------------------------------------------------------------------------------------");
+//First Initialize heads and tails all lists
+foreach(MEM[addr]) begin
+  if ( addr >= HAWK_LIST_START && addr < HAWK_PPA_START) begin
+       for (int i=0;i<2;i++) begin
+         cacheline=MEM[addr][i];
+         //reverseswap=MEM[addr][i];
+         //cacheline=get_unswapped_line(reverseswap);	
+         //$display("Half cache line: ADDR:%h: DATA:%h",addr,cacheline);	
+         lstentry[0].rsvd=cacheline[127:114];
+         lstentry[0].way=cacheline[113:64];
+         lstentry[0].prev=cacheline[63:32];
+         lstentry[0].next=cacheline[31:0];
+         lstentry[1].rsvd=cacheline[`LSTSIZE1+127:`LSTSIZE1+114];
+         lstentry[1].way=cacheline[`LSTSIZE1+113:`LSTSIZE1+64];
+         lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
+         lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
+       		for (int j=0;j<2;j++) begin
+			///Initialize 
+        		if (freeListHead==lst_enry_id) begin
+			   prev_free_next=lstentry[j].next;
+			end else if (uncompListHead==lst_enry_id) begin
+			   prev_uncomp_next=lstentry[j].next;
+			end else if (ifLstHead1 ==lst_enry_id) begin
+			   prev_ifl64_next=lstentry[j].next;
+			end
+			lst_enry_id = lst_enry_id + 1;
+     		end
+      end
+  end	
+end
+lst_enry_id=cnt;
+
 foreach(MEM[addr]) begin
   $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
@@ -269,13 +301,13 @@ foreach(MEM[addr]) begin
      for (int j=0;j<2;j++) begin
 
 	///Initialize 
-        if (freeListHead==lst_enry_id) begin
-	   prev_free_next=lstentry[j].next;
-	end else if (uncompListHead==lst_enry_id) begin
-	   prev_uncomp_next=lstentry[j].next;
-	end else if (ifLstHead1 ==lst_enry_id) begin
-	   prev_ifl64_next=lstentry[j].next;
-	end
+        //if (freeListHead==lst_enry_id) begin
+	//   prev_free_next=lstentry[j].next;
+	//end else if (uncompListHead==lst_enry_id) begin
+	//   prev_uncomp_next=lstentry[j].next;
+	//end else if (ifLstHead1 ==lst_enry_id) begin
+	//   prev_ifl64_next=lstentry[j].next;
+	//end
 	//detect head/tails or head-tail or middle entries
 	if(lstentry[j].prev=='d0 && lstentry[j].next=='d0) begin
         	if (freeListHead==lst_enry_id) begin
@@ -307,6 +339,7 @@ foreach(MEM[addr]) begin
 			prev_free_next:  begin listentry_name="FREE     "; prev_free_next=lstentry[j].next; end //update my next
 			prev_uncomp_next:begin listentry_name="UCMP     "; prev_uncomp_next=lstentry[j].next;end //update my next
 			prev_ifl64_next: begin listentry_name="If64     "; prev_ifl64_next=lstentry[j].next;end //update my next
+			default:	 begin listentry_name="MIDL     "; end //we are broken here, we can't trace middle entries if they appear not in order, we need to parse entire list once, before printing->update later
 		endcase
 	end
 

@@ -194,7 +194,7 @@ logic allow_cpu_access,allow_cpu_access_next;
     end
 
  
-    always @(posedge clk) begin
+    always @(posedge clk or posedge rst) begin
         if (rst) begin
             p_state <= STATE_IDLE;
             m_axi_awvalid_reg <= 1'b0;
@@ -211,7 +211,9 @@ logic allow_cpu_access,allow_cpu_access_next;
 	   	   allow_cpu_access<=allow_cpu_access_next;
 		end
         end
+    end
 
+    always @(posedge clk) begin
         m_axi_awid_reg <= m_axi_awid_next;
         m_axi_awaddr_reg <= m_axi_awaddr_next;
         m_axi_awlen_reg <= m_axi_awlen_next;

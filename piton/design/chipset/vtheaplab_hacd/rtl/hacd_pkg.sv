@@ -68,8 +68,8 @@ package hacd_pkg;
  parameter [1:0] STS_COMP=2'b10;
  parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
-	logic [63:54] zpd_cnt; //zero page detection count
-	logic [53:2]  way;      //technically it is start address of physical page
+	logic [63:58] zpd_cnt; //zero page detection count
+	logic [57:2]  way;      //technically it is start address of physical page
 	logic [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  	} AttEntry;
 	
@@ -142,7 +142,7 @@ package hacd_pkg;
 
  //below packet is used for  
  typedef struct packed {
-	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:0] ppa;
 	logic [1:0] sts;
 	logic allow_access;
  } trnsl_reqpkt_t;
@@ -183,7 +183,7 @@ package hacd_pkg;
 
 
 //helper fucntins
-function logic [511:0] get_8byte_byteswap;
+function automatic logic [511:0] get_8byte_byteswap;
 	input logic [511:0] data;
 	integer i,j;
 	logic [63:0] eightByte,swappedEightByte;
@@ -200,8 +200,8 @@ function logic [511:0] get_8byte_byteswap;
 	
 	//For hawk byteswap does not matter
 		get_8byte_byteswap=data;
-endfunction
-function logic [63:0] get_strb_swap;
+endfunction 
+function automatic logic [63:0] get_strb_swap;
 	input logic [63:0] data;
 	integer i,j;
 	logic [7:0] eightByte,swappedEightByte;
@@ -217,10 +217,10 @@ function logic [63:0] get_strb_swap;
 	end
 	//For hawk byteswap does not matter
 	get_strb_swap=data;	
-endfunction
+endfunction 
  
-  //generic helper functions
-  function integer clogb2;
+  //generic helper function automatics
+  function automatic integer clogb2;
       input [31:0] value;
       begin
           value = value - 1;
@@ -228,7 +228,7 @@ endfunction
               value = value >> 1;
           end
       end
-  endfunction
+  endfunction 
 
 
 //////////
@@ -265,13 +265,14 @@ parameter int ZS_OFFSET=48'd64; //size+valids+3 ways+5 pages=50bytes
 //typedef enum {IWAY,CPAGE} CTYPE;
 typedef struct packed{
 	logic update;
+	logic comp_decomp;
 	//CTYPE iWayORcPage; //packet type iWay type serves either while creating new ZsPage or Updating existing zsPage 
 	logic [47:0] cPage_byteStart;//page start-where to write compressed page if (iWayORcPage==0) = > iWay_start+ Byte address(62bytes) = $size(zsPgMd)=50bytes+ iwayptr(6bytes) + nxtwayptr(6bytes) else 
 	logic [13:0] cpage_size;
 	//payload content
-	logic [47:0] iWay_ptr;  //6B  
-	logic [47:0] nxtWay_ptr; //6B 
 	ZsPg_Md_t zsPgMd; //50bytes
+	logic [47:0] nxtWay_ptr; //6B 
+	logic [47:0] iWay_ptr;  //6B  
 } iWayORcPagePkt_t;
 
 endpackage

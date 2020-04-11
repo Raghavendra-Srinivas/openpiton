@@ -22,6 +22,7 @@ localparam IDLE	='d0,
 	   
 always@* begin
 	n_wr_reqpkt='d0;
+	n_wr_reqpkt.addr=p_wr_reqpkt.addr;
 	n_state=p_state;
 	case(p_state)
 		IDLE: begin

@@ -5,6 +5,7 @@ hawk_cmpdcmp_wr_mngr.sv
 hawk_pgwr_mngr.sv
 hawk_comdecomp.sv
 hawk_cmpresn_mngr.sv
+hawk_decomp_mngr.sv
 hawk_pgrd_mngr.sv
 hacd_interfaces.sv
 hawk_ctrl_unit.sv

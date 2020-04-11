@@ -22,12 +22,13 @@ module hawk_pgrd_mngr (
   input logic [13:0] comp_size,
   output logic comp_start,
   input wire comp_done,
-  
+
+  output logic decomp_start,
+  input wire decomp_done,
+ 
   //from AXI FIFO
   input wire rdfifo_full,
   input wire rdfifo_empty,
-  output wire rdfifo_wrptr_rst, //this would reset read pointer to zero
-  output wire rdfifo_rdptr_rst, //this would reset read pointer to zero
 
  //with PWM
   input pgwr_mngr_ready,
@@ -78,7 +79,7 @@ localparam IDLE			='d0,
 	   TBL_UPDATE		='d7,
 	   TBL_UPDATE_DONE	='d8,
 	   COMPRESS		='d9,
-	   UNCOMPRESS		='d10,
+	   DECOMPRESS		='d10,
 	   BUS_ERROR		='d11;
 
 
@@ -101,6 +102,7 @@ trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
 logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
 tol_updpkt_t n_comp_tol_updpkt;
+tol_updpkt_t n_decomp_tol_updpkt;
 
 
 //handshakes with comp_manager
@@ -110,6 +112,12 @@ axi_rd_pld_t n_comp_axireq;
 logic n_comp_req_arvalid,n_comp_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_comp_rdata;
 //
+wire decomp_mngr_done;
+axi_rd_pld_t n_decomp_axireq;
+logic n_decomp_req_arvalid,n_decomp_rready;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata;
+logic [`HACD_AXI4_ADDR_WIDTH-1:0] decomp_cPage_byteStart;
+logic  [`HACD_AXI4_ADDR_WIDTH-1:0] decomp_freeWay;
 
 //logic to handle different modes
 always@* begin
@@ -121,6 +129,7 @@ always@* begin
 	n_rdata=p_rdata;
 	n_trnsl_reqpkt.allow_access=1'b0;
 	n_tol_updpkt.tbl_update=1'b0;
+	decomp_freeWay='d0;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -160,7 +169,7 @@ always@* begin
 					n_trnsl_reqpkt.allow_access=1'b1;
 			   end
 			   else if(n_trnsl_reqpkt.sts==STS_COMP) begin
-					n_state = UNCOMPRESS; //not handling for now
+					n_state = POP_FREE_LST; //DECOMPRESS; //not handling for now
 			   end
 			   else begin //DALLOC: if it powerup, everything is deallcoated, and if deallocated proactively, it means , freelist has been updated with that ppa.
 			  	n_state = POP_FREE_LST; 
@@ -182,13 +191,22 @@ always@* begin
 		end
 		WAIT_LST_ENTRY: begin 
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
-				     n_rdata=rdata; //get_8byte_byteswap(rdata); 
-				     n_state = ALLOCATE_PPA;
+				     n_rdata=rdata; //get_8byte_byteswap(rdata);
+				     //decode freeway from freelist from read
+				     //data
+				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,n_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
+				     //If caller of POP_FREE_LST was
+				     //decompressor state then go back  
+					if(p_trnsl_reqpkt.sts==STS_COMP) begin //if this call because targeted acccess is on compressed page, go to decompress state to expand page on this freeWay
+						n_state = DECOMPRESS; 
+					end
+					else begin
+				     		n_state = ALLOCATE_PPA;
+					end
 			  end
 		end
 
 		ALLOCATE_PPA: begin //this stae, we get ppa from freelist and also prepare att & tol updte packet taht is sent pgwr_manager
-				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,p_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
 			   	     if(pgwr_mngr_ready) begin
 				     	n_tol_updpkt.tbl_update=1'b1;
 				     	n_state = TBL_UPDATE_DONE;
@@ -204,7 +222,7 @@ always@* begin
 		end
 		TBL_UPDATE_DONE:begin
 				if(tbl_update_done) begin
-					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way;
+					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way<<12;
 					n_trnsl_reqpkt.sts=UNCOMP;
 					n_trnsl_reqpkt.allow_access=1'b1;
 				     	n_state = IDLE;
@@ -212,14 +230,29 @@ always@* begin
 		end
 	  	COMPRESS:begin
 				if(cmpresn_done) begin //get the freeway from comp_mnger
-					n_trnsl_reqpkt.ppa=cmpresn_freeWay;
-					n_trnsl_reqpkt.sts=UNCOMP;
-					n_trnsl_reqpkt.allow_access=1'b1;
-				     	n_state = IDLE;
+					//Am I servicing to make freeway for
+					//decompressor or for new Hppa ?
+					if(p_trnsl_reqpkt.sts==STS_COMP) begin //my Attenry says compressed, then I am doen servicing for decompressor, so give freeway to it
+						decomp_freeWay=cmpresn_freeWay<<12;
+			   			decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
+						n_state = DECOMPRESS; 
+					end else begin //I am done serving for new hppa ,so share freeway over translation request 	
+						n_trnsl_reqpkt.ppa=cmpresn_freeWay<<12;
+						n_trnsl_reqpkt.sts=UNCOMP;
+						n_trnsl_reqpkt.allow_access=1'b1;
+				     		n_state = IDLE;
+					end
 				end		
 		end
-		UNCOMPRESS: begin
-			   n_state = UNCOMPRESS; //Trigger Burst mode engine //not handling this for phase1
+		DECOMPRESS: begin
+				decomp_freeWay=cmpresn_freeWay<<12;
+			   	decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
+				if(decomp_mngr_done) begin 
+					n_trnsl_reqpkt.ppa=decomp_freeWay; //dcomp done, so this way is expanded with needed page, send it over trnls packet
+					n_trnsl_reqpkt.sts=UNCOMP;
+					n_trnsl_reqpkt.allow_access=1'b1;
+					n_state = IDLE;
+				end
 		end
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
@@ -248,11 +281,16 @@ begin
 		p_attEntryId <= n_attEntryId;		
 
 		//Axi signals
-		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : n_axireq.addr;
-		p_axireq.arlen <= (p_state==COMPRESS) ? n_comp_axireq.arlen : 'd0;
-		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid : n_req_arvalid;
-		p_rready <= (p_state==COMPRESS) ? n_comp_rready : n_rready;
-		p_rdata <= (p_state==COMPRESS) ? n_comp_rdata : n_rdata;
+		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : 
+				 (p_state==DECOMPRESS) ? n_decomp_axireq.addr : n_axireq.addr;
+		p_axireq.arlen <= (p_state==COMPRESS) ? n_comp_axireq.arlen : 
+				  (p_state==DECOMPRESS) ? n_decomp_axireq.arlen : 'd0;
+		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid :
+				 (p_state==DECOMPRESS) ? n_decomp_req_arvalid : n_req_arvalid;
+		p_rready <= (p_state==COMPRESS) ? n_comp_rready : 
+			    (p_state==DECOMPRESS) ? n_decomp_rready : n_rready;
+		p_rdata <= (p_state==COMPRESS) ? n_comp_rdata :
+			   (p_state==DECOMPRESS) ? n_decomp_rdata : n_rdata;
 	end
 end
 
@@ -266,7 +304,8 @@ begin
 	else begin
 		//Tranalstion Request : It can be att hit or tbl update
 		p_trnsl_reqpkt<= n_trnsl_reqpkt; //(p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
-		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : n_tol_updpkt;
+		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : 
+				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
 	end
 end
 
@@ -281,7 +320,7 @@ assign rd_reqpkt.rready =p_rready;
 assign trnsl_reqpkt=p_trnsl_reqpkt;
 assign tol_updpkt=p_tol_updpkt;
 // just for debug
-wire [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
+wire [`HACD_AXI4_ADDR_WIDTH-1:0] ppa;
 wire [1:0] sts;
 wire debug_allow_access;
 
@@ -310,10 +349,26 @@ end
 
 //Compression Manager
 
-//wire cmpresn_done;
-//wire logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay;
+hacd_pkg::iWayORcPagePkt_t c_iWayORcPagePkt;
 wire cmpresn_trigger;
+wire comp_rdm_reset;
 assign cmpresn_trigger=(p_state==COMPRESS);
 hawk_cmpresn_mngr u_cmpresn_mngr (.*);
+
+
+hacd_pkg::iWayORcPagePkt_t dc_iWayORcPagePkt;
+wire decomp_trigger;
+wire decomp_rdm_reset;
+assign decomp_trigger=(p_state==DECOMPRESS);
+
+hawk_decomp_mngr u_decomp_mngr (.*);
+
+//muxing for FIFO
+assign rdm_reset = (p_state==COMPRESS)   ? comp_rdm_reset :
+		   (p_state==DECOMPRESS) ? decomp_rdm_reset : 1'b0;
+
+//muxing for ZsPg Pkt
+assign iWayORcPagePkt = (p_state==COMPRESS)   ? c_iWayORcPagePkt :
+			(p_state==DECOMPRESS) ? dc_iWayORcPagePkt : 'd0;
 
 endmodule

@@ -111,18 +111,16 @@ function logic [13:0] get_cpage_size;
 	get_cpage_size=suprted_comp_size[idx];
 endfunction
 
-function iWayORcPagePkt_t decode_ZsPageiWay;
+function iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 	iWayORcPagePkt_t pkt;
 	ZsPg_Md_t md;
 	logic [47:0] iway_ptr,nxtway_ptr;
 	logic [13:0] cpage_size;
 
-	iway_ptr=rdata[(50*8)+48+48-1:(50*8)+48];
-	nxtway_ptr=rdata[(50*8)+48-1:(50*8)];
-	md=rdata[(50*8)-1 : 0]; //50 bytes on LSB 
-
-	//size
+	md=rdata[(50*8-1)+2*48:2*48];
+	nxtway_ptr=rdata[(48-1)+48:48];
+	iway_ptr=rdata[(48-1)+0 : 0]; 
 	
 	cpage_size=suprted_comp_size[md.size];
 	
@@ -139,21 +137,23 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 					md.page1=md.page0+cpage_size;
 					md.pg_vld[1]=1'b1;
 				end //not handling other cases for now 
-				//nxtway_ptr has to be valid in below case
+		end else if (!md.pg_vld[2]) begin
+				if (md.page1+(2*cpage_size)< (iway_ptr+4096)) begin
+					pkt.cPage_byteStart=md.page1+cpage_size;
+					md.page2=md.page1+cpage_size;
+					md.pg_vld[2]=1'b1;
+				end //not handling other cases for now 
 		end
 	end //not handling other ways for now
 
-
         //cpage size
 	pkt.cpage_size=cpage_size;
-
-	
 	pkt.update=1'b0;
 	pkt.iWay_ptr=iway_ptr;
 	pkt.nxtWay_ptr=nxtway_ptr;
 	pkt.zsPgMd=md;
 
-	decode_ZsPageiWay=pkt;
+	getFreeCpage_ZsPageiWay=pkt;
 
 	$display ("RAGHAV DEBUG rdata- %0h",rdata );
 
@@ -168,6 +168,54 @@ function iWayORcPagePkt_t decode_ZsPageiWay;
 	$display ("RAGHAV DEBUG cpage_size - %0h",pkt.cpage_size );
 	$display ("RAGHAV DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
 	$display ("RAGHAV DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+endfunction
+
+function iWayORcPagePkt_t setCpageBusy_ZsPageiWay;
+	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
+	input logic [47:0] cPage_byteStart;
+	iWayORcPagePkt_t pkt;
+
+	pkt.zsPgMd=rdata[(50*8-1)+2*48:2*48]; //50 bytes on LSB
+	pkt.nxtWay_ptr=rdata[(48-1)+48:48];
+	pkt.iWay_ptr=rdata[(48-1)+0 : 0];  
+	pkt.cpage_size=suprted_comp_size[pkt.zsPgMd.size];
+	pkt.update=1'b0;
+ 		
+	//cpage byte start
+	if 	(pkt.zsPgMd.page0 == cPage_byteStart) begin
+		pkt.zsPgMd.pg_vld[0]=1'b0;
+	end 
+	else if (pkt.zsPgMd.page1 == cPage_byteStart) begin
+		pkt.zsPgMd.pg_vld[1]=1'b0;
+	end
+	else if (pkt.zsPgMd.page2 == cPage_byteStart) begin
+		pkt.zsPgMd.pg_vld[2]=1'b0;
+	end
+	else if (pkt.zsPgMd.page3 == cPage_byteStart) begin
+		pkt.zsPgMd.pg_vld[3]=1'b0;
+	end
+	else if (pkt.zsPgMd.page4 == cPage_byteStart) begin
+		pkt.zsPgMd.pg_vld[4]=1'b0;
+	end
+	
+	//[TODO] invalidate way valid based on if all page valid goes invalid later
+		
+
+	setCpageBusy_ZsPageiWay=pkt;
+
+	$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
+
+	$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+	$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+	$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+	$display ("RAGHAV SETCPAGE DEBUG way0- %0h",pkt.zsPgMd.way0 );
+	$display ("RAGHAV SETCPAGE DEBUG page0- %0h",pkt.zsPgMd.page0 );
+	$display ("RAGHAV SETCPAGE DEBUG page1- %0h",pkt.zsPgMd.page1 );
+
+	$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+	$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",pkt.cpage_size );
+	$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+	$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
 endfunction
 
 endpackage

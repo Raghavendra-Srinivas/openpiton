@@ -56,9 +56,13 @@ module hacd_core (
    wire [13:0] comp_size;
    wire comp_start;
    wire comp_done;
+   wire decomp_start;
+   wire decomp_done;
    wire zspg_updated;
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
    wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full;
+   assign rdfifo_rdptr_rst = 1'b0;
+   assign rdfifo_wrptr_rst = 1'b0;
 
    wire rdm_reset;
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
@@ -210,6 +214,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .comp_size,
      .comp_start,
      .comp_done,
+     .decomp_start,
+     .decomp_done,
      //.rdfifo_rdptr_rst,
      .rdfifo_empty(rdfifo_empty),
      .rdfifo_full(rdfifo_full),

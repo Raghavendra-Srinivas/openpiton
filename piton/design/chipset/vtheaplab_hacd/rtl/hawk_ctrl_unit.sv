@@ -55,7 +55,7 @@ wire [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 wire [1:0] sts;
 wire allow_access;
 
-assign ppa=trnsl_reqpkt.ppa;
+assign ppa=trnsl_reqpkt.ppa[`HACD_AXI4_ADDR_WIDTH-1:12];
 assign sts=trnsl_reqpkt.sts;
 assign allow_access=trnsl_reqpkt.allow_access;
 
@@ -133,7 +133,7 @@ begin
 		RD_LOOKUP_ALLOCATE: begin
 				if(trnsl_reqpkt.allow_access) begin 
 
-				      n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_rdpkt.ppa=trnsl_reqpkt.ppa[`HACD_AXI4_ADDR_WIDTH-1:12];
 				      n_hawk_cpu_ovrd_rdpkt.allow_access=1'b1;
 
 			              //drop lookup request
@@ -147,7 +147,7 @@ begin
 		end
 		WR_LOOKUP_ALLOCATE: begin
 				if(trnsl_reqpkt.allow_access) begin 
-				      n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa;
+				      n_hawk_cpu_ovrd_wrpkt.ppa=trnsl_reqpkt.ppa[`HACD_AXI4_ADDR_WIDTH-1:12];
 				      n_hawk_cpu_ovrd_wrpkt.allow_access=1'b1;
 
 			              //drop lookup request

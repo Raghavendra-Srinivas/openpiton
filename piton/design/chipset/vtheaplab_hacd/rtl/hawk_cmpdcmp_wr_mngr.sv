@@ -17,43 +17,74 @@ logic send;
 logic int_ready;
 hacd_pkg::axi_wr_pld_t int_axi_req;
 //
+logic [6:0] n_burst_cnt,p_burst_cnt;
 logic [2:0] n_state,p_state;
-localparam IDLE	='d0,
-	   ZS_PAGE_UPDATE ='d1,
-	   CPAGE_TRNSFR ='d2,
-	   DONE ='d3;
+localparam IDLE		  ='d0,
+	   CPAGE_TRNSFR   ='d1,
+	   DCPAGE_TRNSFR  ='d2,
+	   ZS_PAGE_UPDATE ='d3,
+	   DONE		  ='d4;
 
 function axi_wr_pld_t get_zspg_axi_wrpkt;
 	input iWayORcPagePkt_t zs_pkt;
 	get_zspg_axi_wrpkt.addr={{16{1'b0}},zs_pkt.iWay_ptr};
-	get_zspg_axi_wrpkt.data={{16{1'b0}},zs_pkt.iWay_ptr,zs_pkt.nxtWay_ptr,zs_pkt.zsPgMd}; //MD is 50 bytes=50*8=400bit + 2 ptr = 12 bytes = 96 bits -> 496 bits fits in same cacheline
+	get_zspg_axi_wrpkt.data={{16{1'b0}},zs_pkt.zsPgMd,zs_pkt.nxtWay_ptr,zs_pkt.iWay_ptr}; //MD is 50 bytes=50*8=400bit + 2 ptr = 12 bytes = 96 bits -> 496 bits fits in same cacheline
 	get_zspg_axi_wrpkt.strb={{2{1'b0}},{62{1'b1}}}; 
 endfunction
 
 always@* begin
 	n_state=p_state;
 	send=1'b0;
+	n_burst_cnt=p_burst_cnt;	
 	case(p_state)
 		IDLE: begin
 			if(cmpdcmp_trigger) begin
-				n_state=ZS_PAGE_UPDATE;
+				if(iWayORcPagePkt.comp_decomp) begin
+					n_state=CPAGE_TRNSFR;
+				end
+				else begin
+					n_state=DCPAGE_TRNSFR;
+					n_burst_cnt = 'd0;
+				end
 			end
 		end
-		ZS_PAGE_UPDATE: begin
-			    	int_axi_req=get_zspg_axi_wrpkt(iWayORcPagePkt);
-				send=int_ready;
+		CPAGE_TRNSFR:begin
+				if(int_ready) begin
+					//Send dummy compressed data for now
+			    		int_axi_req.addr=iWayORcPagePkt.cPage_byteStart;
+					int_axi_req.data={32{16'h1234}};
+					int_axi_req.strb={64{1'b1}};
+					send=1'b1;
+				end
 				if(sent) begin
-				   n_state=CPAGE_TRNSFR;
+					n_state=ZS_PAGE_UPDATE;
 				end
 		end
-		CPAGE_TRNSFR:begin
+		DCPAGE_TRNSFR:begin
 				//Send dummy compressed data for now
-			    	int_axi_req.addr=iWayORcPagePkt.cPage_byteStart;
-				int_axi_req.data={32{16'h1234}};
-				int_axi_req.strb={64{1'b1}};
-				send=int_ready;
+				if(int_ready && (p_burst_cnt < 'd64)) begin
+				   if(p_burst_cnt == 'd0) begin					
+			    	   	int_axi_req.addr=iWayORcPagePkt.cPage_byteStart; //the same address will act as start of freeway for decompressed data
+				   	n_burst_cnt = p_burst_cnt + 'd1;
+				   end else begin
+				   	int_axi_req.addr=int_wr_reqpkt.addr+'d64;
+				   	n_burst_cnt = p_burst_cnt + 'd1;
+				   end
+				   int_axi_req.data={32{16'hF0F0}};
+				   int_axi_req.strb={64{1'b1}};
+				   send=1'b1;
+				end
+				if (p_burst_cnt[6]==1'b1 && sent) begin
+				      n_state=ZS_PAGE_UPDATE;
+				end
+		end
+		ZS_PAGE_UPDATE: begin
+				if(int_ready) begin
+			    		int_axi_req=get_zspg_axi_wrpkt(iWayORcPagePkt);
+					send=1'b1;
+				end
 				if(sent) begin
-				   n_state=DONE;
+					n_state=DONE;
 				end
 		end
 		DONE:begin
@@ -65,9 +96,11 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
+		p_burst_cnt <= 'd0;
 	end
 	else begin
  		p_state <= n_state;	
+		p_burst_cnt <= n_burst_cnt;
 	end
 end
 assign cmpdcmp_done = p_state == DONE;
