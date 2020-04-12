@@ -301,7 +301,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		else if (OPCODE == PUSH_HEAD  ) begin 
 		 j=tbl_updat_pkt.ifl_idx;
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.IfLstHead[j]-1) >> 2) << 6);
-		  $display("RAGHAV_DEBUG: j=%0d, addr=%0h" ,j,get_tbl_axi_wrpkt.addr);
+		  //$display("RAGHAV_DEBUG: j=%0d, addr=%0h" ,j,get_tbl_axi_wrpkt.addr);
 		 i=(tol_HT.IfLstHead[j][1:0]==2'b00)? 3 : (tol_HT.IfLstHead[j][1:0]-1);
 		 data[(128*i+32)+:32]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
 		 wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes

@@ -45,6 +45,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
   /////////////////////////////
   // HACD
   /////////////////////////////
+`ifndef SYNTH
 
   AXI_BUS #(
     .AXI_ID_WIDTH   ( AxiIdWidth   ),
@@ -239,7 +240,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
       default: state_d = Idle;
     endcase
   end
-
+`endif
 
 
 
@@ -249,8 +250,13 @@ hacd u_hacd(
   .infl_interrupt (infl_interrupt),
   .defl_interrupt (defl_interrupt),
 
-  .req_i (hacd_req), //('d0),
-  .resp_o (hacd_resp),  //()
+`ifdef SYNTH
+  .req_i ('d0),
+  .resp_o (),
+`else
+  .req_i (hacd_req), 
+  .resp_o (hacd_resp),
+`endif
 
   .cpu_axi_wr_bus(cpu_axi_wr_bus),
   .cpu_axi_rd_bus(cpu_axi_rd_bus),

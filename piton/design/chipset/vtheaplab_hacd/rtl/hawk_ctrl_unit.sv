@@ -140,7 +140,7 @@ begin
 				      //n_lkup_reqpkt.lookup=1'b0;
 			              //n_lkup_reqpkt.hppa='d0;
 	 
-				      n_state<=CHK_WR_ACTIVE;
+				      n_state=CHK_WR_ACTIVE;
 				end
 				//handle inflation later
 				//else if (infl)
@@ -154,7 +154,7 @@ begin
 				      //n_lkup_reqpkt.lookup=1'b0;
 			              //n_lkup_reqpkt.hppa='d0;
 
-				      n_state<=CHK_RD_ACTIVE;
+				      n_state=CHK_RD_ACTIVE;
 				end
 				//handle inflation later
 				//else if (infl)

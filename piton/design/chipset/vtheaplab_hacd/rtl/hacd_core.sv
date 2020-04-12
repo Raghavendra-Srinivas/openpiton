@@ -206,8 +206,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
 //
-logic [13:0] comp_size;
-wire compdecomp_rready,comp_start;
+wire compdecomp_rready;
 hawk_comdecomp u_hawk_comdecomp(
      .clk_i,
      .rst_ni,

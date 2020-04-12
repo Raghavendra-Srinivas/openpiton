@@ -108,7 +108,7 @@ always@* begin
 		end
 		REQ_IWAY_PTR:begin
 			if(arready && !arvalid) begin
-			    n_decomp_axireq.addr = {decomp_cPage_byteStart [`HACD_AXI4_DATA_WIDTH-1:12],12'b0};
+			    n_decomp_axireq.addr = {decomp_cPage_byteStart [`HACD_AXI4_ADDR_WIDTH-1:12],12'b0};
 			    n_decomp_req_arvalid = 1'b1;
 			    n_state = FETCH_IWAY_PTR;
 			end

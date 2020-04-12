@@ -5,7 +5,7 @@ typedef enum {AXI_RD_ATT,AXI_RD_TOL} AXI_RD_TYPE;
 //FUnctions shared by hawkpg_rd_manger and hawk_cmpresn_mngr// They closely
 //work together, so I have added themn in common hawk package , instead of separate packages just for both of them
 //helper functions
-function axi_rd_pld_t get_axi_rd_pkt;
+function automatic axi_rd_pld_t get_axi_rd_pkt;
 	input [clogb2(LST_ENTRY_MAX)-1:0] lstEntryId;
 	input [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 	input AXI_RD_TYPE p_state;
@@ -31,7 +31,7 @@ function axi_rd_pld_t get_axi_rd_pkt;
 endfunction
 
 //function  decode_AttEntry
-function trnsl_reqpkt_t decode_AttEntry;
+function automatic trnsl_reqpkt_t decode_AttEntry;
 	input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 		integer i;
@@ -48,7 +48,7 @@ function trnsl_reqpkt_t decode_AttEntry;
 endfunction 
 
 //function  decode_AttEntry
-function ListEntry decode_LstEntry;
+function automatic ListEntry decode_LstEntry;
 	input [clogb2(LST_ENTRY_MAX)-1:0] lstEntryId;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 		integer i;
@@ -68,7 +68,7 @@ endfunction
 
 typedef enum {TOL_ALLOCATE_PPA,TOL_COMPRESS} TOL_UPDATE_TYPE;
 
-function tol_updpkt_t get_Tolpkt;
+function automatic tol_updpkt_t get_Tolpkt;
 	input [clogb2(LST_ENTRY_MAX)-1:0] lstEntryId;
 	input [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
  	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -96,7 +96,7 @@ function tol_updpkt_t get_Tolpkt;
 
 endfunction
 localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd64}; //supportable compressed sizes in bytes, just one for now
-function logic [7:0] get_idx;
+function automatic logic [7:0] get_idx;
 	input logic [13:0] size;
 	integer i; 
 	for(i=0;i<IFLST_COUNT;i=i+1) begin
@@ -106,12 +106,12 @@ function logic [7:0] get_idx;
 	end
 endfunction
 
-function logic [13:0] get_cpage_size;
+function automatic logic [13:0] get_cpage_size;
 	input [7:0] idx;
 	get_cpage_size=suprted_comp_size[idx];
 endfunction
 
-function iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
+function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 	iWayORcPagePkt_t pkt;
 	ZsPg_Md_t md;
@@ -154,23 +154,25 @@ function iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	pkt.zsPgMd=md;
 
 	getFreeCpage_ZsPageiWay=pkt;
+	`ifndef SYNTH
+		$display ("RAGHAV DEBUG rdata- %0h",rdata );
 
-	$display ("RAGHAV DEBUG rdata- %0h",rdata );
+		$display ("RAGHAV DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+		$display ("RAGHAV DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+		$display ("RAGHAV DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+		$display ("RAGHAV DEBUG way0- %0h",pkt.zsPgMd.way0 );
+		$display ("RAGHAV DEBUG page0- %0h",pkt.zsPgMd.page0 );
+		$display ("RAGHAV DEBUG page1- %0h",pkt.zsPgMd.page1 );
+		$display ("RAGHAV DEBUG page2- %0h",pkt.zsPgMd.page2 );
 
-	$display ("RAGHAV DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
-	$display ("RAGHAV DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
-	$display ("RAGHAV DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
-	$display ("RAGHAV DEBUG way0- %0h",pkt.zsPgMd.way0 );
-	$display ("RAGHAV DEBUG page0- %0h",pkt.zsPgMd.page0 );
-	$display ("RAGHAV DEBUG page1- %0h",pkt.zsPgMd.page1 );
-
-	$display ("RAGHAV DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
-	$display ("RAGHAV DEBUG cpage_size - %0h",pkt.cpage_size );
-	$display ("RAGHAV DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
-	$display ("RAGHAV DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+		$display ("RAGHAV DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+		$display ("RAGHAV DEBUG cpage_size - %0h",pkt.cpage_size );
+		$display ("RAGHAV DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+		$display ("RAGHAV DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+	`endif
 endfunction
 
-function iWayORcPagePkt_t setCpageBusy_ZsPageiWay;
+function automatic iWayORcPagePkt_t setCpageBusy_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 	input logic [47:0] cPage_byteStart;
 	iWayORcPagePkt_t pkt;
@@ -203,19 +205,23 @@ function iWayORcPagePkt_t setCpageBusy_ZsPageiWay;
 
 	setCpageBusy_ZsPageiWay=pkt;
 
-	$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
+	`ifndef SYNTH
+		$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
 
-	$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
-	$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
-	$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
-	$display ("RAGHAV SETCPAGE DEBUG way0- %0h",pkt.zsPgMd.way0 );
-	$display ("RAGHAV SETCPAGE DEBUG page0- %0h",pkt.zsPgMd.page0 );
-	$display ("RAGHAV SETCPAGE DEBUG page1- %0h",pkt.zsPgMd.page1 );
+		$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+		$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+		$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+		$display ("RAGHAV SETCPAGE DEBUG way0- %0h",pkt.zsPgMd.way0 );
+		$display ("RAGHAV SETCPAGE DEBUG page0- %0h",pkt.zsPgMd.page0 );
+		$display ("RAGHAV SETCPAGE DEBUG page1- %0h",pkt.zsPgMd.page1 );
+		$display ("RAGHAV SETCPAGE DEBUG page2- %0h",pkt.zsPgMd.page2 );
 
-	$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
-	$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",pkt.cpage_size );
-	$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
-	$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+		$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+		$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",pkt.cpage_size );
+		$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+		$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+	`endif
+
 endfunction
 
 endpackage

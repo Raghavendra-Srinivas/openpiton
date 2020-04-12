@@ -104,7 +104,7 @@ package hacd_pkg;
  } axi_wr_rdypkt_t;
 
  typedef struct packed {
- 	logic bresp;
+ 	logic [1:0] bresp;
 	logic bvalid;
  } axi_wr_resppkt_t;
 
