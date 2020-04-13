@@ -110,6 +110,7 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	get_axi_wr_pkt.strb ='d0;
 	get_axi_wr_pkt.data ='d0;
 	lst_entry.rsvd = 'd0;
+	lst_entry.attEntryId='d0;
 
         if(etry_cnt=='d1) begin
 	   ppa = (HAWK_PPA_START>>12);
@@ -172,26 +173,26 @@ function axi_wr_pld_t get_axi_wr_pkt;
 		    end
 
 		    if (etry_cnt[1:0] == 2'b01) begin
-		    	data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[127:0] = {lst_entry.rsvd,lst_entry.way,lst_entry.attEntryId,lst_entry.prev,lst_entry.next}; 
 		        wstrb[15:0] ={16{1'b1}};
 		    end
 		    else if  (etry_cnt[1:0] == 2'b10) begin
-		    	data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[255:128] = {lst_entry.rsvd,lst_entry.way,lst_entry.attEntryId,lst_entry.prev,lst_entry.next}; 
 		        wstrb[31:16] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b11) begin
-		    	data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[383:256] = {lst_entry.rsvd,lst_entry.way,lst_entry.attEntryId,lst_entry.prev,lst_entry.next}; 
 		        wstrb[47:32] ={16{1'b1}};
 		    end	
 		    else if  (etry_cnt[1:0] == 2'b00) begin
-		    	data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.prev,lst_entry.next}; 
+		    	data[511:384] = {lst_entry.rsvd,lst_entry.way,lst_entry.attEntryId,lst_entry.prev,lst_entry.next}; 
 		        wstrb[63:48] ={16{1'b1}};
 		    end
 	end
 	//Test byte swap/endianess of riscv core
 	//data=511'h0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF;
- 	get_axi_wr_pkt.data = get_8byte_byteswap(data); //511'h0123456789ABCDEF;		
-	get_axi_wr_pkt.strb = get_strb_swap(wstrb);		
+ 	get_axi_wr_pkt.data = data; //get_8byte_byteswap(data); //511'h0123456789ABCDEF;		
+	get_axi_wr_pkt.strb = wstrb; //get_strb_swap(wstrb);		
 endfunction
 
 
@@ -249,15 +250,18 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 	
 			//Which entry we shoudl change in cacheline
 			i= (tbl_updat_pkt.lstEntry.next[1:0] == 2'b00 ) ? 3 : (tbl_updat_pkt.lstEntry.next[1:0]-1);
-			data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
-			wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+			//data[(128*i+32)+:32]=tbl_updat_pkt.lstEntry.prev; //pointers are 32 bits //only prev changes, remaining remains same
+			//wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+			//attentryid update
+			data[(128*i+24)+:24]=tbl_updat_pkt.lstEntry.prev; //pointers are 24 bits //only prev changes, remaining remains same
+			wstrb[(16*i+3)+:3]={3{1'b1}}; //pointers are 3 bytes adn attenry of 3 bytes
 		end
 		else if (OPCODE == POP_TAIL ) begin  //if it is UNCMP , we always do POP_BACK
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.lstEntry.prev-1) >> 2) << 6);
 			my_lst_entry.next= tbl_updat_pkt.lstEntry.next; ///'d0; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			data[128*i+:32]=my_lst_entry.next; 
-			wstrb[16*i+:4]={4{1'b1}};
+			data[128*i+:24]=my_lst_entry.next; 
+			wstrb[16*i+:3]={3{1'b1}};
 		end
 	end
 	else if (p_state==TOL_DLST_UPDATE1) begin //PUSH BACK on tail of UNCOMPRESSED LIST
@@ -267,8 +271,8 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 			my_lst_entry.prev= NULL;	
 			my_lst_entry.next= NULL;	
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-			wstrb[16*i+:8]={8{1'b1}};
+			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+			wstrb[16*i+:6]={6{1'b1}};
 		end 
 		else if	(OPCODE == PUSH_TAIL) begin
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
@@ -276,8 +280,9 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 			my_lst_entry.prev= tol_HT.uncompListTail;	
 			my_lst_entry.next= NULL; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-			wstrb[16*i+:8]={8{1'b1}};
+			data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
+			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+			wstrb[16*i+:9]={9{1'b1}}; //whenver we push to uncomp tail, we record attentryid too
 		end
 		else if (OPCODE == PUSH_HEAD  ) begin 
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
@@ -285,8 +290,8 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 			j=tbl_updat_pkt.ifl_idx;
 			my_lst_entry.next= tol_HT.IfLstHead[j]; //I am pointing to head now, update IfLSTHead in next cycle	
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			data[128*i+:64]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
-			wstrb[16*i+:8]={8{1'b1}};
+			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
+			wstrb[16*i+:6]={6{1'b1}};
 		end 
 	end
 	else if (p_state==TOL_DLST_UPDATE2) begin //PUSH BACK on tail of UNCOMPRESSED LIST
@@ -295,16 +300,16 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		if	(OPCODE == PUSH_TAIL) begin
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.uncompListTail-1) >> 2) << 6);
 		 i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
-		 data[128*i+:32]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
-		 wstrb[16*i+:4]={4{1'b1}};
+		 data[128*i+:24]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
+		 wstrb[16*i+:3]={3{1'b1}};
 		end
 		else if (OPCODE == PUSH_HEAD  ) begin 
 		 j=tbl_updat_pkt.ifl_idx;
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.IfLstHead[j]-1) >> 2) << 6);
 		  //$display("RAGHAV_DEBUG: j=%0d, addr=%0h" ,j,get_tbl_axi_wrpkt.addr);
 		 i=(tol_HT.IfLstHead[j][1:0]==2'b00)? 3 : (tol_HT.IfLstHead[j][1:0]-1);
-		 data[(128*i+32)+:32]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
-		 wstrb[(16*i+4)+:4]={4{1'b1}}; //pointers are 4 bytes
+		 data[(128*i+24)+:24]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
+		 wstrb[(16*i+3)+:3]={3{1'b1}}; //pointers are 3 bytes
 		end 
 	end
  	get_tbl_axi_wrpkt.data = data; //get_8byte_byteswap(data); //511'h0123456789ABCDEF;

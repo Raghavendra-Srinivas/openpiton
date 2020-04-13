@@ -55,14 +55,16 @@ function automatic ListEntry decode_LstEntry;
         	ListEntry lst_entry;
 		//defaults
         	decode_LstEntry.way ='d0;
+        	decode_LstEntry.attEntryId ='d0;
  		decode_LstEntry.prev ='d0;
  		decode_LstEntry.next =1'b0;
         	//decode
 		i= (lstEntryId[2:0] == 3'b000) ? 'd7: (lstEntryId[2:0]-1);
 		lst_entry=rdata[128*i+:128];
-        	decode_LstEntry.way = lst_entry.way;
- 		decode_LstEntry.prev = lst_entry.prev;
- 		decode_LstEntry.next = lst_entry.next;
+        	decode_LstEntry.way 	 	= lst_entry.way;
+        	decode_LstEntry.attEntryId 	= lst_entry.attEntryId;
+ 		decode_LstEntry.prev 		= lst_entry.prev;
+ 		decode_LstEntry.next 		= lst_entry.next;
 endfunction
 
 
@@ -90,6 +92,7 @@ function automatic tol_updpkt_t get_Tolpkt;
 			2'b00:	list_entry = rdata[511:384];
 		 endcase
 		 get_Tolpkt.lstEntry=list_entry;
+		 get_Tolpkt.lstEntry.attEntryId=attEntryId; //keep track to which attenry we allocated this ppa to.
 	
 	end
 	//handle other table update later

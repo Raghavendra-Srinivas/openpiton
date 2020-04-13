@@ -72,13 +72,23 @@ package hacd_pkg;
 	logic [57:2]  way;      //technically it is start address of physical page
 	logic [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  	} AttEntry;
-	
+/*	
  typedef struct packed {
-	logic [127:114] rsvd; 
+	logic [127:(LST_ENTRY_MAX+114)] rsvd;
+	logic [(LST_ENTRY_MAX+114)-1:114] attEntryId;
 	logic [113:64] way;
 	logic [63:32] prev;
 	logic [31:0] next;
  } ListEntry;
+*/
+ typedef struct packed {
+	logic [127:120] rsvd;
+	logic [119:72] way;
+	logic [71:48] attEntryId;
+	logic [47:24] prev;
+	logic [23:0] next;
+ } ListEntry;
+
 
  //Below packet is between hawk_axiwr_master and hawk_pgwr_mngr
  //For simplicity , we dont treat addr and data as separate, though they are
@@ -199,7 +209,7 @@ function automatic logic [511:0] get_8byte_byteswap;
 	end
 	
 	//For hawk byteswap does not matter
-		get_8byte_byteswap=data;
+		//get_8byte_byteswap=data;
 endfunction 
 function automatic logic [63:0] get_strb_swap;
 	input logic [63:0] data;
@@ -216,7 +226,7 @@ function automatic logic [63:0] get_strb_swap;
 		get_strb_swap[(8*i)+:8]=swappedEightByte;
 	end
 	//For hawk byteswap does not matter
-	get_strb_swap=data;	
+	//get_strb_swap=data;	
 endfunction 
  
   //generic helper function automatics

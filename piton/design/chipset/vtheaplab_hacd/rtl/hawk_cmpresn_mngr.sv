@@ -263,7 +263,7 @@ always@* begin
 		end
 		UPDATE_ATT_POP_UCMP_TAIL:begin //wait till Zspage is written
 				if( pgwr_mngr_ready) begin //update ATT and TOL then 
-					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
+					n_comp_tol_updpkt.attEntryId=p_listEntry.attEntryId;//tol_HT.uncompListHead;
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
 					n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
@@ -314,9 +314,10 @@ always@* begin
 		end
 		TOL_UPDATE_FREEWAY_ENTRY:begin
 			   	if(pgwr_mngr_ready) begin //we can make zspg_updated is level signal till next reqeust, but pgwr*ready is good enough
-					n_comp_tol_updpkt.attEntryId=tol_HT.uncompListHead;
+					n_comp_tol_updpkt.attEntryId=p_listEntry.attEntryId; //tol_HT.uncompListHead;
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
+				  	n_comp_tol_updpkt.lstEntry.attEntryId=p_attEntryId;
 					n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart; //p_listEntry.way;//now ATT way if freeway
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.dst_list=UNCOMP; //I got freeway, list entry remain in same staet

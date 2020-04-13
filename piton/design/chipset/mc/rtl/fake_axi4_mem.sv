@@ -290,14 +290,16 @@ foreach(MEM[addr]) begin
        //reverseswap=MEM[addr][i];
        //cacheline=get_unswapped_line(reverseswap);	
        //$display("Half cache line: ADDR:%h: DATA:%h",addr,cacheline);	
-       lstentry[0].rsvd=cacheline[127:114];
-       lstentry[0].way=cacheline[113:64];
-       lstentry[0].prev=cacheline[63:32];
-       lstentry[0].next=cacheline[31:0];
-       lstentry[1].rsvd=cacheline[`LSTSIZE1+127:`LSTSIZE1+114];
-       lstentry[1].way=cacheline[`LSTSIZE1+113:`LSTSIZE1+64];
-       lstentry[1].prev=cacheline[`LSTSIZE1+63:`LSTSIZE1+32];
-       lstentry[1].next=cacheline[`LSTSIZE1+31:`LSTSIZE1+0];
+       lstentry[0].rsvd=cacheline[127:120];
+       lstentry[0].way=cacheline[119:72];
+       lstentry[0].attEntryId=cacheline[71:48];
+       lstentry[0].prev=cacheline[47:24];
+       lstentry[0].next=cacheline[23:0];
+       lstentry[1].rsvd=cacheline[`LSTSIZE1+127:`LSTSIZE1+120];
+       lstentry[1].way=cacheline[`LSTSIZE1+119:`LSTSIZE1+72];
+       lstentry[1].attEntryId=cacheline[`LSTSIZE1+71:`LSTSIZE1+48];
+       lstentry[1].prev=cacheline[`LSTSIZE1+47:`LSTSIZE1+24];
+       lstentry[1].next=cacheline[`LSTSIZE1+23:`LSTSIZE1+0];
      for (int j=0;j<2;j++) begin
 
 	///Initialize 
@@ -344,7 +346,7 @@ foreach(MEM[addr]) begin
 	end
 
 	 		
-       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%s: %0d || way:%0h || prev: %0d || next:%0d", addr,listentry_name,lst_enry_id,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
+       $display("CACHE/DRAM ADDR: %h LST_ENTRY->%s: %0d || attEntryId:%0d || way:%0h || prev: %0d || next:%0d", addr,listentry_name,lst_enry_id,lstentry[j].attEntryId,lstentry[j].way,lstentry[j].prev,lstentry[j].next); //cacheline[(i+1)*64-1:i*64]); 
 
 	lst_enry_id = lst_enry_id + 1;
      end //for
