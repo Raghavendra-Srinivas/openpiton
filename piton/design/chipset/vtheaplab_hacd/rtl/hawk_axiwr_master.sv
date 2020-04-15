@@ -39,7 +39,7 @@ module hawk_axiwr_master #
     parameter [1:0] BURST_TYPE=`HACD_AXI4_BURST_TYPE,
 
     // Write data FIFO depth (cycles)
-    parameter FIFO_DEPTH = 32, //`HACD_AXI_MASTER_FIFO_DEPTH,
+    parameter FIFO_DEPTH = `HACD_AXI_MASTER_FIFO_DEPTH, //48 for 3.5KB
     // Hold write address until write data in FIFO, if possible
     parameter FIFO_DELAY = 1
 )
@@ -96,7 +96,7 @@ parameter LAST_OFFSET  = STRB_OFFSET + STRB_WIDTH;
 parameter WUSER_OFFSET = LAST_OFFSET + 1;
 parameter WWIDTH       = WUSER_OFFSET + (WUSER_ENABLE ? WUSER_WIDTH : 0);
 
-parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH);
+parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH)+1;
 
 
 /////////////////

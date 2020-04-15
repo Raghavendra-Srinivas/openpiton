@@ -32,17 +32,30 @@ endfunction
 
 //function  decode_AttEntry
 function automatic trnsl_reqpkt_t decode_AttEntry;
-	input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
+	//input logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
+  	input hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 		integer i;
         	AttEntry att_entry;
 		//defaults
+        	decode_AttEntry.zpd_cnt ='d0;
+        	decode_AttEntry.zpd_update =1'b0;
         	decode_AttEntry.ppa ='d0;
  		decode_AttEntry.sts ='d0;
  		decode_AttEntry.allow_access =1'b0;
         	//decode
-		i=hppa[14:12];
+		i=lkup_reqpkt.hppa[14:12];
 		att_entry=rdata[64*i+:64];
+		if 	(att_entry.zpd_cnt!='d0 && !lkup_reqpkt.zeroBlkWr ) begin
+        		decode_AttEntry.zpd_cnt = 'd0;
+        		decode_AttEntry.zpd_update = 1'b1;
+		end else if (lkup_reqpkt.zeroBlkWr) begin
+        		decode_AttEntry.zpd_cnt = att_entry.zpd_cnt+8'd1;
+        		decode_AttEntry.zpd_update = 1'b1;
+		end else begin
+        		decode_AttEntry.zpd_cnt = att_entry.zpd_cnt;
+        		decode_AttEntry.zpd_update = 1'b0;
+		end
 		decode_AttEntry.ppa=att_entry.way;
 		decode_AttEntry.sts=att_entry.sts;
 endfunction 
@@ -73,6 +86,7 @@ typedef enum {TOL_ALLOCATE_PPA,TOL_COMPRESS} TOL_UPDATE_TYPE;
 function automatic tol_updpkt_t get_Tolpkt;
 	input [clogb2(LST_ENTRY_MAX)-1:0] lstEntryId;
 	input [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
+	input logic [7:0] zpd_cnt;
  	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
 	input TOL_UPDATE_TYPE p_state;
 	ListEntry list_entry;
@@ -93,6 +107,7 @@ function automatic tol_updpkt_t get_Tolpkt;
 		 endcase
 		 get_Tolpkt.lstEntry=list_entry;
 		 get_Tolpkt.lstEntry.attEntryId=attEntryId; //keep track to which attenry we allocated this ppa to.
+	         get_Tolpkt.zpd_cnt = zpd_cnt;
 	
 	end
 	//handle other table update later

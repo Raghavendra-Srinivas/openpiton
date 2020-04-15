@@ -12,6 +12,7 @@ module hawk_cmpresn_mngr (
     input pgwr_mngr_ready,
     input tbl_update_done,
 
+    input zeroBlkWr,
     //handshake with PWM
     input zspg_updated,	
     output logic comp_rdm_reset,
@@ -267,6 +268,7 @@ always@* begin
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
 					n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;//now ATT way is byte address of compressed page
+				  	n_comp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
 					//n_comp_tol_updpkt.dst_list= ; This
@@ -334,6 +336,12 @@ always@* begin
 					n_comp_tol_updpkt.lstEntry.way=p_listEntry.way;//now ATT way if freeway
 					n_comp_tol_updpkt.ATT_UPDATE_ONLY=1'b1;
 					n_comp_tol_updpkt.ATT_STS=STS_UNCOMP;
+					if(zeroBlkWr) begin
+					    n_comp_tol_updpkt.zpd_cnt='d1; //if the write upon decompression is zero, initialize it to 1
+					end
+					else begin
+					    n_comp_tol_updpkt.zpd_cnt='d0; //else zero
+					end
 					n_comp_tol_updpkt.tbl_update=1'b1;		
 				end
 				if(tbl_update_done) begin   

@@ -68,10 +68,10 @@ package hacd_pkg;
  parameter [1:0] STS_COMP=2'b10;
  parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
-	logic [63:58] zpd_cnt; //zero page detection count
-	logic [57:2]  way;      //technically it is start address of physical page
-	logic [1:0]   sts;       //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
- 	} AttEntry;
+	logic [63:56] zpd_cnt; //zero page detection count
+	logic [55:2]  way;     //it is start address of physical page
+	logic [1:0]   sts;     //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
+ } AttEntry;
 /*	
  typedef struct packed {
 	logic [127:(LST_ENTRY_MAX+114)] rsvd;
@@ -146,12 +146,15 @@ package hacd_pkg;
  //packets for interaction between cu, rd and write managers
 
  typedef struct packed {
+	logic zeroBlkWr;
  	logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
 	logic lookup;
  } att_lkup_reqpkt_t;
 
  //below packet is used for  
  typedef struct packed {
+	logic [7:0] zpd_cnt;
+	logic zpd_update;
 	logic [`HACD_AXI4_ADDR_WIDTH-1:0] ppa;
 	logic [1:0] sts;
 	logic allow_access;
@@ -170,11 +173,13 @@ package hacd_pkg;
 	logic [7:0] ifl_idx; //this is needed for irregular free list
 	logic ATT_UPDATE_ONLY;
 	logic [1:0] ATT_STS;
+	logic [7:0] zpd_cnt;
 	logic tbl_update;
  } tol_updpkt_t;
 
 
  typedef struct packed {
+	logic zeroBlkWr;
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] hppa;
 	logic valid;
  } cpu_reqpkt_t;

@@ -116,8 +116,8 @@ wire decomp_mngr_done;
 axi_rd_pld_t n_decomp_axireq;
 logic n_decomp_req_arvalid,n_decomp_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata;
-logic [`HACD_AXI4_ADDR_WIDTH-1:0] decomp_cPage_byteStart;
-logic  [`HACD_AXI4_ADDR_WIDTH-1:0] decomp_freeWay;
+logic [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_cPage_byteStart,decomp_cPage_byteStart;
+logic  [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_freeWay,decomp_freeWay;
 
 //logic to handle different modes
 always@* begin
@@ -129,7 +129,9 @@ always@* begin
 	n_rdata=p_rdata;
 	n_trnsl_reqpkt.allow_access=1'b0;
 	n_tol_updpkt.tbl_update=1'b0;
-	decomp_freeWay='d0;
+	n_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
+	n_decomp_freeWay=decomp_freeWay;
+	n_decomp_cPage_byteStart=decomp_cPage_byteStart;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -160,16 +162,26 @@ always@* begin
 			  end
 		end
 		DECODE_ATT_ENTRY:begin
-			   n_trnsl_reqpkt=decode_AttEntry(lkup_reqpkt.hppa,p_rdata);
+			   n_trnsl_reqpkt=decode_AttEntry(lkup_reqpkt,p_rdata);
 			   //n_state = CHK_ATT_ENTRY;
 		//end
-	        //CHK_ATT_ENTRY: begin
-			   if     (n_trnsl_reqpkt.sts==STS_UNCOMP || n_trnsl_reqpkt.sts==STS_INCOMP) begin
-					n_state = IDLE; // att_hit: nothing to do 
-					n_trnsl_reqpkt.allow_access=1'b1;
+	        //CHK_ATT_ENTRY: begin 
+	        //			//ATT 
+			   if     (n_trnsl_reqpkt.sts==STS_UNCOMP || n_trnsl_reqpkt.sts==STS_INCOMP) begin //this case though hit still needs att updateif there is zpd_cnt update
+					if(n_trnsl_reqpkt.zpd_update) begin
+						n_tol_updpkt.attEntryId=p_attEntryId;
+						n_tol_updpkt.lstEntry.way=n_trnsl_reqpkt.ppa;//now ATT way if freeway
+						n_tol_updpkt.ATT_UPDATE_ONLY=1'b1;
+						n_tol_updpkt.ATT_STS=n_trnsl_reqpkt.sts;
+						n_tol_updpkt.zpd_cnt=n_trnsl_reqpkt.zpd_cnt;
+						n_state = TBL_UPDATE;
+					end else begin
+						n_state = IDLE; // no change in zpd_cnt : nothing to do 
+						n_trnsl_reqpkt.allow_access=1'b1;
+					end
 			   end
 			   else if(n_trnsl_reqpkt.sts==STS_COMP) begin
-					n_state = POP_FREE_LST; //DECOMPRESS; //not handling for now
+					n_state = POP_FREE_LST; 
 			   end
 			   else begin //DALLOC: if it powerup, everything is deallcoated, and if deallocated proactively, it means , freelist has been updated with that ppa.
 			  	n_state = POP_FREE_LST; 
@@ -194,10 +206,16 @@ always@* begin
 				     n_rdata=rdata; //get_8byte_byteswap(rdata);
 				     //decode freeway from freelist from read
 				     //data
-				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,n_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
+
+				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,'d0,n_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
+					if(lkup_reqpkt.zeroBlkWr) begin
+						n_tol_updpkt.zpd_cnt='d1;
+					end
 				     //If caller of POP_FREE_LST was
 				     //decompressor state then go back  
 					if(p_trnsl_reqpkt.sts==STS_COMP) begin //if this call because targeted acccess is on compressed page, go to decompress state to expand page on this freeWay
+						n_decomp_freeWay=n_tol_updpkt.lstEntry.way<<12;
+			   		        n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
 						n_state = DECOMPRESS; 
 					end
 					else begin
@@ -206,12 +224,10 @@ always@* begin
 			  end
 		end
 
-		ALLOCATE_PPA: begin //this stae, we get ppa from freelist and also prepare att & tol updte packet taht is sent pgwr_manager
-			   	     if(pgwr_mngr_ready) begin
-				     	n_tol_updpkt.tbl_update=1'b1;
-				     	n_state = TBL_UPDATE_DONE;
-				     end
-				     else n_state = TBL_UPDATE;	
+		ALLOCATE_PPA: begin 
+					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way<<12;
+					n_trnsl_reqpkt.sts=UNCOMP;
+				        n_state = TBL_UPDATE;	
 		end
 		TBL_UPDATE:begin
 			   //we can deliver packet to PWM only if it's ready
@@ -222,8 +238,6 @@ always@* begin
 		end
 		TBL_UPDATE_DONE:begin
 				if(tbl_update_done) begin
-					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way<<12;
-					n_trnsl_reqpkt.sts=UNCOMP;
 					n_trnsl_reqpkt.allow_access=1'b1;
 				     	n_state = IDLE;
 				end
@@ -233,8 +247,8 @@ always@* begin
 					//Am I servicing to make freeway for
 					//decompressor or for new Hppa ?
 					if(p_trnsl_reqpkt.sts==STS_COMP) begin //my Attenry says compressed, then I am doen servicing for decompressor, so give freeway to it
-						decomp_freeWay=cmpresn_freeWay<<12;
-			   			decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
+						n_decomp_freeWay=cmpresn_freeWay<<12;
+			   			n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
 						n_state = DECOMPRESS; 
 					end else begin //I am done serving for new hppa ,so share freeway over translation request 	
 						n_trnsl_reqpkt.ppa=cmpresn_freeWay<<12;
@@ -245,13 +259,15 @@ always@* begin
 				end		
 		end
 		DECOMPRESS: begin
-				decomp_freeWay=cmpresn_freeWay<<12;
-			   	decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
 				if(decomp_mngr_done) begin 
 					n_trnsl_reqpkt.ppa=decomp_freeWay; //dcomp done, so this way is expanded with needed page, send it over trnls packet
 					n_trnsl_reqpkt.sts=UNCOMP;
 					n_trnsl_reqpkt.allow_access=1'b1;
-					n_state = IDLE;
+				        if(freeLstHead!=NULL) begin //If i just uncompressed compressed page to popped way from free list, i need tol update
+					  n_state = TBL_UPDATE;
+					end else begin //it must be called from COMPRESS, so it internally updated necessary tol
+					  n_state = IDLE;
+					end
 				end
 		end
 		BUS_ERROR: begin
@@ -294,6 +310,18 @@ begin
 	end
 end
 
+//inputs for decompressor
+always@(posedge clk_i or negedge rst_ni) 
+begin
+ if(!rst_ni) begin
+ 	decomp_cPage_byteStart <= 'd0;
+ 	decomp_freeWay <= 'd0;
+ end else begin
+ 	decomp_cPage_byteStart <= n_decomp_cPage_byteStart;
+ 	decomp_freeWay <= n_decomp_freeWay;
+ end
+end
+
 //table packets
 always @(posedge clk_i or negedge rst_ni)
 begin
@@ -304,8 +332,8 @@ begin
 	else begin
 		//Tranalstion Request : It can be att hit or tbl update
 		p_trnsl_reqpkt<= n_trnsl_reqpkt; //(p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
-		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : 
-				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
+		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : n_tol_updpkt;
+				 //(p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
 	end
 end
 
@@ -348,11 +376,12 @@ end
 
 
 //Compression Manager
-
 hacd_pkg::iWayORcPagePkt_t c_iWayORcPagePkt;
 wire cmpresn_trigger;
 wire comp_rdm_reset;
+logic zeroBlkWr;	 
 assign cmpresn_trigger=(p_state==COMPRESS);
+assign zeroBlkWr=lkup_reqpkt.zeroBlkWr;
 hawk_cmpresn_mngr u_cmpresn_mngr (.*);
 
 

@@ -1,3 +1,5 @@
+
+
 // File: hawk_cpu_stall_wr.sv
 // Author : Raghavendra-Srinivas
 // 	    raghavs@vt.edu
@@ -105,22 +107,11 @@ module hawk_cpu_stall_wr #
     output wire                     m_axi_bready
 );
 
-parameter STRB_OFFSET  = DATA_WIDTH;
-parameter LAST_OFFSET  = STRB_OFFSET + STRB_WIDTH;
-parameter WUSER_OFFSET = LAST_OFFSET + 1;
-parameter WWIDTH       = WUSER_OFFSET + (WUSER_ENABLE ? WUSER_WIDTH : 0);
-
-reg [WWIDTH-1:0] m_axi_w_reg;
-reg m_axi_wvalid_reg, m_axi_wvalid_next;
-
-
-
-
 
     localparam [1:0]
-        STATE_IDLE = 2'd0,
-        STATE_TRANSFER_IN = 2'd1,
-        STATE_WAIT= 2'd2;
+        IDLE = 2'd0,
+        WAIT_DATA = 2'd1,
+        WAIT_HAWK= 2'd2;
 
     reg [1:0] p_state , n_state;
 
@@ -139,7 +130,13 @@ logic allow_cpu_access,allow_cpu_access_next;
     reg m_axi_awvalid_reg , m_axi_awvalid_next;
 
     reg s_axi_awready_reg, s_axi_awready_next;
+    reg s_axi_wready_reg, s_axi_wready_next;
 
+    reg m_axi_wvalid_reg, m_axi_wvalid_next;
+    reg [DATA_WIDTH-1:0] m_axi_wdata_reg,m_axi_wdata_next;
+    reg	[STRB_WIDTH-1:0] m_axi_wstrb_reg,m_axi_wstrb_next;
+    reg	m_axi_wlast_reg,m_axi_wlast_next;
+    
     always @* begin
         n_state = p_state;
 
@@ -155,13 +152,15 @@ logic allow_cpu_access,allow_cpu_access_next;
         m_axi_awregion_next = m_axi_awregion_reg;
         m_axi_awuser_next = m_axi_awuser_reg;
         m_axi_awvalid_next = m_axi_awvalid_reg && !m_axi_awready;
+	m_axi_wvalid_next = m_axi_wvalid_reg && !m_axi_wready;
         s_axi_awready_next = s_axi_awready_reg;
-	
+
 	allow_cpu_access_next = allow_cpu_access;
 
         case (p_state)
-            STATE_IDLE: begin
+            IDLE: begin
                 s_axi_awready_next = !m_axi_awvalid;
+                s_axi_wready_next = 1'b0;
 
                 if (s_axi_awready & s_axi_awvalid) begin
                     s_axi_awready_next = 1'b0;
@@ -179,15 +178,32 @@ logic allow_cpu_access,allow_cpu_access_next;
                     m_axi_awuser_next = s_axi_awuser;
 
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
-                    n_state = STATE_WAIT;
+                    n_state = WAIT_DATA;
                 end 
             end
-	   STATE_WAIT:begin
+	   WAIT_DATA:begin
                 s_axi_awready_next = 1'b0;
+                s_axi_wready_next = !m_axi_wvalid;
+
+                if (s_axi_wready & s_axi_wvalid) begin
+                    s_axi_wready_next = 1'b0;
+
+    		    m_axi_wdata_next = s_axi_wdata;
+		    m_axi_wstrb_next = s_axi_wstrb;
+    		    m_axi_wlast_next = s_axi_wlast;
+		
+		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
+                    n_state = WAIT_HAWK;
+                end		  
+	   end
+	   WAIT_HAWK:begin
+                s_axi_awready_next = 1'b0;
+                s_axi_wready_next = 1'b0;
                 if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
 		    m_axi_awaddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_awaddr_reg[11:0]};
                     m_axi_awvalid_next = 1'b1;
-                    n_state = STATE_IDLE;
+                    m_axi_wvalid_next = 1'b1;
+                    n_state = IDLE;
                 end 
 	   end
         endcase
@@ -196,14 +212,21 @@ logic allow_cpu_access,allow_cpu_access_next;
  
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            p_state <= STATE_IDLE;
+            p_state <= IDLE;
             m_axi_awvalid_reg <= 1'b0;
             s_axi_awready_reg <= 1'b0;
+
+            m_axi_wvalid_reg <= 1'b0;
+            s_axi_awready_reg <= 1'b0;
+
 	    allow_cpu_access <=1'b0;
         end else begin
             p_state <= n_state;
             m_axi_awvalid_reg <= m_axi_awvalid_next;
             s_axi_awready_reg <= s_axi_awready_next;
+            
+	    m_axi_wvalid_reg <= m_axi_wvalid_next;
+            s_axi_wready_reg <= s_axi_wready_next;
 
 		if(hawk_cpu_ovrd_pkt.allow_access) begin
 		   allow_cpu_access<=1'b1;
@@ -225,6 +248,10 @@ logic allow_cpu_access,allow_cpu_access_next;
         m_axi_awqos_reg <= m_axi_awqos_next;
         m_axi_awregion_reg <= m_axi_awregion_next;
         m_axi_awuser_reg <= m_axi_awuser_next;
+    		    
+        m_axi_wdata_reg <= m_axi_wdata_next;
+	m_axi_wstrb_reg <= m_axi_wstrb_next;
+    	m_axi_wlast_reg <= m_axi_wlast_next;
     end
 
    assign m_axi_awid = m_axi_awid_reg;
@@ -250,17 +277,18 @@ logic allow_cpu_access,allow_cpu_access_next;
    assign m_axi_bready = s_axi_bready;
    //
    //Write Channel 
-   assign m_axi_wvalid = s_axi_wvalid;
-   assign s_axi_wready = m_axi_wready; 
-   assign m_axi_wdata = s_axi_wdata;
-   assign m_axi_wstrb = s_axi_wstrb;
-   assign m_axi_wlast = s_axi_wlast;
+   assign m_axi_wvalid = m_axi_wvalid_reg;
+   assign s_axi_wready = s_axi_wready_reg; 
+   assign m_axi_wdata = m_axi_wdata_reg;
+   assign m_axi_wstrb = m_axi_wstrb_reg;
+   assign m_axi_wlast = m_axi_wlast_reg;
    assign m_axi_wuser = (WUSER_ENABLE) ? s_axi_wuser : {WUSER_WIDTH{1'b0}};
 
    //hawk req packet
    assign cpu_reqpkt.hppa  = m_axi_awaddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
    wire lookup;
-   assign lookup= (p_state==STATE_WAIT) && !(hawk_cpu_ovrd_pkt.allow_access | allow_cpu_access);
+   assign lookup= (p_state==WAIT_HAWK) && !(hawk_cpu_ovrd_pkt.allow_access | allow_cpu_access);
    assign cpu_reqpkt.valid = lookup;
+   assign cpu_reqpkt.zeroBlkWr= (p_state==WAIT_HAWK) && (&m_axi_wstrb_reg && ~(|m_axi_wdata_reg));
 
 endmodule

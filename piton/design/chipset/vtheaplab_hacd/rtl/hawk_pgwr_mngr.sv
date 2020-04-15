@@ -222,15 +222,17 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		
 	        if(tbl_updat_pkt.ATT_UPDATE_ONLY) begin
 			att_entry.sts=tbl_updat_pkt.ATT_STS;
+			att_entry.zpd_cnt=tbl_updat_pkt.zpd_cnt;
 		end	
 		else if(tbl_updat_pkt.src_list == UNCOMP && tbl_updat_pkt.dst_list==UNCOMP) begin //this entry must got compressed and provied freeway
-			att_entry.sts=STS_COMP;
+			att_entry.sts=STS_COMP; //zpd_cnt gets default of 0
 		end
 		else if(tbl_updat_pkt.src_list == FREE && tbl_updat_pkt.dst_list==UNCOMP) begin
 			att_entry.sts=STS_UNCOMP;
+			att_entry.zpd_cnt=tbl_updat_pkt.zpd_cnt;
 		end //handl others: by default I make it do to to COMP as there are too many irregular free lists and so no need to compare
 		else begin
-			att_entry.sts=STS_COMP;
+			att_entry.sts=STS_COMP; //zpd_cnt gets default of 0
 		end
 		
 		//Which 64 bit we need to send this.
@@ -265,34 +267,39 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		end
 	end
 	else if (p_state==TOL_DLST_UPDATE1) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			data[(128*i+48)+:24]= tbl_updat_pkt.lstEntry.attEntryId; 
 		
 		if	(OPCODE == NULLIFY) begin
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 			my_lst_entry.prev= NULL;	
 			my_lst_entry.next= NULL;	
-			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			//data[(128*i+48)+:24]='d0; //tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-			wstrb[16*i+:6]={6{1'b1}};
+			//wstrb[16*i+:9]={9{1'b1}};
 		end 
 		else if	(OPCODE == PUSH_TAIL) begin
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 	
 			my_lst_entry.prev= tol_HT.uncompListTail;	
 			my_lst_entry.next= NULL; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
-			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
+			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
-			wstrb[16*i+:9]={9{1'b1}}; //whenver we push to uncomp tail, we record attentryid too
+			//wstrb[16*i+:9]={9{1'b1}}; //whenver we push to uncomp tail, we record attentryid too
 		end
 		else if (OPCODE == PUSH_HEAD  ) begin 
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 			my_lst_entry.prev= 'd0;
 			j=tbl_updat_pkt.ifl_idx;
 			my_lst_entry.next= tol_HT.IfLstHead[j]; //I am pointing to head now, update IfLSTHead in next cycle	
-			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
+			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
-			wstrb[16*i+:6]={6{1'b1}};
+			//wstrb[16*i+:9]={9{1'b1}};
 		end 
+			wstrb[16*i+:9]={9{1'b1}};
 	end
 	else if (p_state==TOL_DLST_UPDATE2) begin //PUSH BACK on tail of UNCOMPRESSED LIST
 		
