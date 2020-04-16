@@ -1,3 +1,4 @@
+//`define SYNTH 1
 `include "hacd_define.vh"
 import hacd_pkg::*;
 import hawk_rd_pkg::*;
@@ -43,6 +44,83 @@ module hawk_decomp_mngr (
     output logic decomp_mngr_done
 );
 
+logic [`HACD_AXI4_DATA_WIDTH-1:0] n_rdata;
+typedef logic [`FSM_WID_DCMP_MNGR-1:0] state_t;
+`undef FSM_WID_DCMP_MNGR
+state_t n_state,p_state;
+localparam IDLE			     ='d0,
+	   REQ_IWAY_PTR	     	     ='d1,
+	   FETCH_IWAY_PTR	     ='d2,
+	   SET_CPAGEFREE	     ='d3,	
+	   RESET_FIFO_PTRS	     ='d4,
+	   WAIT_RESET		     ='d5,
+	   BURST_READ_START	     ='d6,
+	   BURST_READ		     ='d7,
+	   DECOMP_WAIT		     ='d8, //This should wait for decompressed page (4KB) to be written to memory
+	   PUSH_IFL		     ='d9,
+	   DONE			     ='d10,
+	   DECOMP_MNGR_ERROR	     ='d11,
+	   BUS_ERROR		     ='d12;
+///////////
+function automatic iWayORcPagePkt_t setCpageFree_ZsPageiWay;
+	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
+	input logic [47:0] cPage_byteStart;
+	input state_t p_state;
+	input iWayORcPagePkt_t pkt_in;
+	iWayORcPagePkt_t pkt;
+
+	pkt.zsPgMd=rdata[(50*8-1)+2*48:2*48]; //50 bytes on LSB
+	pkt.nxtWay_ptr=rdata[(48-1)+48:48];
+	pkt.iWay_ptr=rdata[(48-1)+0 : 0];  
+	pkt.cpage_size=suprted_comp_size[pkt.zsPgMd.size];
+	pkt.update=1'b0;
+ 	
+        //Zspage was full before decompress from it? then push it to irrgular
+        //free list after decompression
+	if(p_state==FETCH_IWAY_PTR) begin
+        	pkt.pp_ifl = &pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+	end else begin
+        	pkt.pp_ifl = pkt_in.pp_ifl;
+		//cpage byte start
+		if 	(pkt.zsPgMd.page0 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[0]=1'b0;
+		end 
+		else if (pkt.zsPgMd.page1 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[1]=1'b0;
+		end
+		else if (pkt.zsPgMd.page2 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[2]=1'b0;
+		end
+		else if (pkt.zsPgMd.page3 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[3]=1'b0;
+		end
+		else if (pkt.zsPgMd.page4 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[4]=1'b0;
+		end
+	end	
+		//[TODO] invalidate way valid based on if all page valid goes invalid later
+		setCpageFree_ZsPageiWay=pkt;
+
+		`ifndef SYNTH
+			$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
+
+			$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+			$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+			$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+			$display ("RAGHAV SETCPAGE DEBUG way0- %0h",pkt.zsPgMd.way0 );
+			$display ("RAGHAV SETCPAGE DEBUG page0- %0h",pkt.zsPgMd.page0 );
+			$display ("RAGHAV SETCPAGE DEBUG page1- %0h",pkt.zsPgMd.page1 );
+			$display ("RAGHAV SETCPAGE DEBUG page2- %0h",pkt.zsPgMd.page2 );
+
+			$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+			$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",pkt.cpage_size );
+			$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+			$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
+		`endif
+	
+
+endfunction
+/////////////////
 logic [13:0] comp_size;
 wire arready;
 wire arvalid,rvalid,rlast;
@@ -56,22 +134,8 @@ assign rlast = rd_resppkt.rlast;
 assign rdata = rd_resppkt.rdata;
 assign rresp =  rd_resppkt.rresp;
 
-logic [`HACD_AXI4_DATA_WIDTH-1:0] n_rdata;
-typedef logic [`FSM_WID_DCMP_MNGR-1:0] state_t;
-`undef FSM_WID_DCMP_MNGR
-state_t n_state,p_state;
-localparam IDLE			     ='d0,
-	   REQ_IWAY_PTR	     	     ='d1,
-	   FETCH_IWAY_PTR	     ='d2,	
-	   RESET_FIFO_PTRS	     ='d3,
-	   WAIT_RESET		     ='d4,
-	   BURST_READ_START	     ='d5,
-	   BURST_READ		     ='d6,
-	   DECOMP_WAIT		     ='d7, //This should wait for decompressed page (4KB) to be written to memory
-	   //UPDATE_ZSMD		     ='d10,
-	   DONE			     ='d8,
-	   DECOMP_MNGR_ERROR	     ='d9,
-	   BUS_ERROR		     ='d10;
+
+
 
 logic [7:0] size_idx;
 
@@ -92,6 +156,7 @@ always@* begin
         n_decomp_rready=1'b1;     
 	n_decomp_rdata=p_rdata;
 	n_decomp_tol_updpkt.tbl_update=1'b0;
+	n_decomp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_decomp_start=decomp_start; //1'b0;
 	n_decomp_mngr_done=1'b0;
 	n_iWayORcPagePkt=dc_iWayORcPagePkt;
@@ -118,10 +183,10 @@ always@* begin
 			      if(rresp =='d0) begin
 			           n_decomp_rdata= rdata; 
 				   if(n_decomp_rdata[47:0] == p_axireq.addr[47:0]) begin //If Iam  the iWay, pick the csize
-				      n_iWayORcPagePkt=setCpageBusy_ZsPageiWay(n_decomp_rdata,decomp_cPage_byteStart);
+				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(n_decomp_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
 				      //n_burst_cnt=(get_cpage_size(n_decomp_rdata[7+2*48:2*48]) >> 6) + 1;
 				      n_burst_cnt=(n_iWayORcPagePkt.cpage_size >> 6) + 1;
-			              n_state = RESET_FIFO_PTRS;
+			              n_state = SET_CPAGEFREE;
 				   end
 				   else begin
 					if(arready && !arvalid) begin
@@ -133,6 +198,16 @@ always@* begin
 			      end
 			      else n_state = BUS_ERROR;
 			end
+		`ifndef SYNTH
+				$display("RAGHAV_DEBUG:In FETCH_IWAY_PTR");
+		 `endif
+		end
+		SET_CPAGEFREE:begin
+				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(p_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
+			              n_state = RESET_FIFO_PTRS;
+		`ifndef SYNTH
+				$display("RAGHAV_DEBUG:In SET_CPAGEFREE");
+		 `endif
 		end
 		RESET_FIFO_PTRS:begin
 			   n_decomp_rdm_reset = 1'b1; //Later connect this to WRITE FIFO as well. 
@@ -168,17 +243,38 @@ always@* begin
 			end
 		end
 		DECOMP_WAIT: begin
-			        if (zspg_updated) begin //this makes sure, decomprssed page has been written 	
+			        if (zspg_updated) begin //this also makes sure, decomprssed page has been written 	
 				   n_iWayORcPagePkt.update=1'b0;
-			           n_state= DONE;
+					//Do we need IFL push
+					if(dc_iWayORcPagePkt.pp_ifl) begin
+			           		n_state= PUSH_IFL;
+					end
+					else begin
+			           		n_state= DONE;
+					end
 				end
 				//if(decomp_done) begin
-				//	n_state = DONE;//UPDATE_ZSMD;
+				//	n_state = DONE;//PUSH_IFL;
 				//end
 		end
-		//UPDATE_ZSMD: begin
-		//		n_iWayORcPagePkt.update=1'b1;
-		//end
+		PUSH_IFL: begin
+			   	if(pgwr_mngr_ready) begin //we push this zspage wich was nuliify entry to ifl head now
+					//n_decomp_tol_updpkt.attEntryId=p_listEntry.attEntryId; //tol_HT.uncompListHead;
+					n_decomp_tol_updpkt.tolEntryId=((dc_iWayORcPagePkt.iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
+				  	//n_decomp_tol_updpkt.lstEntry=p_listEntry;
+				  	n_decomp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
+					//n_decomp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;
+					n_decomp_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
+					n_decomp_tol_updpkt.src_list=IFL_DETACH; //it was detached before from ifl
+					n_decomp_tol_updpkt.dst_list=IFL_SIZE1; 
+					n_decomp_tol_updpkt.ifl_idx=get_idx(dc_iWayORcPagePkt.cpage_size);
+					n_decomp_tol_updpkt.tbl_update=1'b1;		
+				end
+				if(tbl_update_done) begin
+					n_state = DONE; 
+				end
+				$display("RAGHAV_DEBUG:In PUSH_IFL");
+		end
 		DONE: begin
 					n_decomp_mngr_done=1'b1;
 					n_state = IDLE; //we are done  

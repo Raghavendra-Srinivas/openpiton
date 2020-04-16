@@ -332,8 +332,8 @@ begin
 	else begin
 		//Tranalstion Request : It can be att hit or tbl update
 		p_trnsl_reqpkt<= n_trnsl_reqpkt; //(p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
-		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : n_tol_updpkt;
-				 //(p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
+		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : 
+				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
 	end
 end
 

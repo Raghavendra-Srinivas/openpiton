@@ -195,13 +195,13 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	get_axi_wr_pkt.strb = wstrb; //get_strb_swap(wstrb);		
 endfunction
 
-
-localparam [2:0] NULLIFY='d0,PUSH_HEAD='d1, POP_HEAD='d2, PUSH_TAIL='d3,POP_TAIL='d4;
+`define OPC_WID 3
+localparam [`OPC_WID-1:0] NULLIFY='d0,IFL_DETACH='d1,PUSH_HEAD='d2, POP_HEAD='d3, PUSH_TAIL='d4,POP_TAIL='d5;
 function axi_wr_pld_t get_tbl_axi_wrpkt;
 	input tol_updpkt_t tbl_updat_pkt;
 	input state_t p_state;
         input hacd_pkg::hawk_tol_ht_t tol_HT;
-	input logic [2:0] OPCODE;
+	input logic [`OPC_WID-1:0] OPCODE;
 	integer i,j;
 	bit [511:0] data='d0;
 	bit [63:0] wstrb='d0;
@@ -270,22 +270,28 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 			i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			data[(128*i+48)+:24]= tbl_updat_pkt.lstEntry.attEntryId; 
 		
-		if	(OPCODE == NULLIFY) begin
+		if	(OPCODE == NULLIFY) begin //this works even for pop_head of IFL detach
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 			my_lst_entry.prev= NULL;	
 			my_lst_entry.next= NULL;	
 			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			//data[(128*i+48)+:24]='d0; //tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
+			//$display("RAGHAV DEBUG NULLLIFY = prev =%0d, next=%0d",my_lst_entry.prev,my_lst_entry.next); 
 			//wstrb[16*i+:9]={9{1'b1}};
 		end 
 		else if	(OPCODE == PUSH_TAIL) begin
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
-	
-			my_lst_entry.prev= tol_HT.uncompListTail;	
+
+			if(tbl_updat_pkt.dst_list==UNCOMP) begin
+				my_lst_entry.prev= tol_HT.uncompListTail;
+			end else if(tbl_updat_pkt.dst_list==FREE) begin
+				my_lst_entry.prev= tol_HT.freeListTail;
+			end	
 			my_lst_entry.next= NULL; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
 			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
-			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
+			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId;
+			//$display("RAGHAV DEBGU UNCOMP PUSH TAIL - Pushin TAIL = prev =%0d, next=%0d",my_lst_entry.prev,my_lst_entry.next); 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //we update both prev and next for push
 			//wstrb[16*i+:9]={9{1'b1}}; //whenver we push to uncomp tail, we record attentryid too
 		end
@@ -297,6 +303,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
+			$display("RAGHAV DEBGU PUSH HEAD - Pushin HEAD = prev =%0d, next=%0d",my_lst_entry.prev,my_lst_entry.next); 
 			//wstrb[16*i+:9]={9{1'b1}};
 		end 
 			wstrb[16*i+:9]={9{1'b1}};
@@ -342,7 +349,7 @@ assign wvalid = wr_reqpkt.wvalid; // & vldpkt.wvalid;
 
 axi_wr_pld_t p_axireq,n_axireq;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
-logic [1:0] OPC;
+logic [`OPC_WID-1:0] OPC;
 integer k;
 //logic to handle different modes
 always@* begin
@@ -381,8 +388,12 @@ always@* begin
 				n_freeListHead = 'd1;
 			end
 			else if(tol_updpkt.tbl_update) begin
-				n_state=ATT_UPDATE;
-			 	n_tol_updpkt=tol_updpkt;	
+	        		if(tol_updpkt.TOL_UPDATE_ONLY) begin
+					n_state=TOL_DLST_UPDATE1;
+				end else begin
+					n_state=ATT_UPDATE;
+				end	
+			 		n_tol_updpkt=tol_updpkt;
 			end
 			else if (iWayORcPagePkt.update) begin
 				n_state=CMPDCMP;
@@ -453,10 +464,10 @@ always@* begin
 				     //If SRC is free list and is exhausted, then set
 				     //freelisthead and tail as null and skip
 				     //SRC list Update
-			  	     if (p_tol_updpkt.src_list==FREE && ((freeListHead!=freeListTail) || (freeListTail==NULL))) begin
+			  	     if (p_tol_updpkt.src_list==FREE && ((freeListHead!=freeListTail))) begin // || (freeListTail==NULL))) begin
 				     		n_state = TOL_SLST_UPDATE;
 				     end
-				     else if (p_tol_updpkt.src_list==UNCOMP &&((uncompListHead!=uncompListTail) || (uncompListHead==NULL))) begin
+				     else if (p_tol_updpkt.src_list==UNCOMP &&((uncompListHead!=uncompListTail))) begin// || (uncompListHead==NULL))) begin
 				     		n_state = TOL_SLST_UPDATE;
 			  	     end
 			  	     else begin
@@ -476,6 +487,8 @@ always@* begin
 					case(p_tol_updpkt.src_list)
 					 FREE  : OPC=POP_HEAD;
 					 UNCOMP: OPC=POP_HEAD;
+					 IFL_SIZE1  : OPC=POP_HEAD;
+					 IFL_DETACH :  OPC=PUSH_HEAD;
 					endcase
 			  		if(awready && !awvalid) begin
 			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
@@ -488,7 +501,14 @@ always@* begin
 				     //Update SLST HEAD/TAIL
 					case(p_tol_updpkt.src_list)
 					 FREE  : n_freeListHead=p_tol_updpkt.lstEntry.next; //pop_front->my next will become head 	
-					 UNCOMP  : n_uncompListHead=p_tol_updpkt.lstEntry.next; //pop_back =>my prev will become tail	
+					 UNCOMP  : n_uncompListHead=p_tol_updpkt.lstEntry.next; 	
+					 IFL_SIZE1: begin
+						k=p_tol_updpkt.ifl_idx;
+						n_IfLstHead[k]=p_tol_updpkt.lstEntry.next;
+					 end
+					 //IFL_DETACH : ; we done' have to
+					 //maintain list for fully occupied
+					 //zspages ,so nothing to do here
 				        endcase 
 				     n_req_wvalid = 1'b1;
 				     n_state = TOL_DLST_UPDATE1;
@@ -499,8 +519,10 @@ always@* begin
 					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
+					 IFL_DETACH  : OPC=NULLIFY; 
 					 NULLIFY   : OPC=NULLIFY;
 					endcase
+				//$display("RAGHAV dst list in DLST_UPDATE1=%0d",p_tol_updpkt.dst_list);
 			  if(awready && !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 				     n_req_awvalid = 1'b1;
@@ -518,10 +540,10 @@ always@* begin
 					end
 					else if (p_tol_updpkt.dst_list==IFL_SIZE1 && (IfLstHead[k]==NULL)) begin
 					   	 n_IfLstHead[k]=p_tol_updpkt.tolEntryId; //I will become the Head	
-					   	 n_IfLstTail[k]=p_tol_updpkt.tolEntryId; //I will become the Head	
+					   	 n_IfLstTail[k]=p_tol_updpkt.tolEntryId; //I will become the Tail 
 				                 n_state = WAIT_BRESP;
 				        end
-					else if (p_tol_updpkt.dst_list==NULLIFY) begin //we don't need second UPDATE for nullify entry
+					else if (p_tol_updpkt.dst_list==NULLIFY || p_tol_updpkt.dst_list==IFL_DETACH) begin //we don't need second UPDATE for nullify or detach entry
 				                 n_state = WAIT_BRESP;
 					end
 					else begin
@@ -548,7 +570,7 @@ always@* begin
 					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
 						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
 					end
-					else begin //by default we consdier as irregualr free list
+					else begin //by default we consdier as irregular free list and it si push head for ifl
 						k=p_tol_updpkt.ifl_idx;
 						n_IfLstHead[k]=p_tol_updpkt.tolEntryId;
 					end	

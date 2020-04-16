@@ -65,7 +65,7 @@ typedef logic [`FSM_WID_CMP_MNGR-1:0] state_t;
 state_t n_state,p_state;
 localparam IDLE			     ='d0,
 	   PEEK_UCMP_HEAD	     ='d1,
-	   WAIT_UCMP_TAIL	     ='d2,
+	   WAIT_UCMP_HEAD	     ='d2,
 	   DECODE_LST_ENTRY	     ='d3,
 	   RESET_FIFO_PTRS	     ='d4,
 	   WAIT_RESET		     ='d5,
@@ -76,13 +76,15 @@ localparam IDLE			     ='d0,
 	   WAIT_ZSPAGE		     ='d10,	
 	   DECODE_ZSPGE_IWAY	     ='d11,
 	   PREP_ZSPAGE_MD	     ='d12,
-	   UPDATE_ATT_POP_UCMP_TAIL  ='d13,
+	   UPDATE_ATT_POP_UCMP_HEAD  ='d13,
 	   MIGRATE_TO_ZSPAGE	     ='d14,
-	   TOL_UPDATE_FREEWAY_ENTRY  ='d15,
-	   ATT_UPDATE_FREEWAY_ENTRY  ='d16,
-	   DONE			     ='d17,	
-	   COMP_MNGR_ERROR	     ='d18,
-	   BUS_ERROR		     ='d19;
+	   POP_IFL		     ='d15,	
+	   FREEWAY_OR_CONTINUE	     ='d16,
+	   TOL_UPDATE_FREEWAY_ENTRY  ='d17,
+	   ATT_UPDATE_FREEWAY_ENTRY  ='d18,
+	   DONE			     ='d19,	
+	   COMP_MNGR_ERROR	     ='d20,
+	   BUS_ERROR		     ='d21;
 
 logic [7:0] size_idx;
 
@@ -106,6 +108,7 @@ always@* begin
         n_comp_rready=1'b1;     
 	n_comp_rdata=p_rdata;
 	n_comp_tol_updpkt.tbl_update=1'b0;
+	n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
 	n_iWayORcPagePkt=c_iWayORcPagePkt;
@@ -117,6 +120,8 @@ always@* begin
 	n_UC_ifLst_iWay=UC_ifLst_iWay;
 	n_UC_ifLst_iWay_valid=UC_ifLst_iWay_valid;
 	n_comp_rdm_reset=1'b0;
+	//lookup IF list for corresponding size
+	size_idx=get_idx(comp_size);
 
 	case(p_state)
 		IDLE: begin
@@ -128,10 +133,10 @@ always@* begin
 			if(arready && !arvalid) begin
 			           n_comp_axireq = get_axi_rd_pkt(tol_HT.uncompListHead,p_attEntryId,AXI_RD_TOL); 
 			           n_comp_req_arvalid = 1'b1;
-			           n_state = WAIT_UCMP_TAIL;
+			           n_state = WAIT_UCMP_HEAD;
 			end 
 		end
-		WAIT_UCMP_TAIL: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
+		WAIT_UCMP_HEAD: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
 				if(rresp =='d0) begin
 				     n_comp_rdata= rdata;  
@@ -189,8 +194,6 @@ always@* begin
         		   n_comp_rready=1'b0;     
 			   n_comp_rdm_reset = 1'b0;
 				n_comp_start=1'b0;
-				//lookup IF list for corresponding size
-				size_idx=get_idx(comp_size);
 				if (UC_ifLst_iWay_valid[size_idx]) begin
 					//get underconstruction iWay from
 					//memory
@@ -199,7 +202,6 @@ always@* begin
 				end else if(tol_HT.IfLstHead[size_idx]!=NULL) begin
 					n_state= IDLE;//Not handling for now :->Here, first we need fetch head of Ilist to get ptr to Zspage, then fetch Zspage. MIGRATE_TO_ZSPAGE; 
 				end else begin
-					//n_IfLst_Head[size_idx]=tol_HT.uncompListHead; this shudl happen during uncompression
 					n_state=PREP_ZSPAGE_MD;
 					//record this IWay in Under Construction table
 					n_UC_ifLst_iWay[size_idx]=(p_listEntry.way<<12); 
@@ -208,7 +210,7 @@ always@* begin
 			end
 		FETCH_ZSPAGE:begin
 			if(arready && !arvalid) begin
-			    //n_comp_axireq = UC_ifLst_iWay[size_idx]; //moved to previous state
+			    //n_comp_axireq.addr = UC_ifLst_iWay[size_idx]; 
 			    n_comp_req_arvalid = 1'b1;
 			    n_state = WAIT_ZSPAGE;
 			end
@@ -259,10 +261,10 @@ always@* begin
 				end
 			        if (zspg_updated) begin	
 					n_iWayORcPagePkt.update=1'b0;
-			        	n_state=UPDATE_ATT_POP_UCMP_TAIL;
+			        	n_state=UPDATE_ATT_POP_UCMP_HEAD;
 				end
 		end
-		UPDATE_ATT_POP_UCMP_TAIL:begin //wait till Zspage is written
+		UPDATE_ATT_POP_UCMP_HEAD:begin //wait till Zspage is written
 				if( pgwr_mngr_ready) begin //update ATT and TOL then 
 					n_comp_tol_updpkt.attEntryId=p_listEntry.attEntryId;//tol_HT.uncompListHead;
 					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
@@ -271,8 +273,7 @@ always@* begin
 				  	n_comp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.ifl_idx=get_idx(comp_size);
-					//n_comp_tol_updpkt.dst_list= ; This
-					//will be set by calling states
+					//n_comp_tol_updpkt.dst_list= ; dst list will be set by calling states
 					n_comp_tol_updpkt.tbl_update=1'b1;
 				end
 			        if(tbl_update_done) begin
@@ -295,24 +296,61 @@ always@* begin
 				  	// list_entry way as nxtWay_ptr in Iway
 				  	// 
 			          	if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< (c_iWayORcPagePkt.iWay_ptr+4096) ) begin
+				  	      n_iWayORcPagePkt.update=1'b1;
 				  	end
 				  	else begin
 				  	      n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way<<12;
-				  	end
 				  	      n_iWayORcPagePkt.update=1'b1;
+				  	end
 				end
 				if(zspg_updated) begin
 				  	      n_iWayORcPagePkt.update=1'b0;
+ 						      //Here we need to check
+						      //if maximum  pages are
+						      //exhausted after
+						      //inserting this
+						      //compressed page, then pull
+						      //zspage Iway from IFL
+						      //so as to create new Zspage in next iteration
+						      //if(c_iWayORcPagePkt.pp_ifl) begin
+						        //n_state = POP_IFL;
+						      //end else begin
+							n_state = FREEWAY_OR_CONTINUE;
+						      //end
+				end
+			end
+		POP_IFL:begin
+			   	if(pgwr_mngr_ready) begin //we push this zspage wich was nuliify entry to ifl head now
+					//n_decomp_tol_updpkt.attEntryId=p_listEntry.attEntryId; //this is not rewuried for tol update only
+					n_comp_tol_updpkt.tolEntryId=tol_HT.IfLstHead[size_idx]; //((c_iWayORcPagePkt.iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
+				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
+				  	n_comp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
+					//n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart; //this is not rewuried for tol update only
+					n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
+					n_comp_tol_updpkt.src_list=IFL_SIZE1;
+					n_comp_tol_updpkt.dst_list=IFL_DETACH; 
+					n_comp_tol_updpkt.ifl_idx=get_idx(c_iWayORcPagePkt.cpage_size);
+					n_comp_tol_updpkt.tbl_update=1'b1;		
+				end
+				if(tbl_update_done) begin
+					n_state = FREEWAY_OR_CONTINUE;
+					//under contrcution zspage is always
+					//head,so invalid it after popping
+					//head of ifl
+					n_UC_ifLst_iWay[size_idx]='d0; 
+					n_UC_ifLst_iWay_valid[size_idx]=1'b0;
+				end			
+		end
+		FREEWAY_OR_CONTINUE: begin
 			          	      if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< ({c_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
 					      	      //n_comp_tol_updpkt.dst_list=UNCOMP;  
-			        	      	      //n_state=UPDATE_ATT_POP_UCMP_TAIL;
-				  		      n_state = TOL_UPDATE_FREEWAY_ENTRY;
+			        	      	      //n_state=UPDATE_ATT_POP_UCMP_HEAD;
+				  		      n_state = TOL_UPDATE_FREEWAY_ENTRY; //we are done
 					      end else begin
-				  	      	      //Update ATT and TOL
-					      	      n_comp_tol_updpkt.dst_list=NULLIFY; //for nullify ATT still get compression status but entry in list will be dangled 
-			        	      	      n_state=UPDATE_ATT_POP_UCMP_TAIL;
+				  	      	      	//Update ATT and TOL
+					      	      	n_comp_tol_updpkt.dst_list=NULLIFY; //for nullify ATT still get compression status but entry in list will be dangled 
+			        	      	      	n_state=UPDATE_ATT_POP_UCMP_HEAD;
 					      end
-				end
 		end
 		TOL_UPDATE_FREEWAY_ENTRY:begin
 			   	if(pgwr_mngr_ready) begin //we can make zspg_updated is level signal till next reqeust, but pgwr*ready is good enough

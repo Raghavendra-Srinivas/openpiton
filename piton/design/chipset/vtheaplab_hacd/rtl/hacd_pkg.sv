@@ -162,7 +162,7 @@ package hacd_pkg;
 
 	
  //typedef enum {FREE,UNCOMP,COMP,INCOMP} LIST_NAME;
- localparam [2:0] NULLIFY='d0,FREE='d1, UNCOMP='d2,INCOMP='d3,IFL_SIZE1='d4; //There are 256 Irregular free list 
+ localparam [2:0] NULLIFY='d0,IFL_DETACH='d1,FREE='d2, UNCOMP='d3,INCOMP='d4,IFL_SIZE1='d5; //There can be 256 Irregular free list 
  typedef struct packed {
 	logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 	logic [clogb2(LST_ENTRY_MAX)-1:0] tolEntryId;
@@ -172,6 +172,7 @@ package hacd_pkg;
 	//logic [47:0] ppa;
 	logic [7:0] ifl_idx; //this is needed for irregular free list
 	logic ATT_UPDATE_ONLY;
+	logic TOL_UPDATE_ONLY;
 	logic [1:0] ATT_STS;
 	logic [7:0] zpd_cnt;
 	logic tbl_update;
@@ -258,7 +259,7 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstTail[IFLST_COUNT];	
  } hawk_tol_ht_t;
 
-
+localparam [2:0] MAX_PAGE_ZSPAGE=2;
 //Zspage
 //ZSpage Identity Way
 typedef struct packed {
@@ -281,6 +282,7 @@ parameter int ZS_OFFSET=48'd64; //size+valids+3 ways+5 pages=50bytes
 typedef struct packed{
 	logic update;
 	logic comp_decomp;
+	logic pp_ifl;
 	//CTYPE iWayORcPage; //packet type iWay type serves either while creating new ZsPage or Updating existing zsPage 
 	logic [47:0] cPage_byteStart;//page start-where to write compressed page if (iWayORcPage==0) = > iWay_start+ Byte address(62bytes) = $size(zsPgMd)=50bytes+ iwayptr(6bytes) + nxtwayptr(6bytes) else 
 	logic [13:0] cpage_size;
