@@ -128,13 +128,7 @@ function automatic logic [13:0] get_cpage_size;
 	input [7:0] idx;
 	get_cpage_size=suprted_comp_size[idx];
 endfunction
-typedef struct packed {
-	logic [47:0] src_cpage_ptr;
-	logic [47:0] dst_cpage_ptr;
-	logic src_empty;
-	logic dst_empty;
-	logic migrate;
-} zsPageCompactPkt_t;
+
 
 
 function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;

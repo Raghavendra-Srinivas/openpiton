@@ -312,11 +312,11 @@ always@* begin
 						      //compressed page, then pull
 						      //zspage Iway from IFL
 						      //so as to create new Zspage in next iteration
-						      //if(c_iWayORcPagePkt.pp_ifl) begin
-						        //n_state = POP_IFL;
-						      //end else begin
+						      if(c_iWayORcPagePkt.pp_ifl) begin
+						        n_state = POP_IFL;
+						      end else begin
 							n_state = FREEWAY_OR_CONTINUE;
-						      //end
+						      end
 				end
 			end
 		POP_IFL:begin

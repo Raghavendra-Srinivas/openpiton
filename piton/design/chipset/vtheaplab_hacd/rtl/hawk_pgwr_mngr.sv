@@ -23,7 +23,9 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
 
   //handshake with compress manager
   output logic zspg_updated,
+  output logic zspg_migrated,
   input hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
+  input hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
 
   //table update request pgrd_mangr
   input hacd_pkg::tol_updpkt_t tol_updpkt,
@@ -91,7 +93,8 @@ localparam IDLE			     ='d0,
 	   TOL_DLST_UPDATE2	     ='d11,
 	   WAIT_TOL_DLST_UPDATE2     ='d12,
 	   CMPDCMP		     ='d13,
-	   WAIT_BRESP      ='d14;
+	   ZSPG_COMPACT		     ='d14,
+	   WAIT_BRESP      	     ='d15;
 
 
 //helper functions
@@ -333,8 +336,8 @@ endfunction
 
 
 //
-logic cmpdcmp_trigger;
 logic cmpdcmp_done;
+logic compact_done;
 
 //From fsm manager point of view, I will unify readiness of addr and data channels, because
 //For birngup phase, we always work only hawk_master if both addr and data channels are ready and at cache line granularity always
@@ -397,6 +400,9 @@ always@* begin
 			end
 			else if (iWayORcPagePkt.update) begin
 				n_state=CMPDCMP;
+			end
+			else if (zspg_mig_pkt.migrate || zspg_mig_pkt.zspg_update) begin
+				n_state=ZSPG_COMPACT;
 			end
 
 		end
@@ -583,6 +589,11 @@ always@* begin
 				n_state=WAIT_BRESP;
 			end
 		end
+		ZSPG_COMPACT:begin
+			if(compact_done) begin
+				n_state=WAIT_BRESP;
+			end
+		end
 		WAIT_BRESP: begin
 			  if(bresp_cmplt) begin //data has been already set, in prev state, just assert wvalid
 				     n_state = IDLE;
@@ -593,6 +604,7 @@ end
 
 assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_updated = iWayORcPagePkt.update && (p_state == WAIT_BRESP) && bresp_cmplt;
+assign zspg_migrated = (zspg_mig_pkt.migrate || zspg_mig_pkt.zspg_update)  && (p_state == WAIT_BRESP) && bresp_cmplt;
 
 //state register/output flops
 always @(posedge clk_i or negedge rst_ni)
@@ -647,11 +659,11 @@ always @(posedge clk_i or negedge rst_ni)
 
 hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt;
 //Output combo signals
-assign wr_reqpkt.addr 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.addr   : p_axireq.addr;
-assign wr_reqpkt.data 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.data   : p_axireq.data;
-assign wr_reqpkt.strb 	 =(p_state==CMPDCMP) ? int_wr_reqpkt.strb   : p_axireq.strb;
-assign wr_reqpkt.awvalid =(p_state==CMPDCMP) ? int_wr_reqpkt.awvalid: p_req_awvalid;
-assign wr_reqpkt.wvalid  =(p_state==CMPDCMP) ? int_wr_reqpkt.wvalid : p_req_wvalid;
+assign wr_reqpkt.addr 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.addr   : p_axireq.addr;
+assign wr_reqpkt.data 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.data   : p_axireq.data;
+assign wr_reqpkt.strb 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.strb   : p_axireq.strb;
+assign wr_reqpkt.awvalid =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.awvalid: p_req_awvalid;
+assign wr_reqpkt.wvalid  =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.wvalid : p_req_wvalid;
 
 //Write Response are posted : Check
 //For now, we support only in-order support: so no need to check ID
@@ -725,6 +737,9 @@ assign tol_HT.uncompListTail=uncompListTail;
 //For DV
 assign dump_mem = pgwr_mngr_ready;  //dump memory after operation is complete , dump mem is sensitive to only edge, we can give level signal
 //
+logic cmpdcmp_trigger;
+wire zspg_migrate;
 assign cmpdcmp_trigger = p_state == CMPDCMP;
+assign zspg_migrate = p_state == ZSPG_COMPACT;
 hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
 endmodule

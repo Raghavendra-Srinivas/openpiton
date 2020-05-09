@@ -57,10 +57,16 @@ localparam IDLE			     ='d0,
 	   BURST_READ_START	     ='d6,
 	   BURST_READ		     ='d7,
 	   DECOMP_WAIT		     ='d8, //This should wait for decompressed page (4KB) to be written to memory
-	   PUSH_IFL		     ='d9,
-	   DONE			     ='d10,
-	   DECOMP_MNGR_ERROR	     ='d11,
-	   BUS_ERROR		     ='d12;
+	   FETCH_IFL_LST_ENTRY	     ='d9,	 
+	   WAIT_IFL_LST_ENTRY	     ='d10,
+	   DECODE_LST_ENTRY    	     ='d11,
+	   PUSH_IFL		     ='d12,
+	   DONE			     ='d13,
+	   DECOMP_MNGR_ERROR	     ='d14,
+	   BUS_ERROR		     ='d15;
+
+
+
 ///////////
 function automatic iWayORcPagePkt_t setCpageFree_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -136,6 +142,8 @@ assign rresp =  rd_resppkt.rresp;
 
 
 
+logic [clogb2(LST_ENTRY_MAX)-1:0] lst_entry_id;
+assign lst_entry_id = (((dc_iWayORcPagePkt.iWay_ptr-HAWK_PPA_START[47:0])>>12)+1);
 
 logic [7:0] size_idx;
 
@@ -247,7 +255,7 @@ always@* begin
 				   n_iWayORcPagePkt.update=1'b0;
 					//Do we need IFL push
 					if(dc_iWayORcPagePkt.pp_ifl) begin
-			           		n_state= PUSH_IFL;
+			           		n_state= FETCH_IFL_LST_ENTRY;
 					end
 					else begin
 			           		n_state= DONE;
@@ -257,12 +265,33 @@ always@* begin
 				//	n_state = DONE;//PUSH_IFL;
 				//end
 		end
+
+		FETCH_IFL_LST_ENTRY : begin
+				if(arready && !arvalid) begin
+				           n_decomp_axireq = get_axi_rd_pkt(lst_entry_id,'d0,AXI_RD_TOL); 
+				           n_decomp_req_arvalid = 1'b1;
+				           n_state = WAIT_IFL_LST_ENTRY;
+				end 
+		end
+		WAIT_IFL_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
+			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
+				if(rresp =='d0) begin
+				     n_decomp_rdata= rdata;  
+				     n_state = DECODE_LST_ENTRY;
+				end
+				else n_state = BUS_ERROR;
+			  end
+		end
+		DECODE_LST_ENTRY: begin
+			   n_listEntry=decode_LstEntry(lst_entry_id,p_rdata);
+			   n_state=PUSH_IFL;
+		end		
 		PUSH_IFL: begin
-			   	if(pgwr_mngr_ready) begin //we push this zspage wich was nuliify entry to ifl head now
-					//n_decomp_tol_updpkt.attEntryId=p_listEntry.attEntryId; //tol_HT.uncompListHead;
-					n_decomp_tol_updpkt.tolEntryId=((dc_iWayORcPagePkt.iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
-				  	//n_decomp_tol_updpkt.lstEntry=p_listEntry;
-				  	n_decomp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
+			   	if(pgwr_mngr_ready) begin 
+					//n_decomp_tol_updpkt.attEntryId=p_listEntry.attEntryId; 
+					n_decomp_tol_updpkt.tolEntryId=lst_entry_id;
+				  	n_decomp_tol_updpkt.lstEntry=p_listEntry;
+				  	n_decomp_tol_updpkt.lstEntry.attEntryId='d0; 
 					//n_decomp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;
 					n_decomp_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
 					n_decomp_tol_updpkt.src_list=IFL_DETACH; //it was detached before from ifl

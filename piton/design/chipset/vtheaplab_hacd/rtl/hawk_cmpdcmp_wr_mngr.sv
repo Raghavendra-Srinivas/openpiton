@@ -8,8 +8,11 @@ module hawk_cmpdcmp_wr_mngr(
     input hacd_pkg::axi_wr_rdypkt_t wr_rdypkt,
     //from compressor
     input cmpdcmp_trigger,
+    input zspg_migrate,
     input hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
-    output cmpdcmp_done
+    input hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
+    output cmpdcmp_done,
+    output compact_done
 );
 //int axi_engine
 logic sent;
@@ -23,7 +26,9 @@ localparam IDLE		  ='d0,
 	   CPAGE_TRNSFR   ='d1,
 	   DCPAGE_TRNSFR  ='d2,
 	   ZS_PAGE_UPDATE ='d3,
-	   DONE		  ='d4;
+	   ZSPG_MIGRATE   ='d4,
+	   ZSPG_MIGRATE_MD_UPDATE ='d5,
+	   DONE		  ='d6;
 
 function axi_wr_pld_t get_zspg_axi_wrpkt;
 	input iWayORcPagePkt_t zs_pkt;
@@ -46,6 +51,14 @@ always@* begin
 					n_state=DCPAGE_TRNSFR;
 					n_burst_cnt = 'd0;
 				end
+			end
+			else if (zspg_migrate) begin
+				    if(zspg_mig_pkt.migrate) begin
+					n_state=ZSPG_MIGRATE;
+				    end
+				    else if(zspg_mig_pkt.zspg_update) begin
+					n_state=ZSPG_MIGRATE_MD_UPDATE;
+				    end	
 			end
 		end
 		CPAGE_TRNSFR:begin
@@ -81,6 +94,31 @@ always@* begin
 		ZS_PAGE_UPDATE: begin
 				if(int_ready) begin
 			    		int_axi_req=get_zspg_axi_wrpkt(iWayORcPagePkt);
+					send=1'b1;
+				end
+				if(sent) begin
+					n_state=DONE;
+				end
+		end
+		ZSPG_MIGRATE:begin
+				if(int_ready) begin
+					//Send dummy compressed data for now
+			    		int_axi_req.addr=zspg_mig_pkt.dst_cpage_ptr;
+					int_axi_req.data={32{16'h1234}}; //Here, We shoudl actually pop from read side fifo for compressed size; just writing known comp data for now
+					int_axi_req.strb={64{1'b1}};
+					send=1'b1;
+				end
+				if(sent) begin
+					n_state=DONE;
+				end
+		end
+		ZSPG_MIGRATE_MD_UPDATE:begin
+				if(int_ready) begin
+					//Send dummy compressed data for now
+			    		int_axi_req.addr=zspg_mig_pkt.src_cpage_ptr;
+					int_axi_req.data[(50*8-1)+2*48:2*48]=zspg_mig_pkt.md;
+					int_axi_req.strb={64{1'b0}};
+					int_axi_req.strb[61:12]={50{1'b1}}; //50bytes of metadata leaving 12 bytes for pointers at LSB.
 					send=1'b1;
 				end
 				if(sent) begin

@@ -68,9 +68,9 @@ package hacd_pkg;
  parameter [1:0] STS_COMP=2'b10;
  parameter [1:0] STS_INCOMP=2'b11;
  typedef struct packed {
-	logic [63:56] zpd_cnt; //zero page detection count
-	logic [55:2]  way;     //it is start address of physical page
-	logic [1:0]   sts;     //0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
+	logic [63:56] zpd_cnt; //ZPD_CNT: zero page detection count
+	logic [55:2]  way;     //WAY    : physical page address
+	logic [1:0]   sts;     //STATUS : 0:Deallocated,1:Uncompressed,2:Compressed,3:Incompressible
  } AttEntry;
 /*	
  typedef struct packed {
@@ -89,6 +89,9 @@ package hacd_pkg;
 	logic [23:0] next;
  } ListEntry;
 
+ //RSVD: Reserved                   
+ //WAY : Physical page address  || ATT EID: ATTEntry that got this ppa 
+ //PREV: Previous List entry ID || NEXT   : Next List entry ID 
 
  //Below packet is between hawk_axiwr_master and hawk_pgwr_mngr
  //For simplicity , we dont treat addr and data as separate, though they are
@@ -259,7 +262,7 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstTail[IFLST_COUNT];	
  } hawk_tol_ht_t;
 
-localparam [2:0] MAX_PAGE_ZSPAGE=2;
+localparam [2:0] MAX_PAGE_ZSPAGE=5;
 //Zspage
 //ZSpage Identity Way
 typedef struct packed {
@@ -275,6 +278,13 @@ typedef struct packed {
 	logic [2:0] way_vld; //3 sways
 	logic [7:0] size; //1byte
 } ZsPg_Md_t;
+typedef struct packed {
+	logic [47:0] src_cpage_ptr; //this shoudl indicate iWayptr while doing zspage_update atlast
+	logic [47:0] dst_cpage_ptr;
+	logic migrate;
+	ZsPg_Md_t md;
+	logic zspg_update;	
+} zsPageMigratePkt_t;
 
 parameter int ZS_OFFSET=48'd64; //size+valids+3 ways+5 pages=50bytes 
 

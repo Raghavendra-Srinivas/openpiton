@@ -1258,8 +1258,8 @@ sub pre_build
     !system("cd $ENV{ARIANE_ROOT}/openpiton/bootrom/linux && make clean && make all MAX_HARTS=$ENV{PTON_NUM_TILES} && cd - > /dev/null") or
       die (" Error compiling DTS for ariane.");
     print "done\n";
-    # currently we have two sources (hardcoded in chipset_impl): UART and Ethernet
-    my $num_sources = 2;
+    # currently we have two sources (hardcoded in chipset_impl): UART and Ethernet, raghav adding hawk interrupt
+    my $num_sources = 3;
     # 2 targets per core (M/S mode)
     my $num_targets = 2 * $ENV{PTON_NUM_TILES};
     print "generating PLIC for Ariane with $num_targets targets and $num_sources sources...\n";

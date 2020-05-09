@@ -59,7 +59,10 @@ module hacd_core (
    wire decomp_start;
    wire decomp_done;
    wire zspg_updated;
+   wire zspg_migrated;
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
+   hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt;
+
    wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full;
    assign rdfifo_rdptr_rst = 1'b0;
    assign rdfifo_wrptr_rst = 1'b0;

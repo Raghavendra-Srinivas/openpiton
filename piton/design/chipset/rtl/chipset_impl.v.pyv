@@ -1185,12 +1185,12 @@ fake_uart fake_uart (
 
 `ifdef PITON_ARIANE
 
-    wire [1:0] irq_sources, irq_le;
+    wire [2:0] irq_sources, irq_le;
     wire hacd_infl_interrupt,hacd_defl_interrupt;
     // 0:level 1:edge
-    // Eth is edge, Uart is level
-    assign irq_le      = {1'b1, 1'b0};
-    assign irq_sources = {hacd_defl_interrupt,hacd_infl_interrupt,net_interrupt, uart_interrupt};
+    //  hawk is edge, Eth is edge, Uart is level
+    assign irq_le      = {1'b1,1'b1,1'b0};
+    assign irq_sources = {hacd_infl_interrupt,net_interrupt, uart_interrupt};
 
     // this is for selecting the right bootrom (1: baremetal, 0: linux)
     wire ariane_boot_sel;
@@ -1222,7 +1222,7 @@ str = '''
     riscv_peripherals #(
         .DataWidth      ( `NOC_DATA_WIDTH ),
         .NumHarts       (      `NUM_TILES ),
-        .NumSources     (               2 ),
+        .NumSources     (               3 ),
         .SwapEndianess  (               1 ),
         .DmBase         ( 64'h%016x ),
         .RomBase        ( 64'h%016x ),

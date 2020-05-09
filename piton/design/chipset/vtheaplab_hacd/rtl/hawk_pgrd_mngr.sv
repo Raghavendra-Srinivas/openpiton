@@ -15,8 +15,10 @@ module hawk_pgrd_mngr (
  
   //handshake with PWM
   input zspg_updated,
+  input zspg_migrated,
   input tbl_update_done,
   output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
+  output hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
 	
   //from compressor
   input logic [13:0] comp_size,
@@ -80,7 +82,8 @@ localparam IDLE			='d0,
 	   TBL_UPDATE_DONE	='d8,
 	   COMPRESS		='d9,
 	   DECOMPRESS		='d10,
-	   BUS_ERROR		='d11;
+	   COMPACT		='d11,
+	   BUS_ERROR		='d12;
 
 
 
@@ -103,6 +106,7 @@ logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
 tol_updpkt_t n_comp_tol_updpkt;
 tol_updpkt_t n_decomp_tol_updpkt;
+tol_updpkt_t n_cmpt_tol_updpkt;
 
 
 //handshakes with comp_manager
@@ -118,6 +122,14 @@ logic n_decomp_req_arvalid,n_decomp_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata;
 logic [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_cPage_byteStart,decomp_cPage_byteStart;
 logic  [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_freeWay,decomp_freeWay;
+
+//compacter
+logic compact_trig;
+logic compact_req;
+logic compact_done;
+axi_rd_pld_t n_cmpt_axireq;
+logic n_cmpt_req_arvalid,n_cmpt_rready;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] n_cmpt_rdata;
 
 //logic to handle different modes
 always@* begin
@@ -142,8 +154,10 @@ always@* begin
 				n_attEntryId=lkup_reqpkt.hppa-(HPPA_BASE_ADDR>>12)+1; //entry id starts from 1
 				n_state=LOOKUP_ATT;
 			end
-			//handle other modes below
-
+		 	else if (compact_req) begin
+				n_state=COMPACT;
+			end
+	
 		end
 		LOOKUP_ATT:begin
 			  if(arready && !arvalid) begin
@@ -270,6 +284,11 @@ always@* begin
 					end
 				end
 		end
+		COMPACT:begin
+				if(compact_done) begin
+					  n_state = IDLE;
+				end
+		end
 		BUS_ERROR: begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets
@@ -277,7 +296,6 @@ always@* begin
 		end
 	endcase
 end
-
 
 
 //state register/output flops
@@ -298,15 +316,25 @@ begin
 
 		//Axi signals
 		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : 
-				 (p_state==DECOMPRESS) ? n_decomp_axireq.addr : n_axireq.addr;
+				 (p_state==DECOMPRESS) ? n_decomp_axireq.addr : 
+				 (p_state==COMPACT) ? n_cmpt_axireq.addr : n_axireq.addr;
+
 		p_axireq.arlen <= (p_state==COMPRESS) ? n_comp_axireq.arlen : 
-				  (p_state==DECOMPRESS) ? n_decomp_axireq.arlen : 'd0;
+				  (p_state==DECOMPRESS) ? n_decomp_axireq.arlen :
+				  (p_state==COMPACT) ? 	n_cmpt_axireq.arlen : 'd0;
+
 		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid :
-				 (p_state==DECOMPRESS) ? n_decomp_req_arvalid : n_req_arvalid;
+				 (p_state==DECOMPRESS) ? n_decomp_req_arvalid : 
+				 (p_state==COMPACT) ? n_cmpt_req_arvalid : n_req_arvalid;
+
 		p_rready <= (p_state==COMPRESS) ? n_comp_rready : 
-			    (p_state==DECOMPRESS) ? n_decomp_rready : n_rready;
+			    (p_state==DECOMPRESS) ? n_decomp_rready : 
+			    (p_state==COMPACT) ? n_cmpt_rready : n_rready;
+
 		p_rdata <= (p_state==COMPRESS) ? n_comp_rdata :
-			   (p_state==DECOMPRESS) ? n_decomp_rdata : n_rdata;
+			   (p_state==DECOMPRESS) ? n_decomp_rdata : 
+			   (p_state==COMPACT) ? n_cmpt_rdata : n_rdata;
+
 	end
 end
 
@@ -333,7 +361,8 @@ begin
 		//Tranalstion Request : It can be att hit or tbl update
 		p_trnsl_reqpkt<= n_trnsl_reqpkt; //(p_state==COMPRESS) ? n_comp_trnsl_reqpkt : n_trnsl_reqpkt;
 		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : 
-				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : n_tol_updpkt;
+				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : 
+			         (p_state==COMPACT) ? n_cmpt_tol_updpkt : n_tol_updpkt;
 	end
 end
 
@@ -392,9 +421,14 @@ assign decomp_trigger=(p_state==DECOMPRESS);
 
 hawk_decomp_mngr u_decomp_mngr (.*);
 
+wire cmpt_rdm_reset;
+assign compact_trig = p_state==COMPACT;
+hawk_zsp_compacter u_zsp_compacter(.*);
+
 //muxing for FIFO
 assign rdm_reset = (p_state==COMPRESS)   ? comp_rdm_reset :
-		   (p_state==DECOMPRESS) ? decomp_rdm_reset : 1'b0;
+		   (p_state==DECOMPRESS) ? decomp_rdm_reset : 
+		   (p_state==COMPACT) ? cmpt_rdm_reset : 1'b0;
 
 //muxing for ZsPg Pkt
 assign iWayORcPagePkt = (p_state==COMPRESS)   ? c_iWayORcPagePkt :
