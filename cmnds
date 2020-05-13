@@ -2,3 +2,6 @@ sims -sys=manycore -x_tiles=1 -y_tiles=1 -vcs_build -ariane -vcs_build_args=-deb
 sims -sys=manycore -vcs_run -x_tiles=1 -y_tiles=1 hello_world.c -ariane -rtl_timeout 1000000
 ./piton/verif/diag/c/riscv/ariane/hello_world.c
 ./piton/verif/env/manycore/manycore_top.v.pyv
+./piton/verif/env/manycore/devices_ariane.xml
+./piton/design/xilinx/genesys2/devices_ariane.xml
+./piton/design/chipset/xilinx/genesys2/devices_ariane.xml
