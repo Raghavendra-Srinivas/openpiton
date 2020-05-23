@@ -117,8 +117,8 @@ logic n_comp_req_arvalid,n_comp_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_comp_rdata;
 //
 wire decomp_mngr_done;
-axi_rd_pld_t n_decomp_axireq;
-logic n_decomp_req_arvalid,n_decomp_rready;
+hacd_pkg::axi_rd_pld_t p_decomp_axireq;
+logic p_decomp_req_arvalid,n_decomp_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata;
 logic [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_cPage_byteStart,decomp_cPage_byteStart;
 logic  [`HACD_AXI4_ADDR_WIDTH-1:0] n_decomp_freeWay,decomp_freeWay;
@@ -316,15 +316,15 @@ begin
 
 		//Axi signals
 		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : 
-				 (p_state==DECOMPRESS) ? n_decomp_axireq.addr : 
+				 (p_state==DECOMPRESS) ? p_decomp_axireq.addr : 
 				 (p_state==COMPACT) ? n_cmpt_axireq.addr : n_axireq.addr;
 
 		p_axireq.arlen <= (p_state==COMPRESS) ? n_comp_axireq.arlen : 
-				  (p_state==DECOMPRESS) ? n_decomp_axireq.arlen :
+				  (p_state==DECOMPRESS) ? p_decomp_axireq.arlen :
 				  (p_state==COMPACT) ? 	n_cmpt_axireq.arlen : 'd0;
 
 		p_req_arvalid <= (p_state==COMPRESS) ? n_comp_req_arvalid :
-				 (p_state==DECOMPRESS) ? n_decomp_req_arvalid : 
+				 (p_state==DECOMPRESS) ? p_decomp_req_arvalid : 
 				 (p_state==COMPACT) ? n_cmpt_req_arvalid : n_req_arvalid;
 
 		p_rready <= (p_state==COMPRESS) ? n_comp_rready : 

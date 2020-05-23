@@ -1,7 +1,19 @@
+#Build and Run RTL Sims
 sims -sys=manycore -x_tiles=1 -y_tiles=1 -vcs_build -ariane -vcs_build_args=-debug_access+all
 sims -sys=manycore -vcs_run -x_tiles=1 -y_tiles=1 hello_world.c -ariane -rtl_timeout 1000000
-./piton/verif/diag/c/riscv/ariane/hello_world.c
-./piton/verif/env/manycore/manycore_top.v.pyv
+
+#FPGA Bit file generation
+protosyn -b genesys2 -d system –core=ariane –uart-dmw
+
+#Files that needs change while adding new device device tree
 ./piton/verif/env/manycore/devices_ariane.xml
 ./piton/design/xilinx/genesys2/devices_ariane.xml
 ./piton/design/chipset/xilinx/genesys2/devices_ariane.xml
+
+#Simple Test Case
+./piton/verif/diag/c/riscv/ariane/hello_world.c
+
+#Top file for RTL Sims
+./piton/verif/env/manycore/manycore_top.v.pyv
+protosyn -b genesys2 -d system --core=ariane --axi4_mem --uart-dmw ddr
+/opt/Xilinx/Vivado/2018.2/settings64.sh

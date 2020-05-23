@@ -80,5 +80,12 @@ Description: Peripheral address map for OpenPiton+Ariane configurations.
         <stream_accessible/>
     </port>
     <!-- end ariane specific periphs -->
+    <!-- raghavs adding new block- heap lab-hacd (hardware accelerated compressor decompressor) -->
+    <port>
+        <name>hacd</name>
+        <base>0xfff5100000</base>
+        <length>0x1000</length>
+        <stream_accessible/>
+    </port>
 </devices>
 

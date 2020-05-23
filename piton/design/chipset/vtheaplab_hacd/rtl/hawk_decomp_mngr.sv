@@ -36,13 +36,17 @@ module hawk_decomp_mngr (
     input logic [`HACD_AXI4_DATA_WIDTH-1:0] p_rdata,
     input logic p_req_arvalid,
 
-    output hacd_pkg::axi_rd_pld_t n_decomp_axireq,
+    output hacd_pkg::axi_rd_pld_t p_decomp_axireq,
     output logic n_decomp_rready,
-    output logic n_decomp_req_arvalid,
+    output logic p_decomp_req_arvalid,
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata,
     output hacd_pkg::tol_updpkt_t n_decomp_tol_updpkt,
     output logic decomp_mngr_done
 );
+
+//timign issue on fpga for below one signal
+hacd_pkg::axi_rd_pld_t n_decomp_axireq;
+logic n_decomp_req_arvalid;
 
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_rdata;
 typedef logic [`FSM_WID_DCMP_MNGR-1:0] state_t;
@@ -329,6 +333,8 @@ begin
 		dc_iWayORcPagePkt<='d0;
 		decomp_mngr_done<=1'b0;
 		decomp_rdm_reset<=1'b0;
+		p_decomp_req_arvalid <= 1'b0;
+		p_decomp_axireq<='d0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -338,6 +344,8 @@ begin
 		dc_iWayORcPagePkt<=n_iWayORcPagePkt;
 		decomp_mngr_done<=n_decomp_mngr_done;
 		decomp_rdm_reset<=n_decomp_rdm_reset;
+		p_decomp_req_arvalid <= n_decomp_req_arvalid;
+		p_decomp_axireq<=n_decomp_axireq;
 	end
 end
 

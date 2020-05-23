@@ -25,12 +25,13 @@ THE SOFTWARE.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
-
+`include "../hacd_define.vh"
 /*
  * AXI4 crossbar
  */
 module axi_crossbar #
 (
+    parameter DDR_START_ADDR = DDR_START_ADDR,
     // Number of AXI inputs (slave interfaces)
     parameter S_COUNT = 2, //4,
     // Number of AXI outputs (master interfaces)
@@ -77,7 +78,7 @@ module axi_crossbar #
     // Master interface base addresses
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     // set to zero for default addressing based on M_ADDR_WIDTH
-    parameter M_BASE_ADDR = 64'hfff6100000, //0,
+    parameter M_BASE_ADDR = DDR_START_ADDR, //64'hfff6100000, //0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},

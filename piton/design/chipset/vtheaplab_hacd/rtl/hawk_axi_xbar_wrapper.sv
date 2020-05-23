@@ -1,4 +1,4 @@
-
+import hacd_pkg::*;
 
 module hawk_axi_xbar_wrapper#(parameter PLACE_HOLDER=1)
 (
@@ -141,7 +141,7 @@ begin
 end
 `else
 
-axi_crossbar u_hawk_axi_crossbar (
+axi_crossbar #(.DDR_START_ADDR(DDR_START_ADDR)) u_hawk_axi_crossbar (
      .clk(clk_i),
      .rst(!rst_ni),
    

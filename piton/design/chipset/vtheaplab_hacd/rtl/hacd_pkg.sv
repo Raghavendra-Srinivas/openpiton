@@ -18,12 +18,6 @@ package hacd_pkg;
   
 
     //default values for page tables start and end
-    parameter bit [63:0] HAWK_ATT_START=  64'hFFF6100000; //64'h80000000;
-    parameter bit [63:0] HAWK_LIST_START= 64'hFFF6200000; 
-    parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000;
-
-    parameter bit [63:0] DDR_START_ADDR=  64'h80000000;
-    parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6400000; //for DV //DDR_START_ADDR;
 
     parameter int BLK_SIZE=64;
     parameter int ATT_ENTRY_SIZE=8;
@@ -32,13 +26,23 @@ package hacd_pkg;
     parameter int LST_ENTRY_PER_BLK=BLK_SIZE/LIST_ENTRY_SIZE;
     parameter int BYTE=8;
 
-    parameter int COMPRESSION_RATIO=4;
+    parameter int COMPRESSION_RATIO=2; //4;
     parameter int DRAM_SIZE=1<<30; ////1GB
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
-    parameter int ATT_ENTRY_CNT=4;  //ATT_ENTRY_MAX // lower count for verification //update later
-    parameter int LIST_ENTRY_CNT=4; //LST_ENTRY_MAX // lower count for verification //update later
+    
+    parameter int TABLE_OVERHEAD_PAGE_CNT = 1;
+    parameter int LIST_ENTRY_CNT=4; //LST_ENTRY_MAX - TABLE_OVERHEAD_PAGE_CNT // lower count for verification //update later
+    parameter int ATT_ENTRY_CNT=8; //COMPRESSION_RATIO*LIST_ENTRY_CNT;  
+
+    parameter bit [63:0] DDR_START_ADDR=  64'h80000000; //64'hFFF6100000;
+
+    parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
+    parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + 'd64;//HAWK_ATT_START+ ceil(ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)*BLK_SIZE;//64'hFFF6200000; 
+    parameter bit [63:0] HAWK_PPA_START = DDR_START_ADDR + 'd4096;//One page allocated for table for bringup//HAWK_LIST_START + ceil((LIST_ENTRY_CNT/LST_ENTRY_PER_BLK))*BLK_SIZE ; //64'hFFF6300000;
+
+    parameter bit [63:0] HPPA_BASE_ADDR=  HAWK_PPA_START; //64'hFFF6400000; //for DV
 
     localparam [clogb2(LST_ENTRY_MAX)-1:0] NULL='d0;
 

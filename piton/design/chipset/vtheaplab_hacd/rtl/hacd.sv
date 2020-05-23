@@ -95,8 +95,8 @@ module hacd #
         
         //HACD<->MC
         //hacd will act as request master on request singslas to mc 
-        HACD_MC_AXI_WR_BUS mc_axi_wr_bus, 
-        HACD_MC_AXI_RD_BUS mc_axi_rd_bus,
+        HACD_MC_AXI_WR_BUS.mstr mc_axi_wr_bus, 
+        HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus,
 
 	output wire dump_mem
 );

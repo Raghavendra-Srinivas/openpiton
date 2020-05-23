@@ -501,7 +501,7 @@ def makeDefList(options):
 
     # --axi4_mem option
     if (options.axi4_mem == True):
-        if (options.board not in {"vc707", "xupp3r"}):
+        if (options.board not in {"vc707", "xupp3r","genesys2"}):
             print_warning("axi4_mem option is ignored without board != vc707 or board != xupp3r" )
         else:
             defines.append("PITONSYS_AXI4_MEM")      

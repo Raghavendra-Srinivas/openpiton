@@ -23,6 +23,14 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+//VTHEAPLAB
+//HAWK DEFINES
+//TODO : Move this define to standard openpiton flow
+//`define HAWK_SIMS 0
+`define HAWK_FPGA 1
+
+
+
 `include "define.tmp.h"
 `include "piton_system.vh"
 `include "mc_define.h"
@@ -515,7 +523,7 @@ for i in range(len(devices)):
 if tmpNum:
     print """
 wire [%d-1:0] invalid_access;
-assign invalid_access_o = |invalid_access;
+assign invalid_access_o = |invalid_access || temp_hawk_irq; //tempoary check for hawk
 """ % (tmpNum)
 else:
     print """
@@ -773,59 +781,8 @@ credit_to_valrdy noc3_xbar_to_%s(
         );
     `else
 
-	    /*
-        mc_top mc_top(
-            .mc_ui_clk_sync_rst(mc_ui_clk_sync_rst),
-
-            .core_ref_clk(chipset_clk),
-            .sys_rst_n(chipset_rst_n),
-
-            .mc_flit_in_val(buf_mem_noc2_valid),
-            .mc_flit_in_data(buf_mem_noc2_data),
-            .mc_flit_in_rdy(mem_buf_noc2_ready),
-
-            .mc_flit_out_val(mem_buf_noc3_valid),
-            .mc_flit_out_data(mem_buf_noc3_data),
-            .mc_flit_out_rdy(buf_mem_noc3_ready),
-
-            .uart_boot_en(uart_boot_en),
-            .init_calib_complete_out(init_calib_complete),
-
-        `ifdef PITONSYS_DDR4
-            .sys_clk_p(mc_clk_p),
-            .sys_clk_n(mc_clk_n),
-            .ddr_act_n(ddr_act_n),
-            .ddr_bg(ddr_bg),
-        `else // PITONSYS_DDR4
-            .sys_clk(mc_clk),
-            .ddr_cas_n(ddr_cas_n),
-            .ddr_ras_n(ddr_ras_n),
-            .ddr_we_n(ddr_we_n),
-        `endif // PITONSYS_DDR4
-
-            .ddr_addr(ddr_addr),
-            .ddr_ba(ddr_ba),
-            .ddr_ck_n(ddr_ck_n),
-            .ddr_ck_p(ddr_ck_p),
-            .ddr_cke(ddr_cke),
-            .ddr_reset_n(ddr_reset_n),
-            .ddr_dq(ddr_dq),
-            .ddr_dqs_n(ddr_dqs_n),
-            .ddr_dqs_p(ddr_dqs_p),
-        `ifndef NEXYSVIDEO_BOARD
-            .ddr_cs_n(ddr_cs_n),
-        `endif // endif NEXYSVIDEO_BOARD
-        `ifdef XUPP3R_BOARD
-            .ddr_parity(ddr_parity),
-        `else
-            .ddr_dm(ddr_dm),
-        `endif // XUPP3R_BOARD
-            .ddr_odt(ddr_odt)
-        );
-	*/
-
-
-    		 mc_top_new u_mc_top_new (
+	`ifdef HAWK_FPGA
+    		 hawk_mc_top mc_top (
     		//hacd modifiction
     			.buf_hacd_noc2_data(buf_hacd_noc2_data),
     			.buf_hacd_noc2_valid(buf_hacd_noc2_valid),
@@ -883,7 +840,64 @@ credit_to_valrdy noc3_xbar_to_%s(
     		        .ddr_dm(ddr_dm),
     		    `endif // XUPP3R_BOARD
     		        .ddr_odt(ddr_odt)
-    		    );		
+    		    );
+	`else		
+
+    //raghavs
+    //Commenting initially  - Original memory contoller top
+	/*   
+        mc_top mc_top(
+            .mc_ui_clk_sync_rst(mc_ui_clk_sync_rst),
+
+            .core_ref_clk(chipset_clk),
+            .sys_rst_n(chipset_rst_n),
+
+            .mc_flit_in_val(buf_mem_noc2_valid),
+            .mc_flit_in_data(buf_mem_noc2_data),
+            .mc_flit_in_rdy(mem_buf_noc2_ready),
+
+            .mc_flit_out_val(mem_buf_noc3_valid),
+            .mc_flit_out_data(mem_buf_noc3_data),
+            .mc_flit_out_rdy(buf_mem_noc3_ready),
+
+            .uart_boot_en(uart_boot_en),
+            .init_calib_complete_out(init_calib_complete),
+
+        `ifdef PITONSYS_DDR4
+            .sys_clk_p(mc_clk_p),
+            .sys_clk_n(mc_clk_n),
+            .ddr_act_n(ddr_act_n),
+            .ddr_bg(ddr_bg),
+        `else // PITONSYS_DDR4
+            .sys_clk(mc_clk),
+            .ddr_cas_n(ddr_cas_n),
+            .ddr_ras_n(ddr_ras_n),
+            .ddr_we_n(ddr_we_n),
+        `endif // PITONSYS_DDR4
+
+            .ddr_addr(ddr_addr),
+            .ddr_ba(ddr_ba),
+            .ddr_ck_n(ddr_ck_n),
+            .ddr_ck_p(ddr_ck_p),
+            .ddr_cke(ddr_cke),
+            .ddr_reset_n(ddr_reset_n),
+            .ddr_dq(ddr_dq),
+            .ddr_dqs_n(ddr_dqs_n),
+            .ddr_dqs_p(ddr_dqs_p),
+        `ifndef NEXYSVIDEO_BOARD
+            .ddr_cs_n(ddr_cs_n),
+        `endif // endif NEXYSVIDEO_BOARD
+        `ifdef XUPP3R_BOARD
+            .ddr_parity(ddr_parity),
+        `else
+            .ddr_dm(ddr_dm),
+        `endif // XUPP3R_BOARD
+            .ddr_odt(ddr_odt)
+        );
+	
+	*/
+	`endif
+
     `endif // F1_BOARD
 
 `else
@@ -901,6 +915,39 @@ fake_mem_ctrl fake_mem_ctrl(
     .noc_data_out       ( mem_buf_noc3_data  ),
     .noc_ready_out      ( buf_mem_noc3_ready )
 );
+
+//the below is fake memory controller top with axi mem needed for only hawk sims, refer my thesis document for more details
+`ifdef HAWK_SIMS
+    		 mc_top_new u_mc_top_new (
+    		//hacd modifiction
+    			.buf_hacd_noc2_data(buf_hacd_noc2_data),
+    			.buf_hacd_noc2_valid(buf_hacd_noc2_valid),
+    			.hacd_buf_noc2_ready(hacd_buf_noc2_ready),
+    		 	.hacd_buf_noc3_data(hacd_buf_noc3_data),
+    			.hacd_buf_noc3_valid(hacd_buf_noc3_valid),
+    			.buf_hacd_noc3_ready(buf_hacd_noc3_ready),
+
+    		        .hacd_infl_interrupt(hacd_infl_interrupt),
+    		        .hacd_defl_interrupt(hacd_defl_interrupt),
+
+
+    		        .core_ref_clk(chipset_clk),
+    		        .sys_rst_n(chipset_rst_n),
+
+    		        .mc_flit_in_val(buf_hawk_axi4mem_noc2_valid),
+    		        .mc_flit_in_data(buf_hawk_axi4mem_noc2_data),
+    		        .mc_flit_in_rdy(hawk_axi4mem_buf_noc2_ready),
+
+    		        .mc_flit_out_val(hawk_axi4mem_buf_noc3_valid),
+    		        .mc_flit_out_data(hawk_axi4mem_buf_noc3_data),
+    		        .mc_flit_out_rdy(buf_hawk_axi4mem_noc3_ready),
+
+    		        .uart_boot_en(uart_boot_en),
+    		        .init_calib_complete_out(init_calib_complete)
+
+    		    );		
+`endif
+
 
 `endif // endif PITON_FPGA_MC_DDR3
 
@@ -1183,14 +1230,31 @@ fake_uart fake_uart (
 // Ariane-Specific Chipset //
 /////////////////////////////
 
+
+
 `ifdef PITON_ARIANE
+//logic to generate hawk interrupt
+    wire hacd_infl_interrupt,hacd_defl_interrupt;
+    reg [23:0] count_mc_clk;
+    
+    wire temp_hawk_irq; 
+    always@(posedge chipset_clk or negedge chipset_rst_n ) begin
+  	if(!chipset_rst_n) begin
+		count_mc_clk <= 16'd0;
+	end
+	else begin
+		count_mc_clk <= count_mc_clk + 16'd1;
+	end
+    end
+    assign temp_hawk_irq = hacd_infl_interrupt || uart_timeout_en; //count_mc_clk[23];
+
 
     wire [2:0] irq_sources, irq_le;
-    wire hacd_infl_interrupt,hacd_defl_interrupt;
     // 0:level 1:edge
-    //  hawk is edge, Eth is edge, Uart is level
+    // Eth is edge, Uart is level
     assign irq_le      = {1'b1,1'b1,1'b0};
-    assign irq_sources = {hacd_infl_interrupt,net_interrupt, uart_interrupt};
+    assign irq_sources = {temp_hawk_irq,net_interrupt, uart_interrupt};
+
 
     // this is for selecting the right bootrom (1: baremetal, 0: linux)
     wire ariane_boot_sel;
@@ -1222,7 +1286,7 @@ str = '''
     riscv_peripherals #(
         .DataWidth      ( `NOC_DATA_WIDTH ),
         .NumHarts       (      `NUM_TILES ),
-        .NumSources     (               3 ),
+        .NumSources     (               3 ), //hacd, net, uart
         .SwapEndianess  (               1 ),
         .DmBase         ( 64'h%016x ),
         .RomBase        ( 64'h%016x ),
@@ -1305,38 +1369,8 @@ print str
 `endif
 
 
-`define HAWK_SIMS 1
-
-`ifdef HAWK_SIMS
-    		 mc_top_new u_mc_top_new (
-    		//hacd modifiction
-    			.buf_hacd_noc2_data(buf_hacd_noc2_data),
-    			.buf_hacd_noc2_valid(buf_hacd_noc2_valid),
-    			.hacd_buf_noc2_ready(hacd_buf_noc2_ready),
-    		 	.hacd_buf_noc3_data(hacd_buf_noc3_data),
-    			.hacd_buf_noc3_valid(hacd_buf_noc3_valid),
-    			.buf_hacd_noc3_ready(buf_hacd_noc3_ready),
-
-    		        .hacd_infl_interrupt(hacd_infl_interrupt),
-    		        .hacd_defl_interrupt(hacd_defl_interrupt),
 
 
-    		        .core_ref_clk(chipset_clk),
-    		        .sys_rst_n(chipset_rst_n),
-
-    		        .mc_flit_in_val(buf_hawk_axi4mem_noc2_valid),
-    		        .mc_flit_in_data(buf_hawk_axi4mem_noc2_data),
-    		        .mc_flit_in_rdy(hawk_axi4mem_buf_noc2_ready),
-
-    		        .mc_flit_out_val(hawk_axi4mem_buf_noc3_valid),
-    		        .mc_flit_out_data(hawk_axi4mem_buf_noc3_data),
-    		        .mc_flit_out_rdy(buf_hawk_axi4mem_noc3_ready),
-
-    		        .uart_boot_en(uart_boot_en),
-    		        .init_calib_complete_out(init_calib_complete)
-
-    		    );		
-`endif
 
 
 endmodule
