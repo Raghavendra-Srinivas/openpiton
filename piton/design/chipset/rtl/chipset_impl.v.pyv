@@ -27,8 +27,9 @@
 //HAWK DEFINES
 //TODO : Move this define to standard openpiton flow
 //`define HAWK_SIMS 0
-`define HAWK_FPGA 1
-
+`ifndef HAWK_FPGA
+ `define HAWK_SIMS 1
+`endif
 
 
 `include "define.tmp.h"
@@ -292,6 +293,10 @@ module chipset_impl(
     // PLIC
     output [`NUM_TILES*2-1:0]                   irq_o          // level sensitive IR lines, mip & sip (async)
 `endif
+`ifdef HAWK_FPGA //for genesys2 board only , sw 4 and 5 are not used alrady
+    ,		,
+    input [1:0] hawk_sw_ctrl
+`endif
 );
 
 ///////////////////////
@@ -523,7 +528,7 @@ for i in range(len(devices)):
 if tmpNum:
     print """
 wire [%d-1:0] invalid_access;
-assign invalid_access_o = |invalid_access || temp_hawk_irq; //tempoary check for hawk
+assign invalid_access_o = |invalid_access ; //|| temp_hawk_irq; //tempoary check for hawk
 """ % (tmpNum)
 else:
     print """
@@ -784,6 +789,7 @@ credit_to_valrdy noc3_xbar_to_%s(
 	`ifdef HAWK_FPGA
     		 hawk_mc_top mc_top (
     		//hacd modifiction
+			.hawk_sw_ctrl(hawk_sw_ctrl),
     			.buf_hacd_noc2_data(buf_hacd_noc2_data),
     			.buf_hacd_noc2_valid(buf_hacd_noc2_valid),
     			.hacd_buf_noc2_ready(hacd_buf_noc2_ready),

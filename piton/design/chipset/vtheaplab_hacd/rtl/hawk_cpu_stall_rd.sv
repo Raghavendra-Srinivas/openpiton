@@ -143,14 +143,19 @@ always@* begin
                     m_axi_arqos_next = s_axi_arqos;
                     m_axi_arregion_next = s_axi_arregion;
                     m_axi_aruser_next = s_axi_aruser;
-			
+		
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
+ 		   if(hawk_inactive) begin
+                    m_axi_arvalid_next = 1'b1;
+                    n_state = STATE_IDLE;
+		   end else begin	
                     n_state = STATE_WAIT;
+		   end
                 end 
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
                 s_axi_arready_next = 1'b0;
-                if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
+                if (/*!pending_rsp_q &&*/ allow_cpu_access) begin
 		    m_axi_araddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_araddr_reg[11:0]};
                     m_axi_arvalid_next = 1'b1;
                     n_state = STATE_IDLE;

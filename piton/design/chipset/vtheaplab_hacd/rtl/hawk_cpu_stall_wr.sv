@@ -193,7 +193,13 @@ logic allow_cpu_access,allow_cpu_access_next;
     		    m_axi_wlast_next = s_axi_wlast;
 		
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
-                    n_state = WAIT_HAWK;
+ 		    if(hawk_inactive) begin
+                       m_axi_awvalid_next = 1'b1;
+                       m_axi_wvalid_next = 1'b1;
+                       n_state = IDLE;
+		    end else begin	
+                       n_state = WAIT_HAWK;
+		    end
                 end		  
 	   end
 	   WAIT_HAWK:begin

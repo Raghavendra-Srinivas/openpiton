@@ -477,6 +477,7 @@ def setParserOptions(parser):
     parser.add_option("--swait", dest="swait", action="store_true", default=False)
     parser.add_option("--axi4_mem", dest="axi4_mem", action="store_true", default=False)
     parser.add_option("--zeroer_off", dest="zeroer_off", action="store_true", default=False)
+    parser.add_option("--hawk_fpga", dest="hawk_fpga", action="store_true", default=False)
 
     return parser
 
@@ -530,6 +531,9 @@ def makeDefList(options):
 
     if options.uart_reset == True:
         defines.append("PITONSYS_UART_RESET")
+
+    if options.hawk_fpga == True:
+        defines.append("HAWK_FPGA")
 
     # --asic-rtl option
     if options.asic_rtl == True:

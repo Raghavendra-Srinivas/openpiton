@@ -37,6 +37,7 @@ module hawk_mc_top (
 
    //hawk -start
    //addding custom ports
+   input [1:0] hawk_sw_ctrl,
    input   [`NOC_DATA_WIDTH-1:0] buf_hacd_noc2_data,
    input buf_hacd_noc2_valid,
    output hacd_buf_noc2_ready,
@@ -1233,6 +1234,7 @@ u_hacd_top (
         //.rst_ni                   ( sys_rst_n),
     	.clk_i              (ui_clk                    ),  
     	.rst_ni              (~noc_axi4_bridge_rst      ),
+	.hawk_sw_ctrl(hawk_sw_ctrl),
 	.infl_interrupt           ( hacd_infl_interrupt),
 	.defl_interrupt           ( hacd_defl_interrupt),
         .buf_hacd_noc2_data_i     ( buf_hacd_noc2_data     ),

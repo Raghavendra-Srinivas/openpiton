@@ -1431,6 +1431,11 @@ chipset_impl_noc_power_test  chipset_impl (
         .ipi_o                  ( ipi_o         ),
         .irq_o                  ( irq_o         )
     `endif
+    `ifdef HAWK_FPGA //for genesys2 board only , sw 4 and 5 are not used alrady
+		,
+		.hawk_sw_ctrl({sw[5],sw[4]})
+    `endif
+
 );
 
 

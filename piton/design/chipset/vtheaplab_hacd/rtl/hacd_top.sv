@@ -14,6 +14,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
 (
   input clk_i                    ,
   input rst_ni                   ,
+    input [1:0] hawk_sw_ctrl,
   output infl_interrupt           ,
   output defl_interrupt           ,
   input [NOC_DWIDTH-1:0] buf_hacd_noc2_data_i     ,
@@ -247,6 +248,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
 hacd u_hacd(
   .clk_i (clk_i),
   .rst_ni (rst_ni),
+			.hawk_sw_ctrl(hawk_sw_ctrl),
   .infl_interrupt (infl_interrupt),
   .defl_interrupt (defl_interrupt),
 

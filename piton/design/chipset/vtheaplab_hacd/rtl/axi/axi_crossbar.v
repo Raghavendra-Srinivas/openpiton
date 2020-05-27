@@ -25,7 +25,9 @@ THE SOFTWARE.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
-`include "../hacd_define.vh"
+`ifdef HAWK_FPGA
+	`include "../hacd_define.vh"
+`endif
 /*
  * AXI4 crossbar
  */

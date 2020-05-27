@@ -32,11 +32,11 @@ int main(int argc, char ** argv) {
       printf("HACD: Accessing HAWK \n");
       uint64_t *addr;
       
-      //addr = (uint64_t*)(HACD_BASE);
-      //printf("HACD: Cntrl result = 0x%016x\n",*addr);
-      //printf("Writing Control Register.\n");
-      //*addr = (uint32_t) 0x1;
-      //printf("HACD: Cntrl result = 0x%016x\n",*addr);
+      addr = (uint64_t*)(HACD_BASE);
+      printf("HACD: Cntrl result = 0x%016x\n",*addr);
+      printf("Makign HAWK inactive Register.\n");
+      *addr = (uint32_t) 0x4;
+      printf("HACD: Cntrl result = 0x%016x\n",*addr);
       //
       //addr = (uint64_t*)(HACD_BASE+4);
       //printf("HACD: Low water mark result = 0x%016x\n",*addr);

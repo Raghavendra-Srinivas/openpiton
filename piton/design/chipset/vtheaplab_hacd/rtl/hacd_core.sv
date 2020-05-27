@@ -16,7 +16,8 @@ module hacd_core (
 
     input clk_i,
     input rst_ni,
-   
+    input [1:0] hawk_sw_ctrl,
+    input hawk_reg_inactive_ctrl, 
     //CPU<->HACD
     //hacd will observe these for request signals from cpu
     HACD_AXI_WR_BUS.slv cpu_axi_wr_bus, 
@@ -87,7 +88,7 @@ hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
     /*hawk interface*/
     .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_rdpkt),
     .cpu_reqpkt(cpu_rd_reqpkt),
-    .hawk_inactive(1'b0), //disabling for now 
+    .hawk_inactive(hawk_sw_ctrl[0] || hawk_reg_inactive_ctrl), //disabling for now 
 
     /*
      * AXI slave interface
@@ -150,7 +151,7 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     /*hawk interface*/
     .hawk_cpu_ovrd_pkt(hawk_cpu_ovrd_wrpkt),
     .cpu_reqpkt(cpu_wr_reqpkt),
-    .hawk_inactive(1'b0), //disabling for now 
+    .hawk_inactive(hawk_sw_ctrl[0] || hawk_reg_inactive_ctrl), //disabling for now 
  
     /*
      * AXI slave interface
@@ -323,6 +324,7 @@ hawk_comdecomp u_hawk_comdecomp(
   
    //controls from cu to cpu master
    //hawk main control unit
+   wire cu_init_att,cu_init_list;
    hawk_ctrl_unit #() u_hawk_cu 
    (
 	//Inputs
@@ -344,13 +346,15 @@ hawk_comdecomp u_hawk_comdecomp(
 	.cpu_wr_reqpkt,
 
 	//controls
-	.init_att,
-	.init_list,
+	.init_att(cu_init_att),
+	.init_list(cu_init_list),
 
 	.hawk_cpu_ovrd_rdpkt,
 	.hawk_cpu_ovrd_wrpkt
    );
 
+   assign  init_att = cu_init_att & (hawk_sw_ctrl[1]);   // || !hawk_reg_inactive_ctrl);
+   assign  init_list = cu_init_list & (hawk_sw_ctrl[1]); // || !hawk_reg_inactive_ctrl);
 
 
    //Arbiter between Hawk Master and CPU master
