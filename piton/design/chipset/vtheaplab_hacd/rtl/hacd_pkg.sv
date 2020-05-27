@@ -38,6 +38,10 @@ package hacd_pkg;
 
    `ifdef HAWK_FPGA
     	parameter bit [63:0] DDR_START_ADDR=  64'h80000000; 
+    	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;
+        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + 'd64; 
+	parameter bit [63:0] HAWK_PPA_START = DDR_START_ADDR + 'd4096;
+        parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR + 'd8192; 
    `else
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  

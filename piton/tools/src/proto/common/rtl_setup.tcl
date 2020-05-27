@@ -637,6 +637,7 @@ set CHIPSET_RTL_IMPL_FILES [list \
     "${DV_ROOT}/design/chipset/io_ctrl/rtl/eth_top.v" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_pkg.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_rd_pkg.sv" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_regs.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/priority_encoder.v" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/arbiter.v" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_crossbar.v" \

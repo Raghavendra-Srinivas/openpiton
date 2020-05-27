@@ -23,6 +23,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 `include "define.tmp.h"
 `include "piton_system.vh"
 `include "mc_define.h"
@@ -30,6 +31,7 @@
 `ifdef PITONSYS_AXI4_MEM
 `include "noc_axi4_bridge_define.vh"
 `endif
+
 
 // Filename: chipset.v
 // Author: mmckeown
@@ -1429,11 +1431,8 @@ chipset_impl_noc_power_test  chipset_impl (
         .rtc_i                  ( rtc_i         ),
         .timer_irq_o            ( timer_irq_o   ),
         .ipi_o                  ( ipi_o         ),
-        .irq_o                  ( irq_o         )
-    `endif
-    `ifdef HAWK_FPGA //for genesys2 board only , sw 4 and 5 are not used alrady
-		,
-		.hawk_sw_ctrl({sw[5],sw[4]})
+        .irq_o                  ( irq_o         ),
+	.hawk_sw_ctrl({sw[5],sw[4]})
     `endif
 
 );

@@ -27,6 +27,7 @@
 //HAWK DEFINES
 //TODO : Move this define to standard openpiton flow
 //`define HAWK_SIMS 0
+//`define HAWK_FPGA 1
 `ifndef HAWK_FPGA
  `define HAWK_SIMS 1
 `endif
@@ -291,10 +292,7 @@ module chipset_impl(
     output [`NUM_TILES-1:0]                     timer_irq_o,   // Timer interrupts
     output [`NUM_TILES-1:0]                     ipi_o,         // software interrupt (a.k.a inter-process-interrupt)
     // PLIC
-    output [`NUM_TILES*2-1:0]                   irq_o          // level sensitive IR lines, mip & sip (async)
-`endif
-`ifdef HAWK_FPGA //for genesys2 board only , sw 4 and 5 are not used alrady
-    ,		,
+    output [`NUM_TILES*2-1:0]                   irq_o,          // level sensitive IR lines, mip & sip (async)
     input [1:0] hawk_sw_ctrl
 `endif
 );

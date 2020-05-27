@@ -30,7 +30,7 @@
 `include "mc_define.h"
 `include "noc_axi4_bridge_define.vh"
 
-`define HAWK_PRESENT 1
+`define HAWK_PRESENT 0
 
 import hacd_pkg::*;
 module hawk_mc_top (
