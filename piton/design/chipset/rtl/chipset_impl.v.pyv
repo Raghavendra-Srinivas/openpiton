@@ -27,10 +27,10 @@
 //HAWK DEFINES
 //TODO : Move this define to standard openpiton flow
 //`define HAWK_SIMS 0
-//`define HAWK_FPGA 1
-`ifndef HAWK_FPGA
- `define HAWK_SIMS 1
-`endif
+`define HAWK_FPGA 1
+//`ifndef HAWK_FPGA
+// `define HAWK_SIMS 1
+//`endif
 
 
 `include "define.tmp.h"
@@ -921,6 +921,7 @@ fake_mem_ctrl fake_mem_ctrl(
 );
 
 //the below is fake memory controller top with axi mem needed for only hawk sims, refer my thesis document for more details
+/*
 `ifdef HAWK_SIMS
     		 mc_top_new u_mc_top_new (
     		//hacd modifiction
@@ -951,7 +952,7 @@ fake_mem_ctrl fake_mem_ctrl(
 
     		    );		
 `endif
-
+*/
 
 `endif // endif PITON_FPGA_MC_DDR3
 

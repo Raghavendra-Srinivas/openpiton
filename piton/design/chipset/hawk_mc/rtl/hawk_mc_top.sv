@@ -30,7 +30,7 @@
 `include "mc_define.h"
 `include "noc_axi4_bridge_define.vh"
 
-`define HAWK_PRESENT 0
+//`define HAWK_PRESENT 0
 
 import hacd_pkg::*;
 module hawk_mc_top (
@@ -410,7 +410,7 @@ assign core_app_rd_data         = app_rd_data;
 `else //ifndef PITONSYS_AXI4_MEM
 assign noc_mig_bridge_rst       = ui_clk_sync_rst;
 assign noc_mig_bridge_init_done = init_calib_complete;
-assign init_calib_complete_out  = init_calib_complete & ~ui_clk_syn_rst_delayed;
+//assign init_calib_complete_out  = init_calib_complete & ~ui_clk_syn_rst_delayed;
 `endif
 
 noc_bidir_afifo  mig_afifo  (
@@ -659,6 +659,29 @@ mig_7series_0   mig_7series_0 (
     .sys_clk_i                      (sys_clk),
     .sys_rst                        (sys_rst_n)
 );
+
+ila_2 ila_native(
+  .clk(ui_clk), //input clk;
+  .probe0({1'b0,app_addr}), //input [29:0]probe0;
+  .probe1(app_cmd), //input [2:0]probe1;
+  .probe2(app_wdf_data), //input [255:0]probe2;
+  .probe3(app_wdf_mask), //input [31:0]probe3;
+  .probe4(app_rd_data), //input [255:0]probe4;
+  .probe5(10'b0), //input [9:0]probe5;
+  .probe6(app_en), //input [0:0]probe6;
+  .probe7(app_wdf_wren), //input [0:0]probe7;
+  .probe8(app_rd_data_valid), //input [0:0]probe8;
+  .probe9(app_rd_data_end), //input [0:0]probe9;
+  .probe10(app_rdy), //input [0:0]probe10;
+  .probe11(app_wdf_rdy), //input [0:0]probe11;
+  .probe12(1'b0), //input [0:0]probe11;
+  .probe13(1'b0), //input [0:0]probe11;
+  .probe14(1'b0), //input [0:0]probe11;
+  .probe15(1'b0) //input [0:0]probe11;
+);
+
+
+
 `endif // PITONSYS_DDR4
 
 `else // PITONSYS_AXI4_MEM
@@ -1092,7 +1115,7 @@ mig_7series_axi4 u_mig_7series_axi4 (
 
     // Slave Interface Write Address Ports
     .s_axi_awid                     (mc_axi_wr_bus.axi_awid),  // input [15:0]          s_axi_awid
-    .s_axi_awaddr                   (mc_axi_wr_bus.axi_awaddr[29:0]),  // input [29:0]            s_axi_awaddr
+    .s_axi_awaddr                   (mc_axi_wr_bus.axi_awaddr),  // input [29:0]            s_axi_awaddr
     .s_axi_awlen                    (mc_axi_wr_bus.axi_awlen),  // input [7:0]          s_axi_awlen
     .s_axi_awsize                   (mc_axi_wr_bus.axi_awsize),  // input [2:0]         s_axi_awsize
     .s_axi_awburst                  (mc_axi_wr_bus.axi_awburst),  // input [1:0]            s_axi_awburst
@@ -1115,7 +1138,7 @@ mig_7series_axi4 u_mig_7series_axi4 (
     .s_axi_bready                   (mc_axi_wr_bus.axi_bready),  // input           s_axi_bready
     // Slave Interface Read Address Ports
     .s_axi_arid                     (mc_axi_rd_bus.axi_arid),  // input [15:0]          s_axi_arid
-    .s_axi_araddr                   (mc_axi_rd_bus.axi_araddr[29:0]),  // input [29:0]            s_axi_araddr
+    .s_axi_araddr                   (mc_axi_rd_bus.axi_araddr),  // input [29:0]            s_axi_araddr
     .s_axi_arlen                    (mc_axi_rd_bus.axi_arlen),  // input [7:0]          s_axi_arlen
     .s_axi_arsize                   (mc_axi_rd_bus.axi_arsize),  // input [2:0]         s_axi_arsize
     .s_axi_arburst                  (mc_axi_rd_bus.axi_arburst),  // input [1:0]            s_axi_arburst
@@ -1164,6 +1187,7 @@ mig_7series_axi4 u_mig_7series_axi4 (
 `endif  // PITON_PROTO
 
 
+`ifdef PITONSYS_AXI4_MEM
 
 //connect NOC signals to hawk
 //AW
@@ -1224,6 +1248,7 @@ assign cpu_axi_rd_bus.axi_rready =m_axi_rready;
 wire dump_mem;
 
 `ifdef HAWK_PRESENT
+
 hacd_top  #(
 	.NOC_DWIDTH(`DATA_WIDTH),
         .HacdBase       ( 64'h000000fff5100000 ),
@@ -1252,7 +1277,8 @@ u_hacd_top (
         .mc_axi_rd_bus(mc_axi_rd_bus.mstr),
 	.dump_mem(dump_mem)
 	
-);
+); 
+
 `else
 
 localparam DOWN_RATIO = `HACD_AXI4_DATA_WIDTH/`HACD_MC_AXI4_DATA_WIDTH;
@@ -1265,6 +1291,16 @@ assign axi_slave_w_data_i[i] =  cpu_axi_wr_bus.axi_wdata[(`HACD_MC_AXI4_DATA_WID
 assign axi_slave_w_strb_i[i] = cpu_axi_wr_bus.axi_wstrb[(`HACD_MC_AXI4_STRB_WIDTH*(i+1)) -1 :`HACD_MC_AXI4_STRB_WIDTH*i];
 end
 endgenerate
+
+//logic temp_wready,temp_wready_comboloop_fix;
+//always @(posedge ui_clk or posedge noc_axi4_bridge_rst) begin
+//	if(noc_axi4_bridge_rst) begin
+//	   temp_wready <=1'b0;
+//	end else begin
+//	   temp_wready <=temp_wready_comboloop_fix;
+//	end
+//end
+//assign cpu_axi_wr_bus.axi_wready=temp_wready;
 
 axi_size_conv_DOWNSIZE # 
 (
@@ -1280,7 +1316,7 @@ axi_size_conv_DOWNSIZE #
     .AXI_ID_WIDTH_OUT(`HACD_MC_AXI4_ID_WIDTH)
 
 ) u_axi_size_DOWNSIZE (
-    .clk_i              (ui_clk                    ),  
+    .clk_i              (ui_clk ),  
     .rst_ni              (~noc_axi4_bridge_rst      ),
     // AXI4 SLAVE : for us, it is xbar should drive here
     //***************************************
@@ -1320,7 +1356,8 @@ axi_size_conv_DOWNSIZE #
     .axi_slave_w_strb_i(axi_slave_w_strb_i),
     .axi_slave_w_user_i(cpu_axi_wr_bus.axi_wuser),
     .axi_slave_w_last_i(cpu_axi_wr_bus.axi_wlast),
-    .axi_slave_w_ready_o(cpu_axi_wr_bus.axi_wready),
+    .axi_slave_w_ready_o(cpu_axi_wr_bus.axi_wready), //(temp_wready_comboloop_fix), //(cpu_axi_wr_bus.axi_wready),
+
 
     // READ DATA CHANNEL
     .axi_slave_r_valid_o(cpu_axi_rd_bus.axi_rvalid),
@@ -1447,13 +1484,70 @@ ila_1 debug_hawk_mc
     .probe39 (mc_axi_rd_bus.axi_rready),  // input           s_axi_rready
 
     .probe41 ('d0), //ddr_we_n),
-    .probe42 (cpu_axi_rd_bus.axi_arvalid),
-    .probe43 (cpu_axi_wr_bus.axi_wvalid),
+    .probe42 ('d0),
+    .probe43 ('d0),
 
     .probe36 ('d0),
     .probe37 ('d0)
 
 );
+
+ila_0 debug_hawk_noc_axi 
+   (.clk(ui_clk),
+    .probe0(1'b0), //(ui_clk),
+    .probe40(~noc_axi4_bridge_rst),
+    // Slave Interface Write Address Ports
+    .probe19                  (cpu_axi_wr_bus.axi_awid),  // input [5:0]          s_axi_awid
+    .probe1                   (cpu_axi_wr_bus.axi_awaddr),  // input [29:0]            s_axi_awaddr
+    .probe21                  (cpu_axi_wr_bus.axi_awlen),  // input [7:0]          s_axi_awlen
+    .probe17                   (cpu_axi_wr_bus.axi_awsize),  // input [2:0]         s_axi_awsize
+    .probe2                  (cpu_axi_wr_bus.axi_awburst),  // input [1:0]            s_axi_awburst
+    .probe3 (cpu_axi_wr_bus.axi_awlock),  // input [0:0]         s_axi_awlock
+    .probe31 (cpu_axi_wr_bus.axi_awcache),  // input [3:0]            s_axi_awcache
+    .probe18 (cpu_axi_wr_bus.axi_awprot),  // input [2:0]         s_axi_awprot
+    .probe32 (cpu_axi_wr_bus.axi_awqos),  // input [3:0]          s_axi_awqos
+    .probe4 (cpu_axi_wr_bus.axi_awvalid),  // input          s_axi_awvalid
+    .probe6 (cpu_axi_wr_bus.axi_awready),  // output         s_axi_awready
+    // Slave Interface Write Data Ports
+    .probe10 (cpu_axi_wr_bus.axi_wdata),  // input [255:0]            s_axi_wdata
+    .probe15 (cpu_axi_wr_bus.axi_wstrb),  // input [31:0]         s_axi_wstrb
+    .probe7 (cpu_axi_wr_bus.axi_wlast),  // input            s_axi_wlast
+    .probe8 (cpu_axi_wr_bus.axi_wvalid),  // input           s_axi_wvalid
+    .probe9 (cpu_axi_wr_bus.axi_wready),  // output          s_axi_wready
+    // Slave Interface Write Response Ports
+    .probe20 (cpu_axi_wr_bus.axi_bid),  // output [5:0]          s_axi_bid
+    .probe13 (cpu_axi_wr_bus.axi_bresp),  // output [1:0]         s_axi_bresp
+    .probe11 (cpu_axi_wr_bus.axi_bvalid),  // output          s_axi_bvalid
+    .probe12 (cpu_axi_wr_bus.axi_bready),  // input           s_axi_bready
+    // Slave Interface Read Address Ports
+    .probe25 (cpu_axi_rd_bus.axi_arid),  // input [5:0]          s_axi_arid
+    .probe5 (cpu_axi_rd_bus.axi_araddr),  // input [29:0]            s_axi_araddr
+    .probe27 (cpu_axi_rd_bus.axi_arlen),  // input [7:0]          s_axi_arlen
+    .probe23	(cpu_axi_rd_bus.axi_arsize),  // input [2:0]         s_axi_arsize
+    .probe24 (cpu_axi_rd_bus.axi_arburst),  // input [1:0]            s_axi_arburst
+    .probe22 (cpu_axi_rd_bus.axi_arlock),  // input [0:0]         s_axi_arlock
+    .probe33 (cpu_axi_rd_bus.axi_arcache),  // input [3:0]            s_axi_arcache
+    .probe28 (cpu_axi_rd_bus.axi_arprot),  // input [2:0]         s_axi_arprot
+    .probe34 (cpu_axi_rd_bus.axi_arqos),  // input [3:0]          s_axi_arqos
+    .probe16 (cpu_axi_rd_bus.axi_arvalid),  // input          s_axi_arvalid
+    .probe26 (cpu_axi_rd_bus.axi_arready),  // output         s_axi_arready
+    // Slave Interface Read Data Ports
+    .probe38 (cpu_axi_rd_bus.axi_rid),  // output [5:0]          s_axi_rid
+    .probe14 (cpu_axi_rd_bus.axi_rdata),  // output [255:0]           s_axi_rdata
+    .probe29 (cpu_axi_rd_bus.axi_rresp),  // output [1:0]         s_axi_rresp
+    .probe30(cpu_axi_rd_bus.axi_rlast),  // output           s_axi_rlast
+    .probe35 (cpu_axi_rd_bus.axi_rvalid),  // output          s_axi_rvalid
+    .probe39 (cpu_axi_rd_bus.axi_rready),  // input           s_axi_rready
+
+    .probe41 ('d0), //ddr_we_n),
+    .probe42 ('d0),
+    .probe43 ('d0),
+
+    .probe36 ('d0),
+    .probe37 ('d0)
+
+);
+`endif //PITON_AXI4_MEM
 
 /*
   input clk;

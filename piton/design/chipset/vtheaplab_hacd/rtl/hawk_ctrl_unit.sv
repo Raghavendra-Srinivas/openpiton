@@ -161,6 +161,7 @@ begin
 				//handle inflation later
 				//else if (infl)
 		end
+		default: begin end
 	endcase
 end
 

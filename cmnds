@@ -17,3 +17,4 @@ protosyn -b genesys2 -d system –core=ariane –uart-dmw
 ./piton/verif/env/manycore/manycore_top.v.pyv
 protosyn -b genesys2 -d system --core=ariane --axi4_mem --uart-dmw ddr
 /opt/Xilinx/Vivado/2018.2/settings64.sh
+./piton/tools/src/proto/common/rtl_setup.tcl

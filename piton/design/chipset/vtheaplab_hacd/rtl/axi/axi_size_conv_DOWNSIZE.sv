@@ -557,7 +557,7 @@ module axi_size_conv_DOWNSIZE
 	    						if(axi_slave_w_last_i)
 		    					begin
 		    						NS_W = IDLE_W;
-		    						axi_master_w_last_o = 1'b0;
+		    						axi_master_w_last_o = 1'b1; //raghav setting it to 1//1'b0;
 		    					end
 		    					else
 		    					begin

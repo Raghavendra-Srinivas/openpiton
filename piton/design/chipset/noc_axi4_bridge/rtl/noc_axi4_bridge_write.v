@@ -188,6 +188,14 @@ storage_addr_trans #(
     .storage_addr_out   (phys_addr  )
 );
 
+ila_3 ila_3_uart_addr (
+	.clk(clk),
+	.probe0(m_axi_awaddr), //phys_addr),
+	.probe1(virt_addr)
+);
+
+
+
 reg [`AXI4_STRB_WIDTH-1:0] strb_before_offset;
 reg [5:0] offset;
 reg [`AXI4_ADDR_WIDTH-1:0] addr;
