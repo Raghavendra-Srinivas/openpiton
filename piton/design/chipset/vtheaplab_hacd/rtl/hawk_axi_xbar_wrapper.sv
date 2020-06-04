@@ -21,8 +21,8 @@ module hawk_axi_xbar_wrapper#(parameter PLACE_HOLDER=1)
     HACD_MC_AXI_RD_BUS.mstr out_axi_rd_bus  
 );
  
-    HACD_AXI_WR_BUS xbarOut_axi_wr_bus(); 
-    HACD_AXI_RD_BUS xbarOut_axi_rd_bus();
+    HACD_AXI_XBAR_WR_BUS xbarOut_axi_wr_bus(); 
+    HACD_AXI_XBAR_RD_BUS xbarOut_axi_rd_bus();
 
 //`define NO_AXI_XBAR 1
 `ifdef NO_AXI_XBAR
@@ -145,7 +145,7 @@ axi_crossbar #(.DDR_START_ADDR(DDR_START_ADDR)) u_hawk_axi_crossbar (
      .clk(clk_i),
      .rst(!rst_ni),
    
-     .s_axi_awid({mstr1_axi_wr_bus_slv.axi_awid[4:0],mstr0_axi_wr_bus_slv.axi_awid[4:0]}),
+     .s_axi_awid({mstr1_axi_wr_bus_slv.axi_awid,mstr0_axi_wr_bus_slv.axi_awid}),
      .s_axi_awaddr({mstr1_axi_wr_bus_slv.axi_awaddr,mstr0_axi_wr_bus_slv.axi_awaddr}),
      .s_axi_awlen({mstr1_axi_wr_bus_slv.axi_awlen,mstr0_axi_wr_bus_slv.axi_awlen}),
      .s_axi_awsize({mstr1_axi_wr_bus_slv.axi_awsize,mstr0_axi_wr_bus_slv.axi_awsize}),
@@ -163,13 +163,13 @@ axi_crossbar #(.DDR_START_ADDR(DDR_START_ADDR)) u_hawk_axi_crossbar (
      .s_axi_wuser({mstr1_axi_wr_bus_slv.axi_wuser,mstr0_axi_wr_bus_slv.axi_wuser}),
      .s_axi_wvalid({mstr1_axi_wr_bus_slv.axi_wvalid,mstr0_axi_wr_bus_slv.axi_wvalid}),
      .s_axi_wready({mstr1_axi_wr_bus_slv.axi_wready,mstr0_axi_wr_bus_slv.axi_wready}),
-     .s_axi_bid({mstr1_axi_wr_bus_slv.axi_bid[4:0],mstr0_axi_wr_bus_slv.axi_bid[4:0]}),
+     .s_axi_bid({mstr1_axi_wr_bus_slv.axi_bid,mstr0_axi_wr_bus_slv.axi_bid}),
      .s_axi_bresp({mstr1_axi_wr_bus_slv.axi_bresp,mstr0_axi_wr_bus_slv.axi_bresp}),
      .s_axi_buser({mstr1_axi_wr_bus_slv.axi_buser,mstr0_axi_wr_bus_slv.axi_buser}),
      .s_axi_bvalid({mstr1_axi_wr_bus_slv.axi_bvalid,mstr0_axi_wr_bus_slv.axi_bvalid}),
      .s_axi_bready({mstr1_axi_wr_bus_slv.axi_bready,mstr0_axi_wr_bus_slv.axi_bready}),
 
-     .s_axi_arid({mstr1_axi_rd_bus_slv.axi_arid[4:0],mstr0_axi_rd_bus_slv.axi_arid[4:0]}),
+     .s_axi_arid({mstr1_axi_rd_bus_slv.axi_arid,mstr0_axi_rd_bus_slv.axi_arid}),
      .s_axi_araddr({mstr1_axi_rd_bus_slv.axi_araddr,mstr0_axi_rd_bus_slv.axi_araddr}),
      .s_axi_arlen({mstr1_axi_rd_bus_slv.axi_arlen,mstr0_axi_rd_bus_slv.axi_arlen}),
      .s_axi_arsize({mstr1_axi_rd_bus_slv.axi_arsize,mstr0_axi_rd_bus_slv.axi_arsize}),
@@ -182,7 +182,7 @@ axi_crossbar #(.DDR_START_ADDR(DDR_START_ADDR)) u_hawk_axi_crossbar (
      .s_axi_arvalid({mstr1_axi_rd_bus_slv.axi_arvalid,mstr0_axi_rd_bus_slv.axi_arvalid}),
      .s_axi_arready({mstr1_axi_rd_bus_slv.axi_arready,mstr0_axi_rd_bus_slv.axi_arready}),
 
-     .s_axi_rid({mstr1_axi_rd_bus_slv.axi_rid[4:0],mstr0_axi_rd_bus_slv.axi_rid[4:0]}),
+     .s_axi_rid({mstr1_axi_rd_bus_slv.axi_rid,mstr0_axi_rd_bus_slv.axi_rid}),
      .s_axi_rdata({mstr1_axi_rd_bus_slv.axi_rdata,mstr0_axi_rd_bus_slv.axi_rdata}),
      .s_axi_rresp({mstr1_axi_rd_bus_slv.axi_rresp,mstr0_axi_rd_bus_slv.axi_rresp}),
      .s_axi_rlast({mstr1_axi_rd_bus_slv.axi_rlast,mstr0_axi_rd_bus_slv.axi_rlast}),
@@ -272,8 +272,8 @@ axi_size_conv_DOWNSIZE #
     .AXI_ADDR_WIDTH(`HACD_AXI4_ADDR_WIDTH),
     //slave side
     .AXI_DATA_WIDTH_IN(`HACD_AXI4_DATA_WIDTH),
-    .AXI_USER_WIDTH_IN(`HACD_AXI4_USER_WIDTH),
-    .AXI_ID_WIDTH_IN(`HACD_AXI4_ID_WIDTH),
+    .AXI_USER_WIDTH_IN(`HACD_MC_AXI4_USER_WIDTH),
+    .AXI_ID_WIDTH_IN(`HACD_MC_AXI4_ID_WIDTH),
     
     //master side
     .AXI_DATA_WIDTH_OUT(`HACD_MC_AXI4_DATA_WIDTH),
