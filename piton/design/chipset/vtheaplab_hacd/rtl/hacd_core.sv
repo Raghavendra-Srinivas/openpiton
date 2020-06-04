@@ -353,8 +353,8 @@ hawk_comdecomp u_hawk_comdecomp(
 	.hawk_cpu_ovrd_wrpkt
    );
 
-   assign  init_att = cu_init_att & (hawk_sw_ctrl[1]);   // || !hawk_reg_inactive_ctrl);
-   assign  init_list = cu_init_list & (hawk_sw_ctrl[1]); // || !hawk_reg_inactive_ctrl);
+   assign  init_att = cu_init_att & (!hawk_sw_ctrl[0]);   // || !hawk_reg_inactive_ctrl);
+   assign  init_list = cu_init_list & (!hawk_sw_ctrl[0]); // || !hawk_reg_inactive_ctrl);
 
 
    //Arbiter between Hawk Master and CPU master

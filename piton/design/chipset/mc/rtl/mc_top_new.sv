@@ -25,7 +25,8 @@
 
 module mc_top_new (
    //hawk -start
-   //addding custom ports
+   //addding custom 
+   input [1:0] hawk_sw_ctrl,
    input   [`NOC_DATA_WIDTH-1:0] buf_hacd_noc2_data,
    input buf_hacd_noc2_valid,
    output hacd_buf_noc2_ready,
@@ -821,8 +822,9 @@ hacd_top  #(
         .SwapEndianess  (               1 )
 ) 
 u_hacd_top (
-        .clk_i                    ( core_ref_clk),
-        .rst_ni                   ( sys_rst_n),
+        .clk_i                    ( core_ref_clk), //ui_clk is given by ddr in fpga that should be connecte here
+        .rst_ni                   ( sys_rst_n),    // this should be noc_axi_birdge reset in fpga
+	.hawk_sw_ctrl 		  (2'b00) ,        //(hawk_sw_ctrl),
 	.infl_interrupt           ( hacd_infl_interrupt),
 	.defl_interrupt           ( hacd_defl_interrupt),
         .buf_hacd_noc2_data_i     ( buf_hacd_noc2_data     ),

@@ -43,11 +43,11 @@ package hacd_pkg;
 	parameter bit [63:0] HAWK_PPA_START = DDR_START_ADDR + 'd4096;
         parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR + 'd8192; 
    `else
-    	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000;
+    	parameter bit [63:0] DDR_START_ADDR=  64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
-    	parameter bit [63:0] HAWK_LIST_START= 64'hFFF6200000; //HAWK_ATT_START + 'd64;//HAWK_ATT_START+ ceil(ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)*BLK_SIZE;//64'hFFF6200000; 
-    	parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000; //DDR_START_ADDR + 'd4096;//One page allocated for table for bringup//HAWK_LIST_START + ceil((LIST_ENTRY_CNT/LST_ENTRY_PER_BLK))*BLK_SIZE ; //64'hFFF6300000;
-    	parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6400000; //for DV
+    	parameter bit [63:0] HAWK_LIST_START= 64'hC0100000; //64'hFFF6200000; //HAWK_ATT_START + 'd64;//HAWK_ATT_START+ ceil(ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)*BLK_SIZE;//64'hFFF6200000; 
+    	parameter bit [63:0] HAWK_PPA_START = 64'hC0200000; //64'hFFF6300000; //DDR_START_ADDR + 'd4096;//One page allocated for table for bringup//HAWK_LIST_START + ceil((LIST_ENTRY_CNT/LST_ENTRY_PER_BLK))*BLK_SIZE ; //64'hFFF6300000;
+    	parameter bit [63:0] HPPA_BASE_ADDR=  64'hC0400000; //64'hFFF6400000; //for DV
    `endif
 
 

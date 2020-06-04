@@ -23,7 +23,6 @@ THE SOFTWARE.
 */
 
 // Language: Verilog 2001
-`define HAWK_FPGA 1
 `timescale 1ns / 1ps
 `ifdef HAWK_FPGA
 	`include "../hacd_define.vh"

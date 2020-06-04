@@ -188,12 +188,13 @@ storage_addr_trans #(
     .storage_addr_out   (phys_addr  )
 );
 
+`ifdef HAWK_FPGA_DBG
 ila_3 ila_3_uart_addr (
 	.clk(clk),
 	.probe0(m_axi_awaddr), //phys_addr),
 	.probe1(virt_addr)
 );
-
+`endif
 
 
 reg [`AXI4_STRB_WIDTH-1:0] strb_before_offset;
