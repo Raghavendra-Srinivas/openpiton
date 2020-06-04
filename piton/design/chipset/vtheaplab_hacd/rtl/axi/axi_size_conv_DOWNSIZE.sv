@@ -53,13 +53,13 @@ module axi_size_conv_DOWNSIZE
     // Slave side
     parameter AXI_DATA_WIDTH_IN   = 512,
     parameter AXI_USER_WIDTH_IN   = 11,
-    parameter AXI_ID_WIDTH_IN     = 6,
+    parameter AXI_ID_WIDTH_IN     = 7,
     parameter AXI_STRB_WIDTH_IN   = AXI_DATA_WIDTH_IN/8,
 
     //Master side
     parameter AXI_DATA_WIDTH_OUT  = 256,
     parameter AXI_USER_WIDTH_OUT  = 11,
-    parameter AXI_ID_WIDTH_OUT    = 6,
+    parameter AXI_ID_WIDTH_OUT    = 7,
     parameter AXI_STRB_WIDTH_OUT  = AXI_DATA_WIDTH_OUT/8,
 
     parameter RATIO               = AXI_DATA_WIDTH_IN/AXI_DATA_WIDTH_OUT

@@ -15,11 +15,11 @@
 `define HACD_AXI4_BURST_SIZE 3'b110 //for one memory block of 64bytes
 `define HACD_AXI4_BURST_TYPE 2'b01 //for one memory block of 64bytes
 
-`define HACD_AXI_MASTER_FIFO_DEPTH 32
+`define HACD_AXI_MASTER_FIFO_DEPTH 64 //32 :-> 64 for 4KB max
 
 //for MC
 `define HACD_MC_AXI4_DATA_WIDTH  256
-`define HACD_MC_AXI4_ID_WIDTH    6
+`define HACD_MC_AXI4_ID_WIDTH    7
 `define HACD_MC_AXI4_ADDR_WIDTH  64
 `define HACD_MC_AXI4_LEN_WIDTH   8
 `define HACD_MC_AXI4_SIZE_WIDTH  3

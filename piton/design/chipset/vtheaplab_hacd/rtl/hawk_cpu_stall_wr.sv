@@ -178,7 +178,12 @@ logic allow_cpu_access,allow_cpu_access_next;
                     m_axi_awuser_next = s_axi_awuser;
 
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
-                    n_state = WAIT_DATA;
+ 		    if(hawk_inactive) begin
+                       m_axi_awvalid_next = 1'b1;
+                       n_state = IDLE;
+		    end else begin	
+                    	n_state = WAIT_DATA;
+		    end
                 end 
             end
 	   WAIT_DATA:begin
@@ -193,13 +198,7 @@ logic allow_cpu_access,allow_cpu_access_next;
     		    m_axi_wlast_next = s_axi_wlast;
 		
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
- 		    if(hawk_inactive) begin
-                       m_axi_awvalid_next = 1'b1;
-                       m_axi_wvalid_next = 1'b1;
-                       n_state = IDLE;
-		    end else begin	
-                       n_state = WAIT_HAWK;
-		    end
+                    n_state = WAIT_HAWK;
                 end		  
 	   end
 	   WAIT_HAWK:begin
@@ -282,13 +281,13 @@ logic allow_cpu_access,allow_cpu_access_next;
    assign s_axi_bvalid = m_axi_bvalid;
    assign m_axi_bready = s_axi_bready;
    //
-   //Write Channel 
-   assign m_axi_wvalid = m_axi_wvalid_reg;
-   assign s_axi_wready = s_axi_wready_reg; 
-   assign m_axi_wdata = m_axi_wdata_reg;
-   assign m_axi_wstrb = m_axi_wstrb_reg;
-   assign m_axi_wlast = m_axi_wlast_reg;
-   assign m_axi_wuser = (WUSER_ENABLE) ? s_axi_wuser : {WUSER_WIDTH{1'b0}};
+   //Write Channel with bypass override with hawk_inactive 
+   assign m_axi_wvalid = hawk_inactive ?  s_axi_wvalid  : m_axi_wvalid_reg;
+   assign s_axi_wready = hawk_inactive ?  m_axi_wready /*!m_axi_wvalid*/  : s_axi_wready_reg; 
+   assign m_axi_wdata  = hawk_inactive ?  s_axi_wdata   : m_axi_wdata_reg;
+   assign m_axi_wstrb  = hawk_inactive ?  s_axi_wstrb   : m_axi_wstrb_reg;
+   assign m_axi_wlast  = hawk_inactive ?  s_axi_wlast   : m_axi_wlast_reg;
+   assign m_axi_wuser  = {WUSER_WIDTH{1'b0}}; //(WUSER_ENABLE) ? s_axi_wuser   : {WUSER_WIDTH{1'b0}};
 
    //hawk req packet
    assign cpu_reqpkt.hppa  = m_axi_awaddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned

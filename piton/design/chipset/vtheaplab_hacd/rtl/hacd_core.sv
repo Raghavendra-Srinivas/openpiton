@@ -80,6 +80,7 @@ module hacd_core (
   
    hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_rdpkt,hawk_cpu_ovrd_wrpkt;
    hacd_pkg::cpu_reqpkt_t cpu_rd_reqpkt,cpu_wr_reqpkt;
+
 ///hawk cpu rd stall
 hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
     .clk(clk_i),
@@ -140,10 +141,9 @@ hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
 
 );
 
-assign stall_axi_rd_bus.axi_rid[5]=1'b0;
-assign stall_axi_wr_bus.axi_bid[5]=1'b0;
 
 ///hawk cpu wr stall
+
 hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .clk(clk_i),
     .rst(!rst_ni),
@@ -209,6 +209,69 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bvalid(stall_axi_wr_bus.axi_bvalid),
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
+
+
+//
+ila_0 debug_hawk_stall_wr
+   (
+    .clk(clk_i),
+    .probe0(!rst_ni),
+    .probe40('d0),
+    // Slave Interface Write Address Ports
+    .probe19                  (cpu_axi_wr_bus.axi_awid),  // input [5:0]          s_axi_awid
+    .probe1                   (cpu_axi_wr_bus.axi_awaddr),  // input [29:0]            s_axi_awaddr
+    .probe21                  (cpu_axi_wr_bus.axi_awlen),  // input [7:0]          s_axi_awlen
+    .probe17                   (cpu_axi_wr_bus.axi_awsize),  // input [2:0]         s_axi_awsize
+    .probe2                  (cpu_axi_wr_bus.axi_awburst),  // input [1:0]            s_axi_awburst
+    .probe3 (cpu_axi_wr_bus.axi_awlock),  // input [0:0]         s_axi_awlock
+    .probe31 (cpu_axi_wr_bus.axi_awcache),  // input [3:0]            s_axi_awcache
+    .probe18 (cpu_axi_wr_bus.axi_awprot),  // input [2:0]         s_axi_awprot
+    .probe32 (cpu_axi_wr_bus.axi_awqos),  // input [3:0]          s_axi_awqos
+    .probe4 (cpu_axi_wr_bus.axi_awvalid),  // input          s_axi_awvalid
+    .probe6 (cpu_axi_wr_bus.axi_awready),  // output         s_axi_awready
+    // Slave Interface Write Data Ports
+    .probe10 (cpu_axi_wr_bus.axi_wdata),  // input [255:0]            s_axi_wdata
+    .probe15 (cpu_axi_wr_bus.axi_wstrb),  // input [31:0]         s_axi_wstrb
+    .probe7 (cpu_axi_wr_bus.axi_wlast),  // input            s_axi_wlast
+    .probe8 (cpu_axi_wr_bus.axi_wvalid),  // input           s_axi_wvalid
+    .probe9 (cpu_axi_wr_bus.axi_wready),  // output          s_axi_wready
+    // Slave Interface Write Response Ports
+    .probe20 (cpu_axi_wr_bus.axi_bid),  // output [5:0]          s_axi_bid
+    .probe13 (cpu_axi_wr_bus.axi_bresp),  // output [1:0]         s_axi_bresp
+    .probe11 (cpu_axi_wr_bus.axi_bvalid),  // output          s_axi_bvalid
+    .probe12 (cpu_axi_wr_bus.axi_bready),  // input           s_axi_bready
+    // Slave Interface Read Address Ports
+    .probe25 (cpu_axi_rd_bus.axi_arid),  // input [5:0]          s_axi_arid
+    .probe5 (cpu_axi_rd_bus.axi_araddr),  // input [29:0]            s_axi_araddr
+    .probe27 (cpu_axi_rd_bus.axi_arlen),  // input [7:0]          s_axi_arlen
+    .probe23	(cpu_axi_rd_bus.axi_arsize),  // input [2:0]         s_axi_arsize
+    .probe24 (cpu_axi_rd_bus.axi_arburst),  // input [1:0]            s_axi_arburst
+    .probe22 (cpu_axi_rd_bus.axi_arlock),  // input [0:0]         s_axi_arlock
+    .probe33 (cpu_axi_rd_bus.axi_arcache),  // input [3:0]            s_axi_arcache
+    .probe28 (cpu_axi_rd_bus.axi_arprot),  // input [2:0]         s_axi_arprot
+    .probe34 (cpu_axi_rd_bus.axi_arqos),  // input [3:0]          s_axi_arqos
+    .probe16 (cpu_axi_rd_bus.axi_arvalid),  // input          s_axi_arvalid
+    .probe26 (cpu_axi_rd_bus.axi_arready),  // output         s_axi_arready
+    // Slave Interface Read Data Ports
+    .probe38 (cpu_axi_rd_bus.axi_rid),  // output [5:0]          s_axi_rid
+    .probe14 (cpu_axi_rd_bus.axi_rdata),  // output [255:0]           s_axi_rdata
+    .probe29 (cpu_axi_rd_bus.axi_rresp),  // output [1:0]         s_axi_rresp
+    .probe30(cpu_axi_rd_bus.axi_rlast),  // output           s_axi_rlast
+    .probe35 (cpu_axi_rd_bus.axi_rvalid),  // output          s_axi_rvalid
+    .probe39 (cpu_axi_rd_bus.axi_rready),  // input           s_axi_rready
+
+    .probe41 ('d0), //ddr_we_n),
+    .probe42 ('d0),
+    .probe43 ('d0),
+
+    .probe36 ('d0),
+    .probe37 ('d0)
+
+);
+
+
+
+
 //
 wire compdecomp_rready;
 hawk_comdecomp u_hawk_comdecomp(
@@ -380,6 +443,8 @@ hawk_comdecomp u_hawk_comdecomp(
 	//From CPU
 	.mstr1_axi_wr_bus_slv(stall_axi_wr_bus.slv),
 	.mstr1_axi_rd_bus_slv(stall_axi_rd_bus.slv),
+	//.mstr1_axi_wr_bus_slv(cpu_axi_wr_bus),
+	//.mstr1_axi_rd_bus_slv(cpu_axi_rd_bus),
 
 	//Towards memory controller   
    	.out_axi_wr_bus(mc_axi_wr_bus),

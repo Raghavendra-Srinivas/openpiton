@@ -42,6 +42,7 @@ set GLOBAL_INCLUDE_FILES [list \
     "${DV_ROOT}/design/include/ifu.h" \
     "${DV_ROOT}/design/include/lsu.h" \
     "${DV_ROOT}/design/chipset/include/chipset_define.vh" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_define.vh" \
 ]
 
 set GLOBAL_DEFAULT_VERILOG_MACROS "NO_SCAN FPGA_SYN PITON_FPGA_SYNTH PITON_PROTO"
@@ -753,6 +754,7 @@ set CHIPSET_INCLUDE_FILES [list \
     "${DV_ROOT}/design/chipset/include/mc_define.h" \
     "${DV_ROOT}/design/chipset/include/uart16550_define.vh" \
     "${DV_ROOT}/design/chipset/include/chipset_define.vh" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_define.vh" \
     "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/noc_axi4_bridge_define.vh" \
     "${DV_ROOT}/design/chip/tile/ariane/src/common_cells/include/common_cells/registers.svh"
 ]

@@ -44,7 +44,7 @@ module axi_crossbar #
     // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
     // Input ID field width (from AXI masters)
-    parameter S_ID_WIDTH = `HACD_AXI4_ID_WIDTH-$clog2(S_COUNT) , //8,, we'll use one bit less for hawk design, and from riscv cpu, all id bits are not used for inflight, double check?
+    parameter S_ID_WIDTH = `HACD_AXI4_ID_WIDTH, //-$clog2(S_COUNT), 
     // Output ID field width (towards AXI slaves)
     // Additional bits required for response routing
     parameter M_ID_WIDTH = S_ID_WIDTH+$clog2(S_COUNT),

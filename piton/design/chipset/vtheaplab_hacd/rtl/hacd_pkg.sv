@@ -37,11 +37,11 @@ package hacd_pkg;
     parameter int ATT_ENTRY_CNT=8; //COMPRESSION_RATIO*LIST_ENTRY_CNT;  
 
    `ifdef HAWK_FPGA
-    	parameter bit [63:0] DDR_START_ADDR=  64'h00010000; 
-    	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;
-        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + 'd64; 
-	parameter bit [63:0] HAWK_PPA_START = DDR_START_ADDR + 'd4096;
-        parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR + 'd8192; 
+    	parameter bit [63:0] DDR_START_ADDR=  64'h0; 
+    	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR + 64'h00100000; //100000
+        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + 64'h1000; //101000
+        parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + 64'h1000; //102000
+	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR + 64'h00200000; //200000
    `else
     	parameter bit [63:0] DDR_START_ADDR=  64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
