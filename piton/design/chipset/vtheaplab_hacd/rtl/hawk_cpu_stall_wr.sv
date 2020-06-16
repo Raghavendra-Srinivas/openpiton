@@ -182,7 +182,7 @@ logic allow_cpu_access,allow_cpu_access_next;
                        m_axi_awvalid_next = 1'b1;
                        n_state = IDLE;
 		    end else begin	
-                    	n_state = WAIT_DATA;
+                    	n_state = WAIT_HAWK; //WAIT_DATA;
 		    end
                 end 
             end
@@ -204,7 +204,7 @@ logic allow_cpu_access,allow_cpu_access_next;
 	   WAIT_HAWK:begin
                 s_axi_awready_next = 1'b0;
                 s_axi_wready_next = 1'b0;
-                if (/*!pending_rsp_q &&*/ (allow_cpu_access || hawk_inactive) ) begin
+                if (/*!pending_rsp_q &&*/ allow_cpu_access) begin
 		    m_axi_awaddr_next = {hawk_cpu_ovrd_pkt.ppa[ADDR_WIDTH-1:12],m_axi_awaddr_reg[11:0]};
                     m_axi_awvalid_next = 1'b1;
                     m_axi_wvalid_next = 1'b1;
@@ -282,18 +282,25 @@ logic allow_cpu_access,allow_cpu_access_next;
    assign m_axi_bready = s_axi_bready;
    //
    //Write Channel with bypass override with hawk_inactive 
-   assign m_axi_wvalid = hawk_inactive ?  s_axi_wvalid  : m_axi_wvalid_reg;
-   assign s_axi_wready = hawk_inactive ?  m_axi_wready /*!m_axi_wvalid*/  : s_axi_wready_reg; 
-   assign m_axi_wdata  = hawk_inactive ?  s_axi_wdata   : m_axi_wdata_reg;
-   assign m_axi_wstrb  = hawk_inactive ?  s_axi_wstrb   : m_axi_wstrb_reg;
-   assign m_axi_wlast  = hawk_inactive ?  s_axi_wlast   : m_axi_wlast_reg;
-   assign m_axi_wuser  = {WUSER_WIDTH{1'b0}}; //(WUSER_ENABLE) ? s_axi_wuser   : {WUSER_WIDTH{1'b0}};
+   //assign m_axi_wvalid = hawk_inactive ?  s_axi_wvalid  : m_axi_wvalid_reg;
+   //assign s_axi_wready = hawk_inactive ?  m_axi_wready /*!m_axi_wvalid*/  : s_axi_wready_reg; 
+   //assign m_axi_wdata  = hawk_inactive ?  s_axi_wdata   : m_axi_wdata_reg;
+   //assign m_axi_wstrb  = hawk_inactive ?  s_axi_wstrb   : m_axi_wstrb_reg;
+   //assign m_axi_wlast  = hawk_inactive ?  s_axi_wlast   : m_axi_wlast_reg;
+   //assign m_axi_wuser  = {WUSER_WIDTH{1'b0}}; //(WUSER_ENABLE) ? s_axi_wuser   : {WUSER_WIDTH{1'b0}};
+
+   assign m_axi_wvalid = s_axi_wvalid;
+   assign s_axi_wready = m_axi_wready; 
+   assign m_axi_wdata  = s_axi_wdata; 
+   assign m_axi_wstrb  = s_axi_wstrb; 
+   assign m_axi_wlast  = s_axi_wlast; 
+   assign m_axi_wuser  = {WUSER_WIDTH{1'b0}};
 
    //hawk req packet
    assign cpu_reqpkt.hppa  = m_axi_awaddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
    wire lookup;
    assign lookup= (p_state==WAIT_HAWK) && !(hawk_cpu_ovrd_pkt.allow_access | allow_cpu_access);
    assign cpu_reqpkt.valid = lookup;
-   assign cpu_reqpkt.zeroBlkWr= (p_state==WAIT_HAWK) && (&m_axi_wstrb_reg && ~(|m_axi_wdata_reg));
+   assign cpu_reqpkt.zeroBlkWr= 1'b0; //(p_state==WAIT_HAWK) && (&m_axi_wstrb_reg && ~(|m_axi_wdata_reg));
 
 endmodule

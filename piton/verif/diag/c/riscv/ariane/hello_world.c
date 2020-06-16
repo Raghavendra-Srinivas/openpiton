@@ -3,8 +3,16 @@
 #include <stdio.h>
 
 #define HACD_BASE    0xfff5100000ULL
-#define HPPA_BASE 0xfff6400000ULL
+
+//For DV
+//#define HPPA_BASE 0xfff6400000ULL
+//#define FOURKB 0x1000
+
+//For FPGA
+#define HPPA_BASE 0x80000000ULL //0x80100000ULL
 #define FOURKB 0x1000
+
+//PLIC - Not needed
 #define PLIC_BASE    0xfff1100000ULL
 
 #define IRQ_ENABLE_TARGET1 0x0002000 //Per IrQ 1 bit from lsb = 'b100 for hawk
@@ -14,15 +22,21 @@
 #define IRQ_PRIORITY_SRC1 0x0000004
 #define IRQ_PRIORITY_SRC2 0x0000008 //for hawk -set it to 3'b111
 #define IRQ_PRIORITY_SRC3 0x000000C //for hawk -set it to 3'b111
+//
+
 
 int main(int argc, char ** argv) {
-
-
-  printf("Hello World ..!\n");
-  printf("Performing HAWK Test ..\n");
   uint64_t *addr;
   volatile uint32_t val;
- 
+
+  printf("\nHello World ..!\n");
+  printf("Performing HAWK Test ..\n");
+  for (int k = 0; k < 1; k++) {
+    // assemble number and print
+    printf("Hello world, I am HART %d! Counting (%d of 32)...\n", argv[0][0], k);
+  }
+
+/* 
   addr = (uint32_t*)(PLIC_BASE+IRQ_ENABLE_TARGET1);
   val = *addr;
   printf("PLIC TARGET1 IRQ Enable before 0x%llx, data = 0x%x\n",addr,val);
@@ -44,7 +58,7 @@ int main(int argc, char ** argv) {
   *addr = (uint32_t) 0x1;
   printf("HACD: Cntrl result = 0x%016x\n",*addr);
  
-/*
+
   addr = (uint32_t*)(PLIC_BASE+IRQ_ENABLE_TARGET2);
   val = *addr;
   printf("PLIC TARGET2 IRQ Enable before 0x%llx, data = 0x%x\n",addr,val);
@@ -78,12 +92,21 @@ int main(int argc, char ** argv) {
  
 
 
-  /*  
+   addr = (uint64_t*)(0xD0000000); //hppa1
+   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+    
   //Read from HPPAs 
   //(1): At T1, READ HPPA1
-  addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
-  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //for (int k = 0; k < (8*262144)+128; k++) {
+  ////for (int k = 0; k < 10; k++) {
+  //  addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa1
+  //  //*addr = (uint32_t) k*0x12345678; 
+  //      if((k % 10000) == 0) {
+  //  		printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  //      }
+  //}
 
+ /*
   //(2): At T2, READ HPPA2
   addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa2
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);

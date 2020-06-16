@@ -528,7 +528,8 @@ set_false_path -from [get_clocks clk_osc_n] -to [get_clocks clk_osc_p]
 
 
 
-
+#Raghav adding 
+#set_property ALLOW_COMBINATORIAL_LOOPS TRUE [get_nets chipset/chipset_impl/mc_top/axi4_zeroer/p_13_in]
 
 #set_false_path -from [get_clocks core_ref_clk_clk_mmcm_1] -to [get_clocks clk_pll_i]
 

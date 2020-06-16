@@ -108,6 +108,25 @@ wire                                init_calib_complete;
 wire                                afifo_rst_1;
 wire                                afifo_rst_2;
 
+
+`ifdef HAWK_FPGA
+	//CUSTOM MODULE
+	//START
+	//VT HEAP LAB HACD
+	//CPU<->HACD
+	//hacd will observe these for request signals from cpu
+	HACD_AXI_WR_BUS#() cpu_axi_wr_bus();
+	HACD_AXI_RD_BUS#() cpu_axi_rd_bus();
+	
+	//HACD<->MC
+	//hacd will act as request master on request singslas to mc 
+	HACD_MC_AXI_WR_BUS#() mc_axi_wr_bus();
+	HACD_MC_AXI_RD_BUS#() mc_axi_rd_bus();
+`endif
+
+
+
+
 `ifndef PITONSYS_AXI4_MEM
  wire                               app_en;
  wire    [`MIG_APP_CMD_WIDTH-1 :0]  app_cmd;
@@ -1070,13 +1089,13 @@ noc_bidir_afifo  mig_afifo  (
 	//VT HEAP LAB HACD
 	   //CPU<->HACD
 	    //hacd will observe these for request signals from cpu
-	    HACD_AXI_WR_BUS#() cpu_axi_wr_bus();
-	    HACD_AXI_RD_BUS#() cpu_axi_rd_bus();
-	    
-	    //HACD<->MC
-	    //hacd will act as request master on request singslas to mc 
-	    HACD_MC_AXI_WR_BUS#() mc_axi_wr_bus();
-	    HACD_MC_AXI_RD_BUS#() mc_axi_rd_bus();
+	    //HACD_AXI_WR_BUS#() cpu_axi_wr_bus();
+	    //HACD_AXI_RD_BUS#() cpu_axi_rd_bus();
+	    //
+	    ////HACD<->MC
+	    ////hacd will act as request master on request singslas to mc 
+	    //HACD_MC_AXI_WR_BUS#() mc_axi_wr_bus();
+	    //HACD_MC_AXI_RD_BUS#() mc_axi_rd_bus();
 	
 	mig_7series_axi4 u_mig_7series_axi4 (
 	
@@ -1243,9 +1262,11 @@ assign m_axi_ruser= cpu_axi_rd_bus.axi_ruser;
 assign m_axi_rvalid= cpu_axi_rd_bus.axi_rvalid;
 assign cpu_axi_rd_bus.axi_rready =m_axi_rready;
 
-wire dump_mem;
+`endif //PITON_AXI4_MEM
+
 
 `ifdef HAWK_FPGA
+wire dump_mem;
 
 hacd_top  #(
 	.NOC_DWIDTH(`DATA_WIDTH),
@@ -1253,10 +1274,16 @@ hacd_top  #(
         .SwapEndianess  (               1 )
 ) 
 u_hacd_top (
-        //.clk_i                    ( core_ref_clk),
-        //.rst_ni                   ( sys_rst_n),
-    	.clk_i              (ui_clk                    ),  
-    	.rst_ni              (~noc_axi4_bridge_rst      ),
+        .cfg_clk_i                    ( core_ref_clk),
+        .cfg_rst_ni                   ( sys_rst_n),
+    	.clk_i              (ui_clk                    ), 
+
+	 `ifdef PITON_AXI4_MEM 
+    		.rst_ni              (~noc_axi4_bridge_rst),
+	 `else
+		.rst_ni              (~noc_mig_bridge_rst),
+	 `endif
+
 	.hawk_sw_ctrl(hawk_sw_ctrl),
 	.infl_interrupt           ( hacd_infl_interrupt),
 	.defl_interrupt           ( hacd_defl_interrupt),
@@ -1278,6 +1305,8 @@ u_hacd_top (
 ); 
 
 `else
+
+`ifdef PITON_AXI4_MEM
 
 localparam DOWN_RATIO = `HACD_AXI4_DATA_WIDTH/`HACD_MC_AXI4_DATA_WIDTH;
     logic [DOWN_RATIO-1:0][`HACD_MC_AXI4_DATA_WIDTH-1:0]   axi_slave_w_data_i;
@@ -1431,9 +1460,11 @@ axi_size_conv_DOWNSIZE #
     .axi_master_b_user_i(mc_axi_wr_bus.axi_buser),
     .axi_master_b_ready_o(mc_axi_wr_bus.axi_bready)    
   );		
+`endif
 
 `endif
 
+/*
 ila_1 debug_hawk_mc 
    (.clk(ui_clk),
     .probe0(1'b0), //(ui_clk),
@@ -1489,6 +1520,7 @@ ila_1 debug_hawk_mc
     .probe37 ('d0)
 
 );
+*/
 
 /*
 ila_0 debug_hawk_noc_axi 
@@ -1548,7 +1580,6 @@ ila_0 debug_hawk_noc_axi
 );
 */
 
-`endif //PITON_AXI4_MEM
 
 /*
   input clk;

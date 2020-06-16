@@ -16,6 +16,8 @@ module hacd #
 (parameter MODE=0
 ) (
 
+  input cfg_clk_i                    ,
+  input cfg_rst_ni                   ,
        input logic clk_i,
        input logic rst_ni,
        input [1:0] hawk_sw_ctrl,
@@ -48,8 +50,8 @@ module hacd #
  assign hawk_reg_inactive_ctrl =  w_hacd_ctrl[2];
 
 hacd_regs hacd_regs (
-  .rst_ni,
-  .clk_i,  
+  .rst_ni(cfg_rst_ni),
+  .clk_i(cfg_clk_i),  
   .req_i,
   .resp_o,
 
@@ -72,5 +74,11 @@ hacd_core u_hacd_core (
 
   .dump_mem
 );
+
+	ila_3 ila_3_hawk_reg (
+		.clk(clk_i),
+		.probe0({req_i.addr,resp_o.rdata}),
+		.probe1({req_i.valid,req_i.write,req_i.wstrb,resp_o.error,resp_o.ready,w_l_wm})
+	);
 
 endmodule

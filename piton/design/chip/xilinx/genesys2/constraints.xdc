@@ -23,6 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+set_property SEVERITY {Warning} [get_drc_checks UCIO-1]
 # Clock signals
 set_property IOSTANDARD LVDS [get_ports clk_osc_p]
 set_property PACKAGE_PIN AD12 [get_ports clk_osc_p]

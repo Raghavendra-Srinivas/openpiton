@@ -109,3 +109,9 @@
 `else
 `define OLED_STRING "OpenPiton+ArianePrinceton & ETHZA Collaboration "
 `endif
+
+`ifdef PITON_AXI4_MEM 
+	`define PITONSTREAM_SHIFT 6
+`else
+	`define PITONSTREAM_SHIFT `ADDR_TRANS_PHYS_WIDTH_ALIGN
+`endif

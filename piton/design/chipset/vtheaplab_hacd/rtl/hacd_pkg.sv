@@ -29,19 +29,18 @@ package hacd_pkg;
     parameter int COMPRESSION_RATIO=2; //4;
     parameter int DRAM_SIZE=1<<30; ////1GB
     parameter int PAGE_SIZE=1<<12; //4KB 
-    parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*(DRAM_SIZE/PAGE_SIZE);
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
+    parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*LST_ENTRY_MAX;
     
-    parameter int TABLE_OVERHEAD_PAGE_CNT = 1;
-    parameter int LIST_ENTRY_CNT=4; //LST_ENTRY_MAX - TABLE_OVERHEAD_PAGE_CNT // lower count for verification //update later
-    parameter int ATT_ENTRY_CNT=8; //COMPRESSION_RATIO*LIST_ENTRY_CNT;  
+    parameter int LIST_ENTRY_CNT= LST_ENTRY_MAX; //256; //LST_ENTRY_MAX - TABLE_OVERHEAD_PAGE_CNT // lower count for verification //update later
+    parameter int ATT_ENTRY_CNT= ATT_ENTRY_MAX; //512; //COMPRESSION_RATIO*LIST_ENTRY_CNT;  
 
    `ifdef HAWK_FPGA
     	parameter bit [63:0] DDR_START_ADDR=  64'h0; 
-    	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR + 64'h00100000; //100000
-        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + 64'h1000; //101000
-        parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + 64'h1000; //102000
-	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR + 64'h00200000; //200000
+    	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR; // 0x0
+        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + (ATT_ENTRY_MAX/8)*64'h40; //=0x400000 //8 ATT  entries can fit in one cache line //64'h1000; //0x1000
+        parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'h40;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
+	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  

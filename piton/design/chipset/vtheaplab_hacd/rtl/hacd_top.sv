@@ -12,6 +12,8 @@
 
 module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=64'h000000fff5100000, parameter bit          SwapEndianess   =  0)
 (
+  input cfg_clk_i                    ,
+  input cfg_rst_ni                   ,
   input clk_i                    ,
   input rst_ni                   ,
     input [1:0] hawk_sw_ctrl,
@@ -46,7 +48,7 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
   /////////////////////////////
   // HACD
   /////////////////////////////
-`ifndef SYNTH
+//`ifndef SYNTH
 
   AXI_BUS #(
     .AXI_ID_WIDTH   ( AxiIdWidth   ),
@@ -64,8 +66,8 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
     // this disables shifting of unaligned read data
     .ALIGN_RDATA            ( 0             )
   ) i_hacd_axilite_bridge (
-    .clk                    ( clk_i                        ),
-    .rst                    ( ~rst_ni                      ),
+    .clk                    ( cfg_clk_i                        ),
+    .rst                    ( ~cfg_rst_ni                      ),
     // to/from NOC
     .splitter_bridge_val    ( buf_hacd_noc2_valid_i ),
     .splitter_bridge_data   ( buf_hacd_noc2_data_i  ),
@@ -132,8 +134,8 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
   assign rword_d = (hacd_req.valid && !hacd_req.write) ? hacd_resp.rdata : rword_q;
   assign hacd_master.r_data = {hacd_resp.rdata, rword_q};
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : p_hacd_regs
-    if (!rst_ni) begin
+  always_ff @(posedge cfg_clk_i or negedge cfg_rst_ni) begin : p_hacd_regs
+    if (!cfg_rst_ni) begin
       state_q <= Idle;
       rword_q <= '0;
     end else begin
@@ -241,24 +243,27 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
       default: state_d = Idle;
     endcase
   end
-`endif
+//`endif
 
 
 
 hacd u_hacd(
+
+  .cfg_clk_i (cfg_clk_i),
+  .cfg_rst_ni (cfg_rst_ni),
   .clk_i (clk_i),
   .rst_ni (rst_ni),
 			.hawk_sw_ctrl(hawk_sw_ctrl),
   .infl_interrupt (infl_interrupt),
   .defl_interrupt (defl_interrupt),
 
-`ifdef SYNTH
-  .req_i ('d0),
-  .resp_o (),
-`else
+//`ifdef SYNTH
+//  .req_i ('d0),
+//  .resp_o (),
+//`else
   .req_i (hacd_req), 
   .resp_o (hacd_resp),
-`endif
+//`endif
 
   .cpu_axi_wr_bus(cpu_axi_wr_bus),
   .cpu_axi_rd_bus(cpu_axi_rd_bus),

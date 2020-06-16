@@ -35,6 +35,8 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   output logic pgwr_mngr_ready,
   output wire tbl_update_done,
 
+  //DEBUG
+  output [`FSM_WID-1:0] pwm_state,
   output wire dump_mem  //this is used to help in  DV sims to dump mem when desired during different phase during same sims
 );
 
@@ -115,6 +117,7 @@ function axi_wr_pld_t get_axi_wr_pkt;
 	lst_entry.rsvd = 'd0;
 	lst_entry.attEntryId='d0;
 
+	ppa='d0;
         if(etry_cnt=='d1) begin
 	   ppa = (HAWK_PPA_START>>12);
 	end
@@ -358,6 +361,7 @@ integer k;
 always@* begin
 //default
 	n_init_att_done = 1'b0;
+	n_init_list_done = 1'b0;		  
 	n_etry_cnt = p_etry_cnt; 
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_axireq= p_axireq;
@@ -645,17 +649,20 @@ assign pgwr_mngr_ready = p_state == IDLE;
 
 //done statuses
 //later useful to map it to status register if needed
-always @(posedge clk_i or negedge rst_ni)
+always @(posedge clk_i or negedge rst_ni) begin
 	if(!rst_ni) begin
 	  init_att_done <= 1'b0;
 	  init_list_done <= 1'b0;
   	end
 	else begin 
-	if(n_init_att_done)
-	  init_att_done <= 1'b1;
-	if(n_init_list_done)
-	  init_list_done <= 1'b1;
+		if(n_init_att_done) begin
+		  init_att_done <= 1'b1;
+		end
+		if(n_init_list_done) begin
+		  init_list_done <= 1'b1;
+		end
 	end
+end
 
 hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt;
 //Output combo signals
@@ -742,4 +749,18 @@ wire zspg_migrate;
 assign cmpdcmp_trigger = p_state == CMPDCMP;
 assign zspg_migrate = p_state == ZSPG_COMPACT;
 hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
+
+
+//DEBUG
+assign pwm_state = p_state;
+
+`ifdef HAWK_FPGA
+	ila_3 ila_3_hawk_pwm (
+		.clk(clk_i),
+		.probe0({tol_updpkt.attEntryId,tol_updpkt.tolEntryId}),
+		.probe1({pwm_state,init_att,init_list,init_att_done,init_list_done,p_etry_cnt,tol_updpkt.tbl_update,iWayORcPagePkt.update})
+	);
+`endif
+
+
 endmodule

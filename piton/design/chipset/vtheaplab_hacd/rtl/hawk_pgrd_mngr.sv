@@ -44,7 +44,10 @@ module hawk_pgrd_mngr (
 
   output hacd_pkg::trnsl_reqpkt_t trnsl_reqpkt,
   output hacd_pkg::tol_updpkt_t tol_updpkt,
-  output pgrd_mngr_ready
+  output pgrd_mngr_ready,
+
+  //DEBUG
+  output [`FSM_WID_PGRD-1:0] prm_state
 );
 
   //in waves, not able to obseves struct ports, so mapping for easier debug
@@ -75,15 +78,17 @@ localparam IDLE			='d0,
 	   LOOKUP_ATT	  	='d1,
 	   WAIT_ATT_ENTRY 	='d2,
 	   DECODE_ATT_ENTRY	='d3,
-	   POP_FREE_LST 	='d4,
-	   WAIT_LST_ENTRY	='d5,
-	   ALLOCATE_PPA 	='d6,
-	   TBL_UPDATE		='d7,
-	   TBL_UPDATE_DONE	='d8,
-	   COMPRESS		='d9,
-	   DECOMPRESS		='d10,
-	   COMPACT		='d11,
-	   BUS_ERROR		='d12;
+	   CHK_ATT_ENTRY	='d4,
+	   POP_FREE_LST 	='d5,
+	   WAIT_LST_ENTRY	='d6,
+           DECODE_LST_ENTRY	='d7,
+	   ALLOCATE_PPA 	='d8,
+	   TBL_UPDATE		='d9,
+	   TBL_UPDATE_DONE	='d10,
+	   COMPRESS		='d11,
+	   DECOMPRESS		='d12,
+	   COMPACT		='d13,
+	   BUS_ERROR		='d14;
 
 
 
@@ -139,7 +144,9 @@ always@* begin
 	n_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_rready=1'b1;   //no reason why we block read, as we are sure to issue arvlaid only when we need  
 	n_rdata=p_rdata;
+	n_trnsl_reqpkt = p_trnsl_reqpkt;
 	n_trnsl_reqpkt.allow_access=1'b0;
+	n_tol_updpkt = p_tol_updpkt;
 	n_tol_updpkt.tbl_update=1'b0;
 	n_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
 	n_decomp_freeWay=decomp_freeWay;
@@ -177,24 +184,25 @@ always@* begin
 		end
 		DECODE_ATT_ENTRY:begin
 			   n_trnsl_reqpkt=decode_AttEntry(lkup_reqpkt,p_rdata);
-			   //n_state = CHK_ATT_ENTRY;
-		//end
-	        //CHK_ATT_ENTRY: begin 
-	        //			//ATT 
-			   if     (n_trnsl_reqpkt.sts==STS_UNCOMP || n_trnsl_reqpkt.sts==STS_INCOMP) begin //this case though hit still needs att updateif there is zpd_cnt update
-					if(n_trnsl_reqpkt.zpd_update) begin
+			   n_trnsl_reqpkt.zpd_update=1'b0; //remove this later, not checkign zpd on fpga now
+			   n_state = CHK_ATT_ENTRY;
+		end
+	        CHK_ATT_ENTRY: begin 
+	        			//ATT 
+			   if     (p_trnsl_reqpkt.sts==STS_UNCOMP || p_trnsl_reqpkt.sts==STS_INCOMP) begin //this case though hit still needs att updateif there is zpd_cnt update
+					if(p_trnsl_reqpkt.zpd_update) begin
 						n_tol_updpkt.attEntryId=p_attEntryId;
-						n_tol_updpkt.lstEntry.way=n_trnsl_reqpkt.ppa;//now ATT way if freeway
+						n_tol_updpkt.lstEntry.way=p_trnsl_reqpkt.ppa;//now ATT way if freeway
 						n_tol_updpkt.ATT_UPDATE_ONLY=1'b1;
-						n_tol_updpkt.ATT_STS=n_trnsl_reqpkt.sts;
-						n_tol_updpkt.zpd_cnt=n_trnsl_reqpkt.zpd_cnt;
+						n_tol_updpkt.ATT_STS=p_trnsl_reqpkt.sts;
+						n_tol_updpkt.zpd_cnt=p_trnsl_reqpkt.zpd_cnt;
 						n_state = TBL_UPDATE;
 					end else begin
 						n_state = IDLE; // no change in zpd_cnt : nothing to do 
 						n_trnsl_reqpkt.allow_access=1'b1;
 					end
 			   end
-			   else if(n_trnsl_reqpkt.sts==STS_COMP) begin
+			   else if(p_trnsl_reqpkt.sts==STS_COMP) begin
 					n_state = POP_FREE_LST; 
 			   end
 			   else begin //DALLOC: if it powerup, everything is deallcoated, and if deallocated proactively, it means , freelist has been updated with that ppa.
@@ -215,13 +223,22 @@ always@* begin
 				    end 
 			  end
 		end
-		WAIT_LST_ENTRY: begin 
+		WAIT_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
-				     n_rdata=rdata; //get_8byte_byteswap(rdata);
+				if(rresp =='d0) begin
+				     n_rdata= rdata; //get_8byte_byteswap(rdata); //swap back the data, as we had written swapped format to be compatible with ariane. 
+				     n_state = DECODE_LST_ENTRY;
+				end
+				else n_state = BUS_ERROR;
+			  end
+		end
+		DECODE_LST_ENTRY: begin 
+			  //if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
+				     //n_rdata=rdata; //get_8byte_byteswap(rdata);
 				     //decode freeway from freelist from read
 				     //data
 
-				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,'d0,n_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
+				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,'d0,p_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
 					if(lkup_reqpkt.zeroBlkWr) begin
 						n_tol_updpkt.zpd_cnt='d1;
 					end
@@ -235,12 +252,12 @@ always@* begin
 					else begin
 				     		n_state = ALLOCATE_PPA;
 					end
-			  end
+			  //end
 		end
 
 		ALLOCATE_PPA: begin 
 					n_trnsl_reqpkt.ppa=tol_updpkt.lstEntry.way<<12;
-					n_trnsl_reqpkt.sts=UNCOMP;
+					n_trnsl_reqpkt.sts=STS_UNCOMP;
 				        n_state = TBL_UPDATE;	
 		end
 		TBL_UPDATE:begin
@@ -433,5 +450,17 @@ assign rdm_reset = (p_state==COMPRESS)   ? comp_rdm_reset :
 //muxing for ZsPg Pkt
 assign iWayORcPagePkt = (p_state==COMPRESS)   ? c_iWayORcPagePkt :
 			(p_state==DECOMPRESS) ? dc_iWayORcPagePkt : 'd0;
+
+
+//DEBUG
+assign prm_state = p_state;
+
+`ifdef HAWK_FPGA
+	ila_3 ila_3_hawk_prm (
+		.clk(clk_i),
+		.probe0(trnsl_reqpkt.ppa),
+		.probe1({prm_state,trnsl_reqpkt.allow_access,trnsl_reqpkt.sts,trnsl_reqpkt.zpd_update,trnsl_reqpkt.zpd_cnt})
+	);
+`endif
 
 endmodule

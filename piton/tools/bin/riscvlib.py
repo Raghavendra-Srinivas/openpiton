@@ -316,10 +316,11 @@ def gen_riscv_dts(devices, nCpus, cpuFreq, timeBaseFreq, periphFreq, dtsPath, ti
             addrLen  = devices[i]["length"]
             tmpStr += '''
         hacd@%08x {
-            compatible = "custom";
+            compatible = "hawk";
+            device_type = "custom_mc";
             reg = <%s>;
             clock-frequency = <%d>;
-            current-speed = <115200>;
+            current-speed = <200>;
             interrupt-parent = <&PLIC0>;
             interrupts = <%d>;
             reg-shift = <2>; // regs are spaced on 32 bit boundary

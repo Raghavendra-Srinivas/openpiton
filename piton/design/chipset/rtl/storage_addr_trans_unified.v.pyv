@@ -56,6 +56,7 @@ wire                          in_section_0;
 
 // align physical address, and use correct memory offsets as specified in platform config
 //print("assign bram_addr_0  = (({{(MEM_ADDR_WIDTH-VA_ADDR_WIDTH){1'b0}}, va_byte_addr} - 64'h%s) >> `ADDR_TRANS_PHYS_WIDTH_ALIGN) + 0;" % (memBegin));
+
 <%
 if PITON_ARIANE:
   for i in range(len(devices)):
@@ -64,8 +65,8 @@ if PITON_ARIANE:
           memStop  = memBegin + devices[i]["length"]
           memBegin = "%X" % memBegin
           memStop  = "%X" % memStop
-  print("assign bram_addr_0  = (({{(MEM_ADDR_WIDTH-VA_ADDR_WIDTH){1'b0}}, va_byte_addr} - 64'h%s) >> 6) + 0;" % (memBegin));
-  print("assign in_section_0 = (va_byte_addr >= 64'h%s) & (va_byte_addr < 64'h%s);" % (memBegin, memStop))
+	  print("assign bram_addr_0  = (({{(MEM_ADDR_WIDTH-VA_ADDR_WIDTH){1'b0}}, va_byte_addr} - 64'h%s) >> `PITONSTREAM_SHIFT) + 0;" % (memBegin))
+	  print("assign in_section_0 = (va_byte_addr >= 64'h%s) & (va_byte_addr < 64'h%s);" % (memBegin, memStop))
 %>
 
 assign storage_addr = ({STORAGE_ADDR_WIDTH{in_section_0}} & bram_addr_0[STORAGE_ADDR_WIDTH-1:0]);

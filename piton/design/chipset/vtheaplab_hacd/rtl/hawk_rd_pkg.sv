@@ -46,6 +46,15 @@ function automatic trnsl_reqpkt_t decode_AttEntry;
         	//decode
 		i=lkup_reqpkt.hppa[14:12];
 		att_entry=rdata[64*i+:64];
+		
+	       /*
+		case(lkup_reqpkt.hppa[14:12])
+		3'b000: begin 
+			att_entry = 
+
+		endcase */
+
+
 		if 	(att_entry.zpd_cnt!='d0 && !lkup_reqpkt.zeroBlkWr ) begin
         		decode_AttEntry.zpd_cnt = 'd0;
         		decode_AttEntry.zpd_update = 1'b1;
@@ -56,7 +65,7 @@ function automatic trnsl_reqpkt_t decode_AttEntry;
         		decode_AttEntry.zpd_cnt = att_entry.zpd_cnt;
         		decode_AttEntry.zpd_update = 1'b0;
 		end
-		decode_AttEntry.ppa=att_entry.way;
+		decode_AttEntry.ppa=att_entry.way<<12;
 		decode_AttEntry.sts=att_entry.sts;
 endfunction 
 

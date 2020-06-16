@@ -46,7 +46,9 @@ module hawk_ctrl_unit #()
     
     //to control cpu interface
     output hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_rdpkt,
-    output hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_wrpkt
+    output hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_wrpkt,
+  //DEBUG
+  output [`FSM_WID-1:0] cu_state
 );
 
 
@@ -189,5 +191,7 @@ begin
 	end
 end
 
+//DEBUG
+assign cu_state = p_state;
 
 endmodule
