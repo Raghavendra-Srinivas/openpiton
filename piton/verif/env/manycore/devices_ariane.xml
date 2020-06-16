@@ -78,7 +78,13 @@ Description: Peripheral address map for OpenPiton+Ariane configurations.
     </port>
     <port>
         <name>hawk_axi4mem</name>
+        <base>0xC0000000</base>
+        <length>0x4000000</length>
+    </port>
+<!--    <port>
+        <name>hawk_axi4mem</name>
         <base>0xfff6100000</base>
         <length>0x400000</length>
-    </port>
+    </port> -->
+
 </devices>
