@@ -245,7 +245,7 @@ always@* begin
 			  end
 		end
 		RESET_FIFO_PTRS:begin
-			   n_cmpt_rdm_reset = 1'b1; //Later connect this to WRITE FIFO as well. 
+			   n_cmpt_rdm_reset = 1'b1;  
 			   n_state=WAIT_RESET;
 		end
 		WAIT_RESET: begin

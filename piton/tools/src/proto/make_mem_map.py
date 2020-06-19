@@ -295,7 +295,7 @@ def memImageData(fname):
             # section_list.append(Section(start,fullAddr(addr-8),addr_val_dict))
     f.close()
 
-    # printAddrDataMap(addr_val_dict)
+    printAddrDataMap(addr_val_dict)
     return addr_val_dict
 
 def mapToBram(section_list, st_brd):

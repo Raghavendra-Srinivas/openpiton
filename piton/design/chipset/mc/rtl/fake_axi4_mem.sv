@@ -15,7 +15,7 @@ module  fake_axi4_mem (
 //} axi_wr_req_t;
 
 //axi_wr_req_t wrreq_queue[$];
-bit [5:0] wrreq_queue[$];
+bit [`HACD_MC_AXI4_ID_WIDTH-1:0] wrreq_queue[$];
 
 typedef bit [63:0] ADDR;
 logic [`HACD_MC_AXI4_DATA_WIDTH-1:0] MEM[ADDR][2]; 
@@ -35,7 +35,7 @@ endgenerate
 
 initial
 begin
-	logic [5:0] bid;
+	logic [`HACD_MC_AXI4_ID_WIDTH-1:0] bid;
 	fork 
 		begin : MANAGE_WRITE
 			bit [63:0] capt_addr;
@@ -84,8 +84,8 @@ begin
 			end
 		end : MANAGE_WRITE
 		begin : MANAGE_READ
-			bit [63:0] capt_addr;
-			logic [5:0] capt_id;
+			bit [`HACD_MC_AXI4_ADDR_WIDTH-1:0] capt_addr;
+			logic [`HACD_MC_AXI4_ID_WIDTH-1:0] capt_id;
 			//Wait for reset
 			@(negedge rst_n);
 			forever begin
@@ -146,7 +146,6 @@ end
 
 //Manage Write Response
 initial begin
-	//bit [5:0] bid;
 	fork 
 	 begin :MANAGE_BRESP
 		forever begin

@@ -776,7 +776,7 @@ assign cpu_axi_wr_bus.axi_awuser=m_axi_awuser;//'d0;
 assign cpu_axi_wr_bus.axi_awvalid=m_axi_awvalid;//'d0;
 assign m_axi_awready = cpu_axi_wr_bus.axi_awready;
 //W
-assign cpu_axi_wr_bus.axi_wid=m_axi_wid;//'d0;
+//assign cpu_axi_wr_bus.axi_wid=m_axi_wid;//'d0;
 assign cpu_axi_wr_bus.axi_wdata=m_axi_wdata;//'d0;
 assign cpu_axi_wr_bus.axi_wstrb=m_axi_wstrb;//'d0;
 assign cpu_axi_wr_bus.axi_wlast=m_axi_wlast;//'d0;

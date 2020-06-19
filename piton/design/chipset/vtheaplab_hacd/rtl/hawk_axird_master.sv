@@ -90,7 +90,7 @@ parameter RESP_OFFSET  = ID_OFFSET + ID_WIDTH;
 parameter RUSER_OFFSET = RESP_OFFSET + 2;
 parameter RWIDTH       = RUSER_OFFSET + (RUSER_ENABLE ? RUSER_WIDTH : 0);
 
-parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH)+1;
+parameter FIFO_ADDR_WIDTH = $clog2(FIFO_DEPTH); //+1;
 
 reg [FIFO_ADDR_WIDTH:0] wr_ptr_reg = {FIFO_ADDR_WIDTH+1{1'b0}}, wr_ptr_next;
 reg [FIFO_ADDR_WIDTH:0] wr_addr_reg = {FIFO_ADDR_WIDTH+1{1'b0}};

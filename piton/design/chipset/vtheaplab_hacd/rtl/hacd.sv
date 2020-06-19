@@ -75,10 +75,13 @@ hacd_core u_hacd_core (
   .dump_mem
 );
 
+`ifdef HAWK_FPGA_DBG
 	ila_3 ila_3_hawk_reg (
 		.clk(clk_i),
 		.probe0({req_i.addr,resp_o.rdata}),
 		.probe1({req_i.valid,req_i.write,req_i.wstrb,resp_o.error,resp_o.ready,w_l_wm})
 	);
+`endif
+
 
 endmodule

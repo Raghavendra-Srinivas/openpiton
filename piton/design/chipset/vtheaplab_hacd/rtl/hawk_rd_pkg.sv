@@ -122,7 +122,7 @@ function automatic tol_updpkt_t get_Tolpkt;
 	//handle other table update later
 
 endfunction
-localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd64}; //supportable compressed sizes in bytes, just one for now
+localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd64}; //{14'd1088}; //{14'd64}; //supportable compressed sizes in bytes, just one for now
 function automatic logic [7:0] get_idx;
 	input logic [13:0] size;
 	integer i; 

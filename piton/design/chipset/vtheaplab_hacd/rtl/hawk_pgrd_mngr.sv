@@ -279,7 +279,7 @@ always@* begin
 					//decompressor or for new Hppa ?
 					if(p_trnsl_reqpkt.sts==STS_COMP) begin //my Attenry says compressed, then I am doen servicing for decompressor, so give freeway to it
 						n_decomp_freeWay=cmpresn_freeWay<<12;
-			   			n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
+			   			n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa>>12; // attEntry ppa will be where compressed page is stored
 						n_state = DECOMPRESS; 
 					end else begin //I am done serving for new hppa ,so share freeway over translation request 	
 						n_trnsl_reqpkt.ppa=cmpresn_freeWay<<12;

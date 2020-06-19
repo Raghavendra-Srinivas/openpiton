@@ -31,22 +31,24 @@ package hacd_pkg;
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*LST_ENTRY_MAX;
-    
-    parameter int LIST_ENTRY_CNT= LST_ENTRY_MAX; //256; //LST_ENTRY_MAX - TABLE_OVERHEAD_PAGE_CNT // lower count for verification //update later
-    parameter int ATT_ENTRY_CNT= ATT_ENTRY_MAX; //512; //COMPRESSION_RATIO*LIST_ENTRY_CNT;  
+   
 
    `ifdef HAWK_FPGA
+    	parameter int LIST_ENTRY_CNT= LST_ENTRY_MAX; 
+    	parameter int ATT_ENTRY_CNT= ATT_ENTRY_MAX;  
     	parameter bit [63:0] DDR_START_ADDR=  64'h0; 
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR; // 0x0
         parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + (ATT_ENTRY_MAX/8)*64'h40; //=0x400000 //8 ATT  entries can fit in one cache line //64'h1000; //0x1000
         parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'h40;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter bit [63:0] DDR_START_ADDR=  64'hC0000000; //64'hFFF6100000;
+    	parameter int LIST_ENTRY_CNT=4;
+	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
+    	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
-    	parameter bit [63:0] HAWK_LIST_START= 64'hC0100000; //64'hFFF6200000; //HAWK_ATT_START + 'd64;//HAWK_ATT_START+ ceil(ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)*BLK_SIZE;//64'hFFF6200000; 
-    	parameter bit [63:0] HAWK_PPA_START = 64'hC0200000; //64'hFFF6300000; //DDR_START_ADDR + 'd4096;//One page allocated for table for bringup//HAWK_LIST_START + ceil((LIST_ENTRY_CNT/LST_ENTRY_PER_BLK))*BLK_SIZE ; //64'hFFF6300000;
-    	parameter bit [63:0] HPPA_BASE_ADDR=  64'hC0400000; //64'hFFF6400000; //for DV
+    	parameter bit [63:0] HAWK_LIST_START= 64'hFFF6200000; //64'hC0100000; //64'hFFF6200000; //HAWK_ATT_START + 'd64;//HAWK_ATT_START+ ceil(ATT_ENTRY_CNT/ATT_ENTRY_PER_BLK)*BLK_SIZE;//64'hFFF6200000; 
+    	parameter bit [63:0] HAWK_PPA_START = 64'hFFF6300000; //64'hC0200000; //64'hFFF6300000; //DDR_START_ADDR + 'd4096;//One page allocated for table for bringup//HAWK_LIST_START + ceil((LIST_ENTRY_CNT/LST_ENTRY_PER_BLK))*BLK_SIZE ; //64'hFFF6300000;
+    	parameter bit [63:0] HPPA_BASE_ADDR=  64'hFFF6400000; //64'hC0400000; //64'hFFF6400000; //for DV
    `endif
 
 

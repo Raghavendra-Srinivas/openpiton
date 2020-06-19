@@ -76,15 +76,15 @@ Description: Peripheral address map for OpenPiton+Ariane configurations.
         <length>0x1000</length>
         <stream_accessible/>
     </port>
-    <port>
+<!--     <port>
         <name>hawk_axi4mem</name>
         <base>0xC0000000</base>
         <length>0x4000000</length>
-    </port>
-<!--    <port>
+    </port> -->
+    <port>
         <name>hawk_axi4mem</name>
         <base>0xfff6100000</base>
         <length>0x400000</length>
-    </port> -->
+    </port>
 
 </devices>
