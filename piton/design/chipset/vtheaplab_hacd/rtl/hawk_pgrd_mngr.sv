@@ -24,6 +24,7 @@ module hawk_pgrd_mngr (
   input logic [13:0] comp_size,
   output logic comp_start,
   input wire comp_done,
+  input wire incompressible,
 
   output logic decomp_start,
   input wire decomp_done,

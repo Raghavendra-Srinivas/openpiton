@@ -35,4 +35,5 @@
 `define HACD_MC_AXI4_BURST_SIZE 3'b110 //for one memory block of 64bytes
 `define HACD_MC_AXI4_BURST_TYPE 2'b01 //for one memory block of 64bytes
 
+`define FIFO_PTR_WIDTH 6
 

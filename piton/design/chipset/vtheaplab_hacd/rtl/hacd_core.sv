@@ -65,7 +65,7 @@ module hacd_core (
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
    hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt;
 
-   wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full;
+   wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full,wrfifo_full;
    assign rdfifo_rdptr_rst = 1'b0;
    assign rdfifo_wrptr_rst = 1'b0;
 
@@ -212,27 +212,77 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_bready(stall_axi_wr_bus.axi_bready)
 );
 
-
-
-
-
-
-
-//
 wire compdecomp_rready;
+wire [`FIFO_PTR_WIDTH-1:0] comdecomp_rdfifo_rdptr;
+wire comdecomp_ld_rdfifo_rdptr;
+//for now, addign mux for read channel from axird master 
+logic axird_master_rready,axird_master_rvalid;
+logic comp_decomp_rd_valid;
+always@* begin
+ if(comp_start || decomp_start) begin //rready from comp_decmp unit and rdata goes to it
+	axird_master_rready  = compdecomp_rready;	
+        comp_decomp_rd_valid = axird_master_rvalid; 
+        rd_resppkt.rvalid = 1'b0;
+	
+ end else begin
+   	axird_master_rready = rd_reqpkt.rready;  
+	comp_decomp_rd_valid = 1'b0;
+	rd_resppkt.rvalid = axird_master_rvalid;
+ end
+end
+
+logic compdecomp_wr_valid,axiwr_master_wvalid;
+logic [`HACD_AXI4_STRB_WIDTH -1:0] compdecomp_wr_strb,axiwr_master_wstrb;
+logic  [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data,axiwr_master_wdata;
+
+//Mux between compdecomp unit and hawk to access write FIFO
+`ifdef NAIVE_COMPRESSION
+always@* begin
+ if(comp_start || decomp_start) begin //rready from comp_decmp unit and rdata goes to it
+        axiwr_master_wvalid = compdecomp_wr_valid;
+	axiwr_master_wstrb  = compdecomp_wr_strb;
+	axiwr_master_wdata =  compdecomp_wr_data;
+ end else begin
+        axiwr_master_wvalid = wr_reqpkt.wvalid; 
+	axiwr_master_wstrb  = wr_reqpkt.strb;
+	axiwr_master_wdata =  wr_reqpkt.data;
+ end
+end
+`else
+        assign axiwr_master_wvalid = wr_reqpkt.wvalid; 
+	assign axiwr_master_wstrb  = wr_reqpkt.strb;
+	assign axiwr_master_wdata =  wr_reqpkt.data;
+
+`endif
+
+wire incompressible;
 hawk_comdecomp u_hawk_comdecomp(
      .clk_i,
      .rst_ni,
      .comp_size,
      .comp_start,
      .comp_done,
+     .incompressible,
      .decomp_start,
      .decomp_done,
      //.rdfifo_rdptr_rst,
      .rdfifo_empty(rdfifo_empty),
-     .rdfifo_full(rdfifo_full),
-     .compdecomp_rready(compdecomp_rready)
+     .wrfifo_full(wrfifo_full),
+     .compdecomp_rready(compdecomp_rready),
+     .rd_data(rd_resppkt.rdata),
+     .rd_rresp(rd_resppkt.rresp),
+     .rd_valid(comp_decomp_rd_valid),
+     .rdfifo_rdptr(comdecomp_rdfifo_rdptr),
+     .ld_rdfifo_rdptr(comdecomp_ld_rdfifo_rdptr),
+
+     //WrFifo interface
+     .wr_req(compdecomp_wr_valid),
+     .wr_strb(compdecomp_wr_strb),
+     .wr_data(compdecomp_wr_data)
 );
+
+
+
 //////Hawk Read Master
     hawk_axird_master u_hawk_axird_mstr (
       .clk(clk_i),
@@ -243,7 +293,9 @@ hawk_comdecomp u_hawk_comdecomp(
      .rdfifo_wrptr_rst(rdfifo_wrptr_rst),
      .rdfifo_empty(rdfifo_empty),
      .rdfifo_full(rdfifo_full),
-     
+     .rdfifo_rdptr(comdecomp_rdfifo_rdptr),
+     .ld_rdfifo_rdptr(comdecomp_ld_rdfifo_rdptr),
+ 
      .s_axi_arid(6'd0),//in-order for now
      .s_axi_araddr(rd_reqpkt.addr),
      .s_axi_arlen(rd_reqpkt.arlen), //fix to 1 beat always for hawk now
@@ -262,8 +314,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .s_axi_rresp(rd_resppkt.rresp),
      .s_axi_rlast(rd_resppkt.rlast),
      .s_axi_ruser(), //not used for now
-     .s_axi_rvalid(rd_resppkt.rvalid),
-     .s_axi_rready(rd_reqpkt.rready || (comp_start & compdecomp_rready)),
+     .s_axi_rvalid(axird_master_rvalid), //rd_resppkt.rvalid),
+     .s_axi_rready(axird_master_rready),
 
      .m_axi_arid(hawk_axi_rd_bus.axi_arid),
      .m_axi_araddr(hawk_axi_rd_bus.axi_araddr),
@@ -291,13 +343,13 @@ hawk_comdecomp u_hawk_comdecomp(
      hawk_axiwr_master hawk_axiwr_mstr (
 	.clk(clk_i),
 	.rst(!rst_ni),
-	.s_axi_wdata(wr_reqpkt.data), 	      //wr_blk_data), 	 //from hk_pgwr_manager
-        .s_axi_wstrb(wr_reqpkt.strb),
-	.s_axi_wvalid(wr_reqpkt.wvalid),      //wr_blk_vld), 	 //from hk_pgwr_manager
-	.s_axi_wready(wr_rdypkt.wready),      //wr_data_fifo_ready),
-	.s_axi_awaddr(wr_reqpkt.addr),        //wr_blk_adrr), 	 //from hk_pgwr_manager
-	.s_axi_awvalid(wr_reqpkt.awvalid),    //wr_blk_addr_vld), //from hk_pgwr_manager
-	.s_axi_awready(wr_rdypkt.awready),    //wr_addr_fifo_ready),
+	.s_axi_wdata(axiwr_master_wdata),   //(wr_reqpkt.data), 	      	 //from hk_pgwr_manager
+        .s_axi_wstrb(axiwr_master_wstrb), 		    //(wr_reqpkt.strb),
+	.s_axi_wvalid(axiwr_master_wvalid), //(wr_reqpkt.wvalid),       	 //from hk_pgwr_manager
+	.s_axi_wready(wr_rdypkt.wready),      
+	.s_axi_awaddr(wr_reqpkt.addr),         	 //from hk_pgwr_manager
+	.s_axi_awvalid(wr_reqpkt.awvalid),     //from hk_pgwr_manager
+	.s_axi_awready(wr_rdypkt.awready),    
         .s_axi_bready(1'b1), //wr_reqpkt.bready),
 	.s_axi_bresp(wr_resppkt.bresp),
 	.s_axi_bvalid(wr_resppkt.bvalid),

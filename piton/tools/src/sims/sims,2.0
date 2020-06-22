@@ -2586,6 +2586,7 @@ sub parse_args
             'dmbr!',
             'dmbr_checker!',
             'oram!',
+            'naive_compression!',
            );
 
   # print out all command line arguments + config arguments
@@ -2804,6 +2805,11 @@ sub parse_args
   }
 
 }
+
+
+################################################################################
+  push (@{$opt{config_rtl}}, "NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
+################################################################################
 
 ################################################################################
 # get options from the diaglist if necessary

@@ -21,6 +21,8 @@ module hawk_cmpresn_mngr (
     input logic [13:0] comp_size,
     output logic comp_start,
     input wire comp_done,
+    input wire incompressible,
+
     output hacd_pkg::iWayORcPagePkt_t c_iWayORcPagePkt,
   
     //from AXI FIFO
@@ -71,20 +73,21 @@ localparam IDLE			     ='d0,
 	   WAIT_RESET		     ='d5,
 	   BURST_READ		     ='d6,
 	   COMP_WAIT		     ='d7,
-	   COMP_DONE		     ='d8,
-	   FETCH_ZSPAGE		     ='d9,
-	   WAIT_ZSPAGE		     ='d10,	
-	   DECODE_ZSPGE_IWAY	     ='d11,
-	   PREP_ZSPAGE_MD	     ='d12,
-	   UPDATE_ATT_POP_UCMP_HEAD  ='d13,
-	   MIGRATE_TO_ZSPAGE	     ='d14,
-	   POP_IFL		     ='d15,	
-	   FREEWAY_OR_CONTINUE	     ='d16,
-	   TOL_UPDATE_FREEWAY_ENTRY  ='d17,
-	   ATT_UPDATE_FREEWAY_ENTRY  ='d18,
-	   DONE			     ='d19,	
-	   COMP_MNGR_ERROR	     ='d20,
-	   BUS_ERROR		     ='d21;
+	   POP_UCMP_PUSH_INCOMP	     ='d8,
+	   COMP_DONE		     ='d9,
+	   FETCH_ZSPAGE		     ='d10,
+	   WAIT_ZSPAGE		     ='d11,	
+	   DECODE_ZSPGE_IWAY	     ='d12,
+	   PREP_ZSPAGE_MD	     ='d13,
+	   UPDATE_ATT_POP_UCMP_HEAD  ='d14,
+	   MIGRATE_TO_ZSPAGE	     ='d15,
+	   POP_IFL		     ='d16,	
+	   FREEWAY_OR_CONTINUE	     ='d17,
+	   TOL_UPDATE_FREEWAY_ENTRY  ='d18,
+	   ATT_UPDATE_FREEWAY_ENTRY  ='d19,
+	   DONE			     ='d20,	
+	   COMP_MNGR_ERROR	     ='d21,
+	   BUS_ERROR		     ='d22;
 
 logic [7:0] size_idx;
 
@@ -129,7 +132,7 @@ always@* begin
 				n_state=PEEK_UCMP_HEAD;
 			end
 		end
-		PEEK_UCMP_HEAD: begin
+		PEEK_UCMP_HEAD: begin //TODO: UCOMP List Null case is not handled here
 			if(arready && !arvalid) begin
 			           n_comp_axireq = get_axi_rd_pkt(tol_HT.uncompListHead,p_attEntryId,AXI_RD_TOL); 
 			           n_comp_req_arvalid = 1'b1;
@@ -185,10 +188,28 @@ always@* begin
 		
 		end
 		COMP_WAIT:begin
-			if(comp_done) begin
+			if (incompressible) begin
+				n_state=POP_UCMP_PUSH_INCOMP;
+		  	end
+			else if(comp_done) begin
 			   n_comp_rdm_reset = 1'b1;
 			   n_state=COMP_DONE;
 			end
+		end
+		POP_UCMP_PUSH_INCOMP: begin //coding in progress for this state
+				if( pgwr_mngr_ready) begin //update ATT and TOL then 
+					n_comp_tol_updpkt.attEntryId=p_listEntry.attEntryId;//tol_HT.uncompListHead;
+					n_comp_tol_updpkt.tolEntryId=tol_HT.uncompListHead;
+				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
+					n_comp_tol_updpkt.lstEntry.way=p_listEntry.way;
+				  	n_comp_tol_updpkt.lstEntry.attEntryId=p_listEntry.attEntryId;
+					n_comp_tol_updpkt.src_list=UNCOMP;
+					n_comp_tol_updpkt.dst_list= INCOMP;
+					n_comp_tol_updpkt.tbl_update=1'b1;
+				end
+			        if(tbl_update_done) begin
+						n_state= PEEK_UCMP_HEAD;
+				end
 		end
 		COMP_DONE:begin
         		   n_comp_rready=1'b0;     
@@ -387,11 +408,13 @@ always@* begin
 					n_state = DONE; 
 				end
 		end
+
 		DONE: begin
 					n_cmpresn_done=1'b1;
 					n_cmpresn_freeWay=p_listEntry.way;
 					n_state = IDLE; //we are done  
 		end
+
 		COMP_MNGR_ERROR: begin
 			   n_state = COMP_MNGR_ERROR;
 		end

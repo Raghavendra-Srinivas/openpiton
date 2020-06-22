@@ -89,15 +89,12 @@ int main(int argc, char ** argv) {
   *addr=val; 
   printf("PLIC PRIORITY SRC2 after 0x%llx, data = 0x%x\n",addr,*addr);
  */
-
- 
-
-
     
   //Read from HPPAs 
   //(1): At T1, READ HPPA1
   addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+
  
   //(2): At T2, READ HPPA2
   addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa2

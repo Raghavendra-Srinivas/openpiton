@@ -34,6 +34,8 @@ module hawk_axird_master #
     input wire rdfifo_wrptr_rst, //this would reset read pointer to zero
     output wire rdfifo_empty,
     output wire rdfifo_full,
+    input wire [`FIFO_PTR_WIDTH-1:0] rdfifo_rdptr,
+    input wire ld_rdfifo_rdptr,
    
     /*
      * AXI slave interface
@@ -359,7 +361,11 @@ always @(posedge clk) begin
     end else if (rdfifo_rdptr_rst) begin //this is required for compressor unit
         rd_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
         mem_read_data_valid_reg <= 1'b0;
-    end else begin
+    end else if (ld_rdfifo_rdptr) begin //this support just for naive compression , can combine reest and this later
+        rd_ptr_reg <= {1'b0,rdfifo_rdptr};
+        mem_read_data_valid_reg <= 1'b0;
+    end
+    else begin
         rd_ptr_reg <= rd_ptr_next;
         mem_read_data_valid_reg <= mem_read_data_valid_next;
     end

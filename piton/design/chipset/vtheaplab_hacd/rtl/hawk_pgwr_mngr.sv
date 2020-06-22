@@ -45,6 +45,8 @@ logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListHead,freeListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_freeListTail,freeListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListHead,uncompListHead;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_uncompListTail,uncompListTail;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_incompListHead,incompListHead;
+logic [clogb2(LST_ENTRY_MAX)-1:0] n_incompListTail,incompListTail;
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstHead[IFLST_COUNT],IfLstHead[IFLST_COUNT];
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstTail[IFLST_COUNT],IfLstTail[IFLST_COUNT];
 
@@ -236,7 +238,11 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		else if(tbl_updat_pkt.src_list == FREE && tbl_updat_pkt.dst_list==UNCOMP) begin
 			att_entry.sts=STS_UNCOMP;
 			att_entry.zpd_cnt=tbl_updat_pkt.zpd_cnt;
-		end //handl others: by default I make it do to to COMP as there are too many irregular free lists and so no need to compare
+		end 
+		else if(tbl_updat_pkt.src_list == UNCOMP && tbl_updat_pkt.dst_list==INCOMP) begin
+			att_entry.sts=STS_INCOMP; 
+		end 
+		//handl others: by default I make it do to to COMP as there are too many irregular free lists and so no need to compare
 		else begin
 			att_entry.sts=STS_COMP; //zpd_cnt gets default of 0
 		end
@@ -366,7 +372,7 @@ always@* begin
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_axireq= p_axireq;
 	n_etry_cnt = p_etry_cnt;         //retain previous
-	n_req_awvalid = 1'b0; 	       //reset->fsm decides when to send packet
+	n_req_awvalid = p_req_awvalid && !awready; //1'b0; 	       //reset->fsm decides when to send packet
 	n_req_wvalid = 1'b0; 	       //reset->fsm decides when to send packet
 
 	n_tol_updpkt=p_tol_updpkt;
@@ -411,19 +417,22 @@ always@* begin
 
 		end
 		INIT_ATT:begin
-			  if(awready && !awvalid) begin
+			  if(/*awready &&*/ !awvalid) begin
 				  //handle ATT initialization 
 				  if(p_etry_cnt <=(ATT_ENTRY_CNT)) begin //8 becuase 8 entry
 				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr); //prepare next packet
 				     n_req_awvalid = 1'b1;
 			  	     n_etry_cnt = p_etry_cnt + 1;
-				     n_state = WAIT_ATT;
+				     //n_state = WAIT_ATT;
 				  end
 				  else begin
 				     n_init_att_done = 1'b1;		  
-				     n_state = IDLE;
+				     n_state = WAIT_BRESP; //IDLE;
 				  end
 
+			  end
+			  if(awready && awvalid) begin
+				     n_state = WAIT_ATT;
 			  end 
 		end
 		WAIT_ATT: begin 
@@ -433,20 +442,23 @@ always@* begin
 			  end
 		end
 		INIT_LIST:begin
-			  if(awready && !awvalid) begin
+			  if(/*awready &&*/ !awvalid) begin
 				  //handle LIST initialization
 				  if (p_etry_cnt <= LIST_ENTRY_CNT) begin
 				     n_axireq = get_axi_wr_pkt(p_etry_cnt,p_state,p_axireq.addr); //prepare next packet
 				     
 				     n_req_awvalid = 1'b1;
 			  	     n_etry_cnt = p_etry_cnt + 1;
-				     n_state = WAIT_LIST;
+				     //n_state = WAIT_LIST;
 				  end
 				  else begin
 					n_freeListTail=p_etry_cnt-'d1;
 				        n_init_list_done = 1'b1;		  
-					n_state = IDLE;
+					n_state = WAIT_BRESP; //IDLE;
 				  end
+			  end 
+			  if(awready && awvalid) begin
+				     n_state = WAIT_LIST;
 			  end 
 		end	
 		WAIT_LIST: begin //we can hve multipel beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
@@ -456,11 +468,14 @@ always@* begin
 			  end
 		end
 		ATT_UPDATE : begin
-			  if(awready && !awvalid) begin
+			  if(/*awready &&*/ !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,'d0); //prepare next packet//lst argument is don't care
 				     n_req_awvalid = 1'b1;
-				     n_state = WAIT_ATT_UPDATE;
+				     //n_state = WAIT_ATT_UPDATE;
 			  end
+			  if(awready && awvalid) begin
+				     n_state = WAIT_ATT_UPDATE;
+			  end 
 		end
 		WAIT_ATT_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
@@ -500,11 +515,14 @@ always@* begin
 					 IFL_SIZE1  : OPC=POP_HEAD;
 					 IFL_DETACH :  OPC=PUSH_HEAD;
 					endcase
-			  		if(awready && !awvalid) begin
+			  		if(/*awready &&*/ !awvalid) begin
 			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 			  	           n_req_awvalid = 1'b1;
-			  	           n_state = WAIT_TOL_SLST_UPDATE;
+			  	           //n_state = WAIT_TOL_SLST_UPDATE;
 			  		end
+			  if(awready && awvalid) begin
+			  	           n_state = WAIT_TOL_SLST_UPDATE;
+			  end 
 		end
 		WAIT_TOL_SLST_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
@@ -528,16 +546,20 @@ always@* begin
 					case(p_tol_updpkt.dst_list)
 					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
+					 INCOMP : OPC=PUSH_HEAD;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
 					 IFL_DETACH  : OPC=NULLIFY; 
 					 NULLIFY   : OPC=NULLIFY;
 					endcase
 				//$display("RAGHAV dst list in DLST_UPDATE1=%0d",p_tol_updpkt.dst_list);
-			  if(awready && !awvalid) begin
+			  if(/*awready &&*/ !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 				     n_req_awvalid = 1'b1;
-				     n_state = WAIT_TOL_DLST_UPDATE1;
+				     //n_state = WAIT_TOL_DLST_UPDATE1;
 			  end
+			  if(awready && awvalid) begin
+				     n_state = WAIT_TOL_DLST_UPDATE1;
+			  end 
 		end
 		WAIT_TOL_DLST_UPDATE1: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
@@ -553,6 +575,11 @@ always@* begin
 					   	 n_IfLstTail[k]=p_tol_updpkt.tolEntryId; //I will become the Tail 
 				                 n_state = WAIT_BRESP;
 				        end
+					else if (p_tol_updpkt.dst_list==INCOMP && (incompListHead==NULL)) begin //for uncomp list as destination, it is push back
+					   	n_incompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
+					   	n_incompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
+				                n_state = WAIT_BRESP;
+					end
 					else if (p_tol_updpkt.dst_list==NULLIFY || p_tol_updpkt.dst_list==IFL_DETACH) begin //we don't need second UPDATE for nullify or detach entry
 				                 n_state = WAIT_BRESP;
 					end
@@ -566,19 +593,26 @@ always@* begin
 					case(p_tol_updpkt.dst_list)
 					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
+					 INCOMP    : OPC=PUSH_HEAD;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
 					 NULLIFY   : OPC=NULLIFY;
 					endcase
-			  if(awready && !awvalid) begin
+			  if(/*awready &&*/ !awvalid) begin
 				     n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
 				     n_req_awvalid = 1'b1;
-				     n_state = WAIT_TOL_DLST_UPDATE2;
+				     //n_state = WAIT_TOL_DLST_UPDATE2;
 			  end
+			  if(awready && awvalid) begin
+				     n_state = WAIT_TOL_DLST_UPDATE2;
+			  end 
 		end
 		WAIT_TOL_DLST_UPDATE2: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
 						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
+					end
+					else if(p_tol_updpkt.dst_list==INCOMP) begin //for incomp list as destination, it is push front/head
+						n_incompListHead=p_tol_updpkt.tolEntryId; // I would become head
 					end
 					else begin //by default we consdier as irregular free list and it si push head for ifl
 						k=p_tol_updpkt.ifl_idx;
@@ -708,11 +742,15 @@ always @(posedge clk_i or negedge rst_ni) begin
 		freeListTail<='d0; 
 		uncompListHead<='d0; 
 		uncompListTail<='d0;
+		incompListHead<='d0; 
+		incompListTail<='d0;
 	end else begin
 		freeListHead<=n_freeListHead;
 		freeListTail<=n_freeListTail; 
 		uncompListHead<=n_uncompListHead; 
 		uncompListTail<=n_uncompListTail;
+		incompListHead<=n_incompListHead; 
+		incompListTail<=n_incompListTail;
 	end
 end
 genvar if_h;
@@ -739,6 +777,8 @@ assign tol_HT.freeListHead=freeListHead;
 assign tol_HT.freeListTail=freeListTail;
 assign tol_HT.uncompListHead=uncompListHead;
 assign tol_HT.uncompListTail=uncompListTail;
+assign tol_HT.incompListHead=incompListHead;
+assign tol_HT.incompListTail=incompListTail;
 
 
 //For DV

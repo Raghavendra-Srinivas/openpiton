@@ -23,6 +23,7 @@ localparam IDLE	='d0,
 always@* begin
 	n_wr_reqpkt='d0;
 	n_wr_reqpkt.addr=p_wr_reqpkt.addr;
+	n_wr_reqpkt.awvalid = int_wr_reqpkt.awvalid && !wr_rdypkt.awready;
 	n_state=p_state;
 	case(p_state)
 		IDLE: begin
@@ -31,9 +32,11 @@ always@* begin
 			end
 		end
 		CMND: begin
-			  if(wr_rdypkt.awready && !int_wr_reqpkt.awvalid) begin
+			  if(/*wr_rdypkt.awready &&*/ !int_wr_reqpkt.awvalid) begin
 				n_wr_reqpkt.addr=int_axi_req.addr;
 				n_wr_reqpkt.awvalid=1'b1;
+			  end
+			  if (int_wr_reqpkt.awvalid && wr_rdypkt.awready)  begin
 				n_state=DATA;
 			  end
 		end

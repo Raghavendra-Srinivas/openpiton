@@ -262,6 +262,8 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0] freeListTail;	
   logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListHead;	
   logic [clogb2(LST_ENTRY_MAX)-1:0] uncompListTail;
+  logic [clogb2(LST_ENTRY_MAX)-1:0] incompListHead;	
+  logic [clogb2(LST_ENTRY_MAX)-1:0] incompListTail;
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstHead[IFLST_COUNT];	
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstTail[IFLST_COUNT];	
  } hawk_tol_ht_t;

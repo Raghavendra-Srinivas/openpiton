@@ -5,18 +5,21 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     input comp_start,
     output logic [13:0] comp_size,
 
-    output [FIFO_PTR_WIDTH-1:0] fifo_ptr,
+    output logic [FIFO_PTR_WIDTH-1:0] rdfifo_rdptr,
+    output logic ld_rdfifo_rdptr,
 
-    input fifo_empty,
-    output rd_req,
+    input rdfifo_empty,
+    output logic rd_req,
     input [`HACD_AXI4_DATA_WIDTH-1:0] rd_data,
+    input [1:0] rd_rresp,
     input rd_valid,
 
     input fifo_full,
-    output wr_req,
-    output [`HACD_AXI4_DATA_WIDTH-1:0] wr_data,
+    output logic wr_req,
+    output logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data,
 
-    output comp_done
+    output logic incompressible,
+    output logic comp_done
 );
 
 // Zero chunk metadata
@@ -41,13 +44,16 @@ localparam [2:0] IDLE=0,
 		 COMPRESS=3,
 		 LOAD_FIFO_RDPTR=4,
 		 FIFO_READ_TRNSFR=5,
-		 DONE=6;
+		 DONE=6,
+		 BUS_ERROR=7;
 
 logic [2:0] n_state,p_state;
 logic [6:0] n_cacheline_cnt,cacheline_cnt;
 logic n_rd_req;
 logic n_incompressible; 
 logic n_comp_done;
+logic n_ld_rdfifo_rdptr;
+logic [FIFO_PTR_WIDTH-1:0] n_rdfifo_rdptr;
 
 always@(*) begin
 	n_state = p_state;
@@ -56,22 +62,28 @@ always@(*) begin
 	n_zero_cline_cntr_curr=zero_cline_cntr_curr;
 	n_incompressible=1'b0;
 	n_comp_done = 1'b0;
+	n_ld_rdfifo_rdptr = 1'b0;
+
 	case(p_state) 
 	  	IDLE: begin
-			if(comp_start && !fifo_empty) begin
+			if(comp_start && !rdfifo_empty) begin
 				n_state<=COMP_CHECK1;
 			end
 		end
 	  COMP_CHECK1: begin
-			n_rd_req=!fifo_empty;
+			n_rd_req=!rdfifo_empty;
 			if (cacheline_cnt == 'd64) begin
 				n_state=COMP_CHECK2;
 			end
 			else if(cacheline_cnt < 'd64 && rd_valid) begin
-			   	n_cacheline_cnt=cacheline_cnt+'d1;
-				 if(rd_data =='d0) begin
-					n_zero_cline_cntr_curr = zero_cline_cntr_curr + 'd1;
-				 end		
+				if(rd_rresp=='d0) begin
+			   		n_cacheline_cnt=cacheline_cnt+'d1;
+				 	if(rd_data =='d0) begin
+						n_zero_cline_cntr_curr = zero_cline_cntr_curr + 'd1;
+				 	end	
+				end else begin
+					n_state=BUS_ERROR;
+				end	
 			end
 		end
 	  COMP_CHECK2: begin
@@ -86,27 +98,27 @@ always@(*) begin
 			//reset rd pointer only to rd_fifo
 			if(!fifo_full) begin
 	 		   n_state=LOAD_FIFO_RDPTR;
-			   n_wrd_ata = {zero_chunk_vec,'d0};
+			   n_wr_data = {zero_chunk_vec,'d0};
 			   n_wr_req = 1'b1;
 			end
 	 	end
 	 LOAD_FIFO_RDPTR:begin
 		//if(!zero_chunk_vec[0]) begin
-	 	//   n_fifo_ptr = 0;
+	 	//   n_rdfifo_rdptr = 0;
 		//end else if (!zero_chunk_vec[1]) begin
-	 	//   n_fifo_ptr = 'd15;
+	 	//   n_rdfifo_rdptr = 'd15;
 		//end
-		   n_fifo_ptr = (!zero_chunk_vec[0]) ? 'd0  : 
+		   n_rdfifo_rdptr = (!zero_chunk_vec[0]) ? 'd0  : 
 			     (!zero_chunk_vec[1]) ? 'd15 :	
 			     (!zero_chunk_vec[2]) ? 'd31 :	
 			     (!zero_chunk_vec[3]) ? 'd47 ;	
 	
-		   n_ld_fifo_ptr = 1'b1;
+		   n_ld_rdfifo_rdptr = 1'b1;
 	 	   n_state=FIFO_READ_TRNSFR;
 		   n_cacheline_cnt = 'd0;
 	 end
 	 FIFO_READ_TRNSFR: begin
-		   rd_req=!fifo_empty;
+		   rd_req=!rdfifo_empty;
 		   if (cacheline_cnt == 'd16) begin
 			n_state=DONE;
 		   end
@@ -124,6 +136,11 @@ always@(*) begin
 	   	   	n_state = IDLE;
 		   end
 	 end
+	 BUS_ERROR: begin
+			   //assert trigger, connect it to spare LED.
+			   //Stay here forever unless, user resets
+			   n_state = BUS_ERROR;
+	 end
 
 	endcase
 	end
@@ -137,6 +154,9 @@ begin
 		incompressible<=1'b0;
 		zero_cline_cntr_curr<='d0;
 
+		rdfifo_rdptr<='d0;
+		ld_rdfifo_rdptr<=1'b0;
+
 		wr_data='d0;
 		wr_req=1'b0;
 	
@@ -148,7 +168,9 @@ begin
 		incompressible<=n_incompressible;
 		zero_cline_cntr_curr=n_zero_cline_cntr_curr;
 	
-		fifo_ptr<=n_fifo_ptr;
+		rdfifo_rdptr<=n_rdfifo_rdptr;
+		ld_rdfifo_rdptr<=n_ld_rdfifo_rdptr;
+
 		//Write	
 		wr_data<=n_wr_data;
 		wr_req<=n_wr_req;

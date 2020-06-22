@@ -41,7 +41,7 @@ module hawk_axiwr_master #
     // Write data FIFO depth (cycles)
     parameter FIFO_DEPTH = `HACD_AXI_MASTER_FIFO_DEPTH, //48 for 3.5KB
     // Hold write address until write data in FIFO, if possible
-    parameter FIFO_DELAY = 1
+    parameter FIFO_DELAY = 0
 )
 (
     input  wire                     clk,

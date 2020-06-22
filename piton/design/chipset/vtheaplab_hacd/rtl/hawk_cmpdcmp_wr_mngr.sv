@@ -16,7 +16,7 @@ module hawk_cmpdcmp_wr_mngr(
 );
 //int axi_engine
 logic sent;
-logic send;
+logic n_send,send;
 logic int_ready;
 hacd_pkg::axi_wr_pld_t int_axi_req;
 //
@@ -39,7 +39,7 @@ endfunction
 
 always@* begin
 	n_state=p_state;
-	send=1'b0;
+	n_send=1'b0;
 	n_burst_cnt=p_burst_cnt;	
 	case(p_state)
 		IDLE: begin
@@ -67,7 +67,7 @@ always@* begin
 			    		int_axi_req.addr=iWayORcPagePkt.cPage_byteStart;
 					int_axi_req.data={32{16'h1234}};
 					int_axi_req.strb={64{1'b1}};
-					send=1'b1;
+					n_send=1'b1;
 				end
 				if(sent) begin
 					n_state=ZS_PAGE_UPDATE;
@@ -85,7 +85,7 @@ always@* begin
 				   end
 				   int_axi_req.data={32{16'hF0F0}};
 				   int_axi_req.strb={64{1'b1}};
-				   send=1'b1;
+				   n_send=1'b1;
 				end
 				if (p_burst_cnt[6]==1'b1 && sent) begin
 				      n_state=ZS_PAGE_UPDATE;
@@ -94,7 +94,7 @@ always@* begin
 		ZS_PAGE_UPDATE: begin
 				if(int_ready) begin
 			    		int_axi_req=get_zspg_axi_wrpkt(iWayORcPagePkt);
-					send=1'b1;
+					n_send=1'b1;
 				end
 				if(sent) begin
 					n_state=DONE;
@@ -106,7 +106,7 @@ always@* begin
 			    		int_axi_req.addr=zspg_mig_pkt.dst_cpage_ptr;
 					int_axi_req.data={32{16'h1234}}; //Here, We shoudl actually pop from read side fifo for compressed size; just writing known comp data for now
 					int_axi_req.strb={64{1'b1}};
-					send=1'b1;
+					n_send=1'b1;
 				end
 				if(sent) begin
 					n_state=DONE;
@@ -119,7 +119,7 @@ always@* begin
 					int_axi_req.data[(50*8-1)+2*48:2*48]=zspg_mig_pkt.md;
 					int_axi_req.strb={64{1'b0}};
 					int_axi_req.strb[61:12]={50{1'b1}}; //50bytes of metadata leaving 12 bytes for pointers at LSB.
-					send=1'b1;
+					n_send=1'b1;
 				end
 				if(sent) begin
 					n_state=DONE;
@@ -135,10 +135,12 @@ begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
 		p_burst_cnt <= 'd0;
+		send<=1'b0;
 	end
 	else begin
  		p_state <= n_state;	
 		p_burst_cnt <= n_burst_cnt;
+		send<=n_send;
 	end
 end
 assign cmpdcmp_done = p_state == DONE;

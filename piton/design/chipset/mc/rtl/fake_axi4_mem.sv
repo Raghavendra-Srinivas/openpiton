@@ -197,6 +197,8 @@ input [17:0] freeListHead;
 input [17:0] freeListTail;
 input [17:0] uncompListHead;
 input [17:0] uncompListTail;
+input [17:0] incompListHead;
+input [17:0] incompListTail;
 input [17:0] ifLstHead1;
 input [17:0] ifLstTail1;
 
@@ -206,7 +208,7 @@ ListEntry lstentry[2];
 int att_cnt=cnt,lst_enry_id=cnt;
 
 string listentry_name;
-bit [17:0] prev_free_next,prev_uncomp_next,prev_ifl64_next;
+bit [17:0] prev_free_next,prev_uncomp_next,prev_incomp_next,prev_ifl64_next;
 
 //Print Current Head and Tail of lists
 $display("--------------------------ToL Head and Tails----------------------------------------------------");
@@ -214,6 +216,8 @@ $display("         FreeList HEAD : %0d" ,freeListHead);
 $display("         FreeList TAIL : %0d" ,freeListTail);
 $display("       UncompList HEAD : %0d" ,uncompListHead);
 $display("       UncompList TAIL : %0d" ,uncompListTail);
+$display("       IncompList HEAD : %0d" ,incompListHead);
+$display("       IncompList TAIL : %0d" ,incompListTail);
 $display("IrglrFreeList-64B HEAD : %0d" ,ifLstHead1);
 $display("IrglrFreeList-64B TAIL : %0d" ,ifLstTail1);
 $display("------------------------------------------------------------------------------------------------");
@@ -239,6 +243,8 @@ foreach(MEM[addr]) begin
 			   prev_free_next=lstentry[j].next;
 			end else if (uncompListHead==lst_enry_id) begin
 			   prev_uncomp_next=lstentry[j].next;
+			end else if (incompListHead==lst_enry_id) begin
+			   prev_incomp_next=lstentry[j].next;
 			end else if (ifLstHead1 ==lst_enry_id) begin
 			   prev_ifl64_next=lstentry[j].next;
 			end
@@ -315,6 +321,8 @@ foreach(MEM[addr]) begin
 			listentry_name="FREE_HEAL";
 		end else if  (uncompListHead==lst_enry_id) begin
 			listentry_name="UCMP_HEAL";
+		end else if  (incompListHead==lst_enry_id) begin
+			listentry_name="ICMP_HEAL";
 		end else if (ifLstHead1==lst_enry_id) begin
 			listentry_name="IF64_HEAL";
 		end else begin
@@ -325,6 +333,7 @@ foreach(MEM[addr]) begin
 		case(lst_enry_id)
 			freeListHead:  begin listentry_name="FREE_HEAD"; prev_free_next=lstentry[j].next; end
 			uncompListHead:begin listentry_name="UCMP_HEAD"; prev_uncomp_next=lstentry[j].next; end
+			incompListHead:begin listentry_name="ICMP_HEAD"; prev_incomp_next=lstentry[j].next; end
 			ifLstHead1    :begin listentry_name="IF64_HEAD"; prev_ifl64_next=lstentry[j].next; end
 		endcase
         end 
@@ -332,6 +341,7 @@ foreach(MEM[addr]) begin
 		case(lst_enry_id)
 			freeListTail:  begin listentry_name="FREE_TAIL"; end
 			uncompListTail:begin listentry_name="UCMP_TAIL"; end
+			incompListTail:begin listentry_name="ICMP_TAIL"; end
 			ifLstTail1    :begin listentry_name="IF64_TAIL"; end
 		endcase
         end
@@ -339,6 +349,7 @@ foreach(MEM[addr]) begin
 		case(lst_enry_id)
 			prev_free_next:  begin listentry_name="FREE     "; prev_free_next=lstentry[j].next; end //update my next
 			prev_uncomp_next:begin listentry_name="UCMP     "; prev_uncomp_next=lstentry[j].next;end //update my next
+			prev_incomp_next:begin listentry_name="ICMP     "; prev_incomp_next=lstentry[j].next;end //update my next
 			prev_ifl64_next: begin listentry_name="If64     "; prev_ifl64_next=lstentry[j].next;end //update my next
 			default:	 begin listentry_name="MIDL     "; end //we are broken here, we can't trace middle entries if they appear not in order, we need to parse entire list once, before printing->update later
 		endcase
@@ -376,6 +387,8 @@ assign freeListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.
 assign freeListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.freeListTail[17:0];
 assign uncompListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListHead[17:0];
 assign uncompListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.uncompListTail[17:0];
+assign incompListHead=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.incompListHead[17:0];
+assign incompListTail=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.incompListTail[17:0];
 assign ifLstHead1=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.iflst_head;
 assign ifLstTail1=cmp_top.system.chipset.chipset_impl.u_mc_top_new.u_hacd_top.u_hacd.u_hacd_core.u_hawk_pgwr_mngr.iflst_tail;
 
@@ -388,7 +401,7 @@ forever begin
   			$display("-----------------------------------------------------------------------------------------------------------");
   			$display("---------------------------------------------MEMORY DUMP START-----------------------------------------------");
   			$display("-----------------------------------------------------------------------------------------------------------");
-			dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,ifLstHead1,ifLstTail1);
+			dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,incompListHead,incompListTail,ifLstHead1,ifLstTail1);
   			$display("-----------------------------------------------------------------------------------------------------------");
   			$display("---------------------------------------------MEMORY DUMP END-----------------------------------------------");
   			$display("-----------------------------------------------------------------------------------------------------------");
@@ -403,7 +416,7 @@ final begin
   $display("-----------------------------------------------------------------------------------------------------------");
   $display("---------------------------------------------MEMORY DUMP START-----------------------------------------------");
   $display("-----------------------------------------------------------------------------------------------------------");
-  dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,ifLstHead1,ifLstTail1);
+  dump_mem_func(1,freeListHead,freeListTail,uncompListHead,uncompListTail,incompListHead,incompListTail,ifLstHead1,ifLstTail1);
   $display("-----------------------------------------------------------------------------------------------------------");
   $display("---------------------------------------------MEMORY DUMP END-----------------------------------------------");
   $display("-----------------------------------------------------------------------------------------------------------");
