@@ -19,6 +19,8 @@ hawk_axi_xbar_wrapper.sv
 hacd_core.sv
 hacd.sv
 hacd_top.sv
+comp_decomp/compressor.sv
+comp_decomp/decompressor.sv
 axi/priority_encoder.v
 axi/arbiter.v
 axi/axi_crossbar.v
@@ -28,3 +30,9 @@ axi/axi_crossbar_wr.v
 axi/axi_register_wr.v
 axi/axi_register_rd.v
 axi/axi_size_conv_DOWNSIZE.sv
+aes_testbench/test_aes_128.v
+aes/aes_128.v
+aes/aes_192.v
+aes/aes_256.v
+aes/round.v
+aes/table.v

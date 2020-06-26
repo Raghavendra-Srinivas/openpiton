@@ -14,7 +14,7 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     input [1:0] rd_rresp,
     input rd_valid,
 
-    input fifo_full,
+    input wrfifo_full,
     output logic wr_req,
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data,
 
@@ -35,9 +35,6 @@ wire compress;
 assign zero_chunk_cnt = zero_chunk_vec[0] + zero_chunk_vec[1] + zero_chunk_vec[2] + zero_chunk_vec[3];
 assign compress = zero_chunk_cnt >= 3;
 
-//Read Logic
-//Read Entire Page and Check if it's compresssible
-
 localparam [2:0] IDLE=0,
 		 COMP_CHECK1=1,
 		 COMP_CHECK2=2,
@@ -54,6 +51,8 @@ logic n_incompressible;
 logic n_comp_done;
 logic n_ld_rdfifo_rdptr;
 logic [FIFO_PTR_WIDTH-1:0] n_rdfifo_rdptr;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] n_wr_data;
+logic n_wr_req;
 
 always@(*) begin
 	n_state = p_state;
@@ -96,9 +95,9 @@ always@(*) begin
 		end
 	 COMPRESS: begin //naive compression just send metadata in first cache line then , follwed by non-zero 16 cacheline chunk.
 			//reset rd pointer only to rd_fifo
-			if(!fifo_full) begin
+			if(!wrfifo_full) begin
 	 		   n_state=LOAD_FIFO_RDPTR;
-			   n_wr_data = {zero_chunk_vec,'d0};
+			   n_wr_data = {'d0,zero_chunk_vec};
 			   n_wr_req = 1'b1;
 			end
 	 	end
@@ -109,23 +108,27 @@ always@(*) begin
 	 	//   n_rdfifo_rdptr = 'd15;
 		//end
 		   n_rdfifo_rdptr = (!zero_chunk_vec[0]) ? 'd0  : 
-			     (!zero_chunk_vec[1]) ? 'd15 :	
-			     (!zero_chunk_vec[2]) ? 'd31 :	
-			     (!zero_chunk_vec[3]) ? 'd47 ;	
+			            (!zero_chunk_vec[1]) ? 'd15 :	
+			            (!zero_chunk_vec[2]) ? 'd31 :	
+			            (!zero_chunk_vec[3]) ? 'd47 : 'd0;	
 	
-		   n_ld_rdfifo_rdptr = 1'b1;
+		   n_ld_rdfifo_rdptr = ~(&zero_chunk_vec); //at-least one bit is zero
 	 	   n_state=FIFO_READ_TRNSFR;
 		   n_cacheline_cnt = 'd0;
 	 end
 	 FIFO_READ_TRNSFR: begin
-		   rd_req=!rdfifo_empty;
+	 	   n_rd_req=!rdfifo_empty && !wrfifo_full; //issue read only if read fifo non-empty and write fifo is not full
 		   if (cacheline_cnt == 'd16) begin
 			n_state=DONE;
 		   end
 		   else if(cacheline_cnt < 'd64 && rd_valid) begin
-		      	n_cacheline_cnt = cacheline_cnt+'d1;
-		   	n_wr_data = rd_data;
-			n_wr_req  = 1'b1;
+			if(rd_rresp=='d0) begin
+		      		n_cacheline_cnt = cacheline_cnt+'d1;
+		   		n_wr_data = rd_data;
+				n_wr_req  = 1'b1;
+			end else begin
+				n_state=BUS_ERROR;
+			end	
 		   end		
 	 end
 	 DONE: begin
@@ -143,7 +146,6 @@ always@(*) begin
 	 end
 
 	endcase
-	end
 end
 
 always @(posedge clk_i or negedge rst_ni)

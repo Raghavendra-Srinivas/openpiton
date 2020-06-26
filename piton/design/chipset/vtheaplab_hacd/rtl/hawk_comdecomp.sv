@@ -18,13 +18,13 @@ module hawk_comdecomp (
     input [`HACD_AXI4_DATA_WIDTH-1:0] rd_data,
     input [1:0] rd_rresp,
     input rd_valid,
-    output [`FIFO_PTR_WIDTH-1:0] rdfifo_rdptr,
-    output logic ld_rdfifo_rdptr,
+    output [`FIFO_PTR_WIDTH-1:0] compdecomp_rdfifo_rdptr,
+    output logic compdecomp_ld_rdfifo_rdptr,
     
 
-    output wr_req,
-    output [`HACD_AXI4_STRB_WIDTH -1:0] wr_strb,
-    output [`HACD_AXI4_DATA_WIDTH-1:0] wr_data
+    output compdecomp_wr_req,
+    output [`HACD_AXI4_STRB_WIDTH -1:0] compdecomp_wr_strb,
+    output [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data
 
 );
 
@@ -44,10 +44,23 @@ module hawk_comdecomp (
 	
 
 `else
-wire rd_req;
+logic [`FIFO_PTR_WIDTH-1:0] comp_rdfifo_rdptr,decomp_rdfifo_rdptr;
+logic comp_ld_rdfifo_rdptr,decomp_ld_rdfifo_rdptr;
+logic comp_rd_req,decomp_rd_req;
+logic comp_wr_req,decomp_wr_req;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] comp_wr_data,decomp_wr_data;
+logic [`HACD_AXI4_STRB_WIDTH -1:0] comp_wr_strb,decomp_wr_strb;
 
-assign compdecomp_rready = rd_req; //||
-assign wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity
+
+assign compdecomp_rready = decomp_start ? decomp_rd_req : comp_rd_req;
+assign compdecomp_ld_rdfifo_rdptr = decomp_start ? decomp_ld_rdfifo_rdptr : comp_ld_rdfifo_rdptr;
+assign compdecomp_rdfifo_rdptr = decomp_start ? decomp_rdfifo_rdptr : comp_rdfifo_rdptr;
+
+assign compdecomp_wr_req = decomp_start ? decomp_wr_req : comp_wr_req;
+assign compdecomp_wr_strb = decomp_start ? decomp_wr_strb : comp_wr_strb;
+assign compdecomp_wr_data = decomp_start ? decomp_wr_data : comp_wr_data;
+
+assign comp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity
  	//Naive Compression Unit
  	compressor u_compressor (
  	   .clk_i,
@@ -56,26 +69,47 @@ assign wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packi
  	   .comp_start,
  	   .comp_size,
 
- 	   .rdfifo_rdptr,
-	   .ld_rdfifo_rdptr,
+ 	   .rdfifo_rdptr(comp_rdfifo_rdptr),
+	   .ld_rdfifo_rdptr(comp_ld_rdfifo_rdptr),
  	   .rdfifo_empty,
 
- 	   .rd_req,
+ 	   .rd_req(comp_rd_req),
  	   .rd_data,
 	   .rd_rresp,
  	   .rd_valid,
 
- 	   .fifo_full(wrfifo_full),
- 	   .wr_req,
- 	   .wr_data,
+ 	   .wrfifo_full,
+ 	   .wr_req(comp_wr_req),
+ 	   .wr_data(comp_wr_data),
 	
 	   .incompressible,
  	   .comp_done
-
  	);
 
+assign decomp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity
  	//Naive Decompression Unit
+ 	decompressor u_decompressor (
+ 	   .clk_i,
+ 	   .rst_ni,
 
+ 	   .decomp_start,
+ 	   .comp_size,
+
+ 	   .rdfifo_rdptr(decomp_rdfifo_rdptr),
+	   .ld_rdfifo_rdptr(decomp_ld_rdfifo_rdptr),
+ 	   .rdfifo_empty,
+
+ 	   .rd_req(decomp_rd_req),
+ 	   .rd_data,
+	   .rd_rresp,
+ 	   .rd_valid,
+
+ 	   .wrfifo_full,
+ 	   .wr_req(decomp_wr_req),
+ 	   .wr_data(decomp_wr_data),
+	
+ 	   .decomp_done
+ 	);
 
 `endif
  

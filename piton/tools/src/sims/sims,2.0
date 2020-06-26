@@ -172,6 +172,7 @@ Getopt::Long::Configure ('no_auto_abbrev') ;
         'pal_use_tgseed' => 0,
         'parallel' => 0,
         'ariane' => 0,
+	'naive_compression' => 0,
         'pico' => 0,
         'pico_het' => 0,
         'post_process_cmd' => [],
@@ -322,6 +323,7 @@ GetOptions (\%opt,
             'model_dir=s',
             'parallel!',
             'ariane!',
+	    'naive_compression!',
             'pico!',
             'pico_het!',
             'regress!',
@@ -2718,6 +2720,7 @@ sub parse_args
   push (@{$opt{config_rtl}}, "PITON_ARIANE")   if ($opt{ariane});
   push (@{$opt{config_rtl}}, "WT_DCACHE")      if ($opt{ariane});
 
+  push (@{$opt{config_rtl}}, "NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
 
   if ($opt{pico} or $opt{pico_het} or $opt{ariane}) {
     push (@{$opt{config_rtl}}, "NO_MRA_VAL") ;
@@ -2808,7 +2811,6 @@ sub parse_args
 
 
 ################################################################################
-  push (@{$opt{config_rtl}}, "NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
 ################################################################################
 
 ################################################################################

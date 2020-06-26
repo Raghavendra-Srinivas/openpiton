@@ -272,13 +272,13 @@ hawk_comdecomp u_hawk_comdecomp(
      .rd_data(rd_resppkt.rdata),
      .rd_rresp(rd_resppkt.rresp),
      .rd_valid(comp_decomp_rd_valid),
-     .rdfifo_rdptr(comdecomp_rdfifo_rdptr),
-     .ld_rdfifo_rdptr(comdecomp_ld_rdfifo_rdptr),
+     .compdecomp_rdfifo_rdptr(comdecomp_rdfifo_rdptr),
+     .compdecomp_ld_rdfifo_rdptr(comdecomp_ld_rdfifo_rdptr),
 
      //WrFifo interface
-     .wr_req(compdecomp_wr_valid),
-     .wr_strb(compdecomp_wr_strb),
-     .wr_data(compdecomp_wr_data)
+     .compdecomp_wr_req(compdecomp_wr_valid),
+     .compdecomp_wr_strb(compdecomp_wr_strb),
+     .compdecomp_wr_data(compdecomp_wr_data)
 );
 
 
