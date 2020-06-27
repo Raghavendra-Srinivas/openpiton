@@ -47,7 +47,9 @@ module hawk_axiwr_master #
     input  wire                     clk,
     input  wire                     rst,
 
+
     //FIFO
+    output wire wrfifo_full,
     //Wdata 
     input  wire                    s_axi_wvalid,
     output wire                    s_axi_wready,
@@ -167,6 +169,7 @@ wire full = ((wr_ptr_reg[FIFO_ADDR_WIDTH] != rd_ptr_reg[FIFO_ADDR_WIDTH]) &&
 // empty when pointers match exactly
 wire empty = wr_ptr_reg == rd_ptr_reg;
 
+
 wire hold;
 
 // control signals
@@ -174,7 +177,7 @@ reg write;
 reg read;
 reg store_output;
 
-
+assign wrfifo_full = full;
 assign s_axi_wready = !full && !hold;
 
 generate

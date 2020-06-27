@@ -266,9 +266,9 @@ hawk_comdecomp u_hawk_comdecomp(
      .decomp_start,
      .decomp_done,
      //.rdfifo_rdptr_rst,
-     .rdfifo_empty(rdfifo_empty),
-     .wrfifo_full(wrfifo_full),
-     .compdecomp_rready(compdecomp_rready),
+     .rdfifo_empty,
+     .wrfifo_full,
+     .compdecomp_rready,
      .rd_data(rd_resppkt.rdata),
      .rd_rresp(rd_resppkt.rresp),
      .rd_valid(comp_decomp_rd_valid),
@@ -343,6 +343,7 @@ hawk_comdecomp u_hawk_comdecomp(
      hawk_axiwr_master hawk_axiwr_mstr (
 	.clk(clk_i),
 	.rst(!rst_ni),
+	.wrfifo_full,
 	.s_axi_wdata(axiwr_master_wdata),   //(wr_reqpkt.data), 	      	 //from hk_pgwr_manager
         .s_axi_wstrb(axiwr_master_wstrb), 		    //(wr_reqpkt.strb),
 	.s_axi_wvalid(axiwr_master_wvalid), //(wr_reqpkt.wvalid),       	 //from hk_pgwr_manager

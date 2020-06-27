@@ -224,6 +224,7 @@ function automatic logic [511:0] get_8byte_byteswap;
 	//For hawk byteswap does not matter
 		//get_8byte_byteswap=data;
 endfunction 
+
 function automatic logic [63:0] get_strb_swap;
 	input logic [63:0] data;
 	integer i,j;
@@ -241,6 +242,14 @@ function automatic logic [63:0] get_strb_swap;
 	//For hawk byteswap does not matter
 	//get_strb_swap=data;	
 endfunction 
+
+function automatic logic [63:0] get_reverse_strb;
+	input logic [63:0] strb_in;
+	integer i;
+  	for(i=0;i<64;i=i+1) begin
+		get_reverse_strb[63-i]=strb_in[i];
+	end
+endfunction
  
   //generic helper function automatics
   function automatic integer clogb2;

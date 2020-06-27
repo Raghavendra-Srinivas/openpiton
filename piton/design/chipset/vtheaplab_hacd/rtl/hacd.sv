@@ -84,6 +84,6 @@ hacd_core u_hacd_core (
 `endif
 
 
-test_aes_128 u_test_aes_128();
+//test_aes_128 u_test_aes_128();
 
 endmodule

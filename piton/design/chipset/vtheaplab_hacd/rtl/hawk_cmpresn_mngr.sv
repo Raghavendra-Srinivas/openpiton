@@ -110,8 +110,8 @@ always@* begin
 	n_comp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_comp_rready=1'b1;     
 	n_comp_rdata=p_rdata;
-	n_comp_tol_updpkt.tbl_update=1'b0;
-	n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
+	n_comp_tol_updpkt='d0; //.tbl_update=1'b0;
+	//n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
 	n_iWayORcPagePkt=c_iWayORcPagePkt;
@@ -189,11 +189,14 @@ always@* begin
 		end
 		COMP_WAIT:begin
 			if (incompressible) begin
-				n_state=POP_UCMP_PUSH_INCOMP;
+			   n_comp_rdm_reset = 1'b1; //chk
+			   n_state=POP_UCMP_PUSH_INCOMP;
+			   n_comp_start=1'b0;
 		  	end
 			else if(comp_done) begin
-			   n_comp_rdm_reset = 1'b1;
+			   n_comp_rdm_reset = 1'b1; //chk
 			   n_state=COMP_DONE;
+			   n_comp_start=1'b0;
 			end
 		end
 		POP_UCMP_PUSH_INCOMP: begin //coding in progress for this state
@@ -206,15 +209,19 @@ always@* begin
 					n_comp_tol_updpkt.src_list=UNCOMP;
 					n_comp_tol_updpkt.dst_list= INCOMP;
 					n_comp_tol_updpkt.tbl_update=1'b1;
+			
+				`ifdef HAWK_SIMS
+					$display("attEntryId=%d,tolEntryId=%d, list entry attID=%d",p_listEntry.attEntryId,tol_HT.uncompListHead,p_listEntry.attEntryId);
+				`endif
 				end
 			        if(tbl_update_done) begin
 						n_state= PEEK_UCMP_HEAD;
 				end
 		end
 		COMP_DONE:begin
-        		   n_comp_rready=1'b0;     
-			   n_comp_rdm_reset = 1'b0;
-				n_comp_start=1'b0;
+        		   //n_comp_rready=1'b0;     
+			   //n_comp_rdm_reset = 1'b0;
+				//n_comp_start=1'b0;
 				if (UC_ifLst_iWay_valid[size_idx]) begin
 					//get underconstruction iWay from
 					//memory

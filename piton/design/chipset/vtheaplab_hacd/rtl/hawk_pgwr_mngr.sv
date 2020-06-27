@@ -310,8 +310,15 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		else if (OPCODE == PUSH_HEAD  ) begin 
 			get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tbl_updat_pkt.tolEntryId-1) >> 2) << 6);
 			my_lst_entry.prev= 'd0;
-			j=tbl_updat_pkt.ifl_idx;
-			my_lst_entry.next= tol_HT.IfLstHead[j]; //I am pointing to head now, update IfLSTHead in next cycle	
+
+
+			if(tbl_updat_pkt.dst_list==INCOMP) begin
+				my_lst_entry.next= tol_HT.incompListHead; //I am pointing to head now, update IfLSTHead in next cycle
+			end else begin
+				j=tbl_updat_pkt.ifl_idx;
+				my_lst_entry.next= tol_HT.IfLstHead[j]; //I am pointing to head now, update IfLSTHead in next cycle
+			end
+	
 			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId; 
 			data[128*i+:48]={my_lst_entry.prev,my_lst_entry.next}; //I update next of me to head and prev to null for push front
@@ -329,11 +336,19 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		 data[128*i+:24]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
 		 wstrb[16*i+:3]={3{1'b1}};
 		end
-		else if (OPCODE == PUSH_HEAD  ) begin 
+		else if (OPCODE == PUSH_HEAD  ) begin
+
+		 
+		if(tbl_updat_pkt.dst_list==INCOMP) begin
+		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.incompListHead-1) >> 2) << 6);
+		 i=(tol_HT.incompListHead[1:0]==2'b00)? 3 : (tol_HT.incompListHead[1:0]-1);
+		end else begin
 		 j=tbl_updat_pkt.ifl_idx;
 		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.IfLstHead[j]-1) >> 2) << 6);
 		  //$display("RAGHAV_DEBUG: j=%0d, addr=%0h" ,j,get_tbl_axi_wrpkt.addr);
 		 i=(tol_HT.IfLstHead[j][1:0]==2'b00)? 3 : (tol_HT.IfLstHead[j][1:0]-1);
+		end
+
 		 data[(128*i+24)+:24]=tbl_updat_pkt.tolEntryId; //I update prev of next entry to me
 		 wstrb[(16*i+3)+:3]={3{1'b1}}; //pointers are 3 bytes
 		end 
@@ -382,7 +397,10 @@ always@* begin
 	n_freeListTail=freeListTail;
 	n_uncompListHead=uncompListHead;
 	n_uncompListTail=uncompListTail;
+	n_incompListHead=incompListHead;
+	n_incompListTail=incompListTail;
 	n_IfLstHead=IfLstHead;
+	n_IfLstTail=IfLstTail;
 
 	case(p_state)
 		IDLE: begin

@@ -25,7 +25,6 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
 // Zero chunk metadata
 // 4 chunks , each of 16 cache lines
 logic [3:0] zero_chunk_vec;
-logic [3:0] zero_chunk_vec_nxt;
 
 logic [6:0] n_zero_cline_cntr_curr,zero_cline_cntr_curr;
 logic [6:0] zero_cline_cntr_prev;
@@ -155,12 +154,13 @@ begin
 		cacheline_cnt<='d0;
 		incompressible<=1'b0;
 		zero_cline_cntr_curr<='d0;
+		rd_req<=1'b0;
 
 		rdfifo_rdptr<='d0;
 		ld_rdfifo_rdptr<=1'b0;
 
-		wr_data='d0;
-		wr_req=1'b0;
+		wr_data<='d0;
+		wr_req<=1'b0;
 	
 		comp_done<=1'b0;
 	end
@@ -168,7 +168,8 @@ begin
 		p_state<=n_state;
 		cacheline_cnt<=n_cacheline_cnt;
 		incompressible<=n_incompressible;
-		zero_cline_cntr_curr=n_zero_cline_cntr_curr;
+		zero_cline_cntr_curr<=n_zero_cline_cntr_curr;
+		rd_req<=n_rd_req;
 	
 		rdfifo_rdptr<=n_rdfifo_rdptr;
 		ld_rdfifo_rdptr<=n_ld_rdfifo_rdptr;

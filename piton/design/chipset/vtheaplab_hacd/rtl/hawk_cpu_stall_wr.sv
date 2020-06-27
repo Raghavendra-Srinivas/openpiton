@@ -292,7 +292,7 @@ logic allow_cpu_access,allow_cpu_access_next;
    assign m_axi_wvalid = s_axi_wvalid;
    assign s_axi_wready = m_axi_wready; 
    assign m_axi_wdata  = s_axi_wdata; 
-   assign m_axi_wstrb  = s_axi_wstrb; 
+   assign m_axi_wstrb  = get_reverse_strb(s_axi_wstrb); 
    assign m_axi_wlast  = s_axi_wlast; 
    assign m_axi_wuser  = {WUSER_WIDTH{1'b0}};
 
