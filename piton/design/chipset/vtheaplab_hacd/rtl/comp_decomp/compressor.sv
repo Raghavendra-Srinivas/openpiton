@@ -61,6 +61,7 @@ always@(*) begin
 	n_incompressible=1'b0;
 	n_comp_done = 1'b0;
 	n_ld_rdfifo_rdptr = 1'b0;
+	n_wr_req = 1'b0;
 
 	case(p_state) 
 	  	IDLE: begin
@@ -120,7 +121,7 @@ always@(*) begin
 		   if (cacheline_cnt == 'd16) begin
 			n_state=DONE;
 		   end
-		   else if(cacheline_cnt < 'd64 && rd_valid) begin
+		   else if(cacheline_cnt < 'd16 && rd_valid) begin
 			if(rd_rresp=='d0) begin
 		      		n_cacheline_cnt = cacheline_cnt+'d1;
 		   		n_wr_data = rd_data;

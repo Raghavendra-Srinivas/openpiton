@@ -39,10 +39,7 @@ module hacd_core (
    hacd_pkg::axi_wr_reqpkt_t wr_reqpkt;
    hacd_pkg::axi_wr_resppkt_t wr_resppkt;
    wire tbl_update_done;
-   //
-   wire [3:0] pwm_state;
-   hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
-   //
+
 
    //rd manager
    hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt;
@@ -65,13 +62,19 @@ module hacd_core (
    hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt;
    hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt;
 
-   wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full,wrfifo_full;
+   wire rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_empty,rdfifo_full,wrfifo_empty,wrfifo_full;
    assign rdfifo_rdptr_rst = 1'b0;
    assign rdfifo_wrptr_rst = 1'b0;
+
 
    wire rdm_reset;
    wire [3:0] prm_state;
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
+
+   //
+   wire [3:0] pwm_state;
+   hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
+   //
 
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
    HACD_AXI_RD_BUS hawk_axi_rd_bus();
@@ -344,6 +347,7 @@ hawk_comdecomp u_hawk_comdecomp(
 	.clk(clk_i),
 	.rst(!rst_ni),
 	.wrfifo_full,
+	.wrfifo_empty,
 	.s_axi_wdata(axiwr_master_wdata),   //(wr_reqpkt.data), 	      	 //from hk_pgwr_manager
         .s_axi_wstrb(axiwr_master_wstrb), 		    //(wr_reqpkt.strb),
 	.s_axi_wvalid(axiwr_master_wvalid), //(wr_reqpkt.wvalid),       	 //from hk_pgwr_manager

@@ -173,6 +173,7 @@ Getopt::Long::Configure ('no_auto_abbrev') ;
         'parallel' => 0,
         'ariane' => 0,
 	'naive_compression' => 0,
+	'hawk_sims' => 0,
         'pico' => 0,
         'pico_het' => 0,
         'post_process_cmd' => [],
@@ -324,6 +325,7 @@ GetOptions (\%opt,
             'parallel!',
             'ariane!',
 	    'naive_compression!',
+	    'hawk_sims!',
             'pico!',
             'pico_het!',
             'regress!',
@@ -2589,6 +2591,7 @@ sub parse_args
             'dmbr_checker!',
             'oram!',
             'naive_compression!',
+            'hawk_sims!',
            );
 
   # print out all command line arguments + config arguments
@@ -2721,6 +2724,7 @@ sub parse_args
   push (@{$opt{config_rtl}}, "WT_DCACHE")      if ($opt{ariane});
 
   push (@{$opt{config_rtl}}, "NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
+  push (@{$opt{config_rtl}}, "HAWK_SIMS") if ($opt{hawk_sims}) ;
 
   if ($opt{pico} or $opt{pico_het} or $opt{ariane}) {
     push (@{$opt{config_rtl}}, "NO_MRA_VAL") ;

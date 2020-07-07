@@ -13,6 +13,9 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   input wire init_att,
   input wire init_list,  //change this to mode later 
 
+ //FIFO 
+    input wire wrfifo_empty,
+ 
   //AXI packets
   input hacd_pkg::axi_wr_rdypkt_t wr_rdypkt,
   output hacd_pkg::axi_wr_reqpkt_t wr_reqpkt,
@@ -662,6 +665,7 @@ assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_updated = iWayORcPagePkt.update && (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_migrated = (zspg_mig_pkt.migrate || zspg_mig_pkt.zspg_update)  && (p_state == WAIT_BRESP) && bresp_cmplt;
 
+hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt;
 //state register/output flops
 always @(posedge clk_i or negedge rst_ni)
 begin
@@ -685,11 +689,11 @@ begin
 		p_etry_cnt <= n_etry_cnt;
 
 		//Axi signals
-		p_axireq.addr <= n_axireq.addr;
-		p_axireq.data <= n_axireq.data;
-		p_axireq.strb <= n_axireq.strb;
-		p_req_awvalid <= n_req_awvalid ;
-		p_req_wvalid <= n_req_wvalid;
+		p_axireq.addr <= (p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.addr    : n_axireq.addr;
+		p_axireq.data <= (p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.data    : n_axireq.data;
+		p_axireq.strb <= (p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.strb    : n_axireq.strb;
+		p_req_awvalid <= (p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.awvalid : n_req_awvalid ;
+		p_req_wvalid <=  (p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.wvalid  : n_req_wvalid;
 
 		//
 		//p_axireq.bready<=1'b1;
@@ -698,6 +702,13 @@ begin
 	end
 end
 assign pgwr_mngr_ready = p_state == IDLE;
+
+
+assign wr_reqpkt.addr 	 =p_axireq.addr;
+assign wr_reqpkt.data 	 =p_axireq.data;
+assign wr_reqpkt.strb 	 =p_axireq.strb;
+assign wr_reqpkt.awvalid =p_req_awvalid;
+assign wr_reqpkt.wvalid  =p_req_wvalid;
 
 //done statuses
 //later useful to map it to status register if needed
@@ -716,13 +727,7 @@ always @(posedge clk_i or negedge rst_ni) begin
 	end
 end
 
-hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt;
-//Output combo signals
-assign wr_reqpkt.addr 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.addr   : p_axireq.addr;
-assign wr_reqpkt.data 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.data   : p_axireq.data;
-assign wr_reqpkt.strb 	 =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.strb   : p_axireq.strb;
-assign wr_reqpkt.awvalid =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.awvalid: p_req_awvalid;
-assign wr_reqpkt.wvalid  =(p_state==CMPDCMP || p_state==ZSPG_COMPACT) ? int_wr_reqpkt.wvalid : p_req_wvalid;
+
 
 //Write Response are posted : Check
 //For now, we support only in-order support: so no need to check ID

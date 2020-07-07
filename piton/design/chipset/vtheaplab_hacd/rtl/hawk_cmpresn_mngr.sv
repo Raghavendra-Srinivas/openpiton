@@ -216,6 +216,9 @@ always@* begin
 				end
 			        if(tbl_update_done) begin
 						n_state= PEEK_UCMP_HEAD;
+				`ifdef HAWK_SIMS
+					$display("After table update uncomp list head =%d",tol_HT.uncompListHead);
+				`endif
 				end
 		end
 		COMP_DONE:begin
@@ -286,6 +289,10 @@ always@* begin
 					else begin
 			        		n_state=COMP_MNGR_ERROR;
 					end
+					
+				`ifdef HAWK_SIMS
+					$display("NAIVE_DEBUG:Traferring comp page on to cPage_byteStart=%x",n_iWayORcPagePkt.cPage_byteStart);
+				`endif
 				end
 			        if (zspg_updated) begin	
 					n_iWayORcPagePkt.update=1'b0;

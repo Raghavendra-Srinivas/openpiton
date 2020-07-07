@@ -5,6 +5,7 @@ module hawk_axiwr (
   	input wire clk_i,
   	input wire rst_ni,
 	input logic send,
+	input logic aw_only,
 	input hacd_pkg::axi_wr_pld_t int_axi_req,
   	output hacd_pkg::axi_wr_reqpkt_t int_wr_reqpkt,
   	input hacd_pkg::axi_wr_rdypkt_t wr_rdypkt,
@@ -37,7 +38,11 @@ always@* begin
 				n_wr_reqpkt.awvalid=1'b1;
 			  end
 			  if (int_wr_reqpkt.awvalid && wr_rdypkt.awready)  begin
-				n_state=DATA;
+				if(aw_only) begin
+				    n_state=DONE;
+				end else begin
+				    n_state=DATA;
+				end
 			  end
 		end
 		DATA:begin

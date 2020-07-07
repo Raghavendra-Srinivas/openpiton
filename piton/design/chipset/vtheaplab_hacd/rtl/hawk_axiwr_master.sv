@@ -50,6 +50,7 @@ module hawk_axiwr_master #
 
     //FIFO
     output wire wrfifo_full,
+    output wire wrfifo_empty,
     //Wdata 
     input  wire                    s_axi_wvalid,
     output wire                    s_axi_wready,
@@ -178,6 +179,7 @@ reg read;
 reg store_output;
 
 assign wrfifo_full = full;
+assign wrfifo_empty = empty;
 assign s_axi_wready = !full && !hold;
 
 generate
