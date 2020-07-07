@@ -349,9 +349,9 @@ always @* begin
             mem_read_data_valid_next = 1'b0;
         end
     end
-    //else begin
-      //      mem_read_data_valid_next = 1'b0;
-    //end
+    else begin
+            mem_read_data_valid_next = 1'b0;
+    end
 end
 
 always @(posedge clk) begin
@@ -381,7 +381,7 @@ end
 always @* begin
     store_output = 1'b0;
 
-    s_axi_rvalid_next = s_axi_rvalid_reg;
+    s_axi_rvalid_next = 1'b0; //s_axi_rvalid_reg;
 
     if (s_axi_rready) begin //  || !s_axi_rvalid) begin
         store_output = 1'b1;

@@ -277,7 +277,8 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstTail[IFLST_COUNT];	
  } hawk_tol_ht_t;
 
-localparam [2:0] MAX_PAGE_ZSPAGE=5;
+localparam [2:0] MAX_PAGE_ZSPAGE=3; //to support naive compression //5;
+localparam [2:0] MAX_WAY_ZSPAGE=1; //to support naive compression //3;
 //Zspage
 //ZSpage Identity Way
 typedef struct packed {

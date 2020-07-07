@@ -41,6 +41,7 @@ endfunction
 
 logic [6:0] n_burst_cnt,p_burst_cnt;
 logic [3:0] n_state,p_state;
+hacd_pkg::axi_wr_pld_t zspg_axi_wrpkt;
 
 always@* begin
 	n_state=p_state;
@@ -75,7 +76,7 @@ always@* begin
 				//Alternative to burst count is Tranfer till Wr-Fifo gets empty
 			 	if(/*awready &&*/ !wr_reqpkt.awvalid) begin
 			 	       `ifdef NAIVE_COMPRESSION
-			 	         	if(!wrfifo_empty) begin
+			 	         	if(p_burst_cnt<'d17/*!wrfifo_empty*/) begin
 			 	         	 	if(p_burst_cnt == 'd0) begin					
 			 	   	  	 		int_wr_reqpkt.addr=iWayORcPagePkt.cPage_byteStart; //the same address will act as start of freeway for decompressed data
 			 	         	 	end else begin
@@ -128,16 +129,18 @@ always@* begin
 		end
 	   	ZS_PAGE_UPDATE_ADDR:begin
 			 	if(/*awready &&*/ !wr_reqpkt.awvalid) begin
-					int_wr_reqpkt.addr=get_zspg_axi_wrpkt(iWayORcPagePkt);
+					int_wr_reqpkt.addr={{16{1'b0}},iWayORcPagePkt.iWay_ptr};
 			 	       	int_wr_reqpkt.awvalid=1'b1;
 				end
 				if (wr_reqpkt.awvalid && wr_rdypkt.awready) begin
 					n_state=ZS_PAGE_UPDATE_DATA;
 				end
-				
 		end
 	   	ZS_PAGE_UPDATE_DATA:begin
-			  if(wr_rdypkt.wready && !wr_reqpkt.wvalid) begin //data/strb has been already set, in prev state, just assert wvalid
+			  if(wr_rdypkt.wready && !wr_reqpkt.wvalid) begin 
+					int_wr_reqpkt.data={{16{1'b0}},iWayORcPagePkt.zsPgMd,iWayORcPagePkt.nxtWay_ptr,iWayORcPagePkt.iWay_ptr};
+					//MD is 50 bytes=50*8=400bit + 2 ptr = 12 bytes = 96 bits -> 496 bits fits in same cacheline
+					int_wr_reqpkt.strb={{2{1'b0}},{62{1'b1}}};
 			 	       	int_wr_reqpkt.wvalid=1'b1;
 					n_state=DONE;
 			  end
