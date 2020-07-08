@@ -284,11 +284,15 @@ always@* begin
 					//comp_size+ZS_OFFSET bytes
 					if((comp_size+ZS_OFFSET) < 4096) begin
 						n_iWayORcPagePkt.update=1'b1;
-						n_comp_tol_updpkt.dst_list=IFL_SIZE1; //for ZS identiy way, we need to push on Identity Way
+						n_comp_tol_updpkt.dst_list=NULLIFY; //PREP state cannot be full Zspage //IFL_SIZE1; //for ZS identiy way, we need to push on Identity Way
 					end
 					else begin
 			        		n_state=COMP_MNGR_ERROR;
 					end
+					
+					//If we have page in
+					//underconstruction, no need to put in IFL
+
 					
 				`ifdef HAWK_SIMS
 					$display("NAIVE_DEBUG:Traferring comp page on to cPage_byteStart=%x",n_iWayORcPagePkt.cPage_byteStart);
@@ -334,8 +338,16 @@ always@* begin
 				  	      n_iWayORcPagePkt.update=1'b1;
 				  	end
 				  	else begin
-				  	      n_iWayORcPagePkt.nxtWay_ptr=p_listEntry.way<<12;
-				  	      n_iWayORcPagePkt.update=1'b1;
+						
+				  	      n_iWayORcPagePkt.nxtWay_ptr='d0; //p_listEntry.way<<12;
+				  	      n_iWayORcPagePkt.update=1'b0; //no need to update metadata if page does not fit.
+
+					      //With naive compression,I remove under cnstruction page if thre is no enough space to hold a completed compressed page, so new Zs page will be
+					      //created ->It won't be air tight layout for bring-up
+						n_state=PREP_ZSPAGE_MD;
+						//record this IWay in Under Construction table
+						n_UC_ifLst_iWay[size_idx]=(p_listEntry.way<<12); 
+						n_UC_ifLst_iWay_valid[size_idx]=1'b1;
 				  	end
 				end
 				if(zspg_updated) begin
@@ -347,11 +359,16 @@ always@* begin
 						      //compressed page, then pull
 						      //zspage Iway from IFL
 						      //so as to create new Zspage in next iteration
-						      if(c_iWayORcPagePkt.pp_ifl) begin
-						        n_state = POP_IFL;
-						      end else begin
+						      //Chaging approach: While compression we						      //will have//underconstution page,
+						      //if not, we check IFL
+						      //to pick which sohuld
+						      //have been decompress
+						      //manager
+						      //if(c_iWayORcPagePkt.pp_ifl) begin
+						        //n_state = POP_IFL;
+						      //end else begin
 							n_state = FREEWAY_OR_CONTINUE;
-						      end
+						      //end
 				end
 			end
 		POP_IFL:begin

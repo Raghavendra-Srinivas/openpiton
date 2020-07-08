@@ -81,7 +81,7 @@ function automatic ListEntry decode_LstEntry;
  		decode_LstEntry.prev ='d0;
  		decode_LstEntry.next =1'b0;
         	//decode
-		i= (lstEntryId[2:0] == 3'b000) ? 'd7: (lstEntryId[2:0]-1);
+		i= (lstEntryId[1:0] == 2'b00) ? 'd3: (lstEntryId[1:0]-1);
 		lst_entry=rdata[128*i+:128];
         	decode_LstEntry.way 	 	= lst_entry.way;
         	decode_LstEntry.attEntryId 	= lst_entry.attEntryId;

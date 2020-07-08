@@ -81,6 +81,7 @@ always@(*) begin
 	  	IDLE: begin
 			if(comp_start && !rdfifo_empty) begin
 				n_state<=COMP_CHECK1;
+				n_zero_cline_cntr_curr = 'd0;
 			end
 		end
 	  COMP_CHECK1: begin
