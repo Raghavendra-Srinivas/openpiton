@@ -255,7 +255,7 @@ endfunction
   function automatic integer clogb2;
       input [31:0] value;
       begin
-          value = value - 1;
+          value = (value<<1) - 1;
           for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
               value = value >> 1;
           end
@@ -316,6 +316,20 @@ typedef struct packed{
 	logic [47:0] nxtWay_ptr; //6B 
 	logic [47:0] iWay_ptr;  //6B  
 } iWayORcPagePkt_t;
+
+
+//debug probes
+   typedef struct packed  {
+	   logic [63:0] last_addr0;
+   	   logic [63:0] last_addr1; 
+
+   	   logic [63:0] req_count0,resp_count0;
+   	   logic [63:0] req_count1,resp_count1;
+  	   logic overflow;
+  	   logic bus_error;
+	   logic [1:0] fsm_state;
+	   logic illegal_hawk_table_access;
+   } stall_debug_bus;
 
 endpackage
 

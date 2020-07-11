@@ -92,19 +92,19 @@ int main(int argc, char ** argv) {
  
 
 
-   addr = (uint64_t*)(0xD0000000); //hppa1
-   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+   //addr = (uint64_t*)(0x80000000); //hppa1
+   //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
     
   //Read from HPPAs 
   //(1): At T1, READ HPPA1
-  //for (int k = 0; k < (8*262144)+128; k++) {
-  ////for (int k = 0; k < 10; k++) {
-  //  addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa1
-  //  //*addr = (uint32_t) k*0x12345678; 
-  //      if((k % 10000) == 0) {
-  //  		printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-  //      }
-  //}
+  for (int k = 0; k < (282244); k++) {
+  //for (int k = 0; k < 10; k++) {
+    addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa1
+    //*addr = (uint32_t) k*0x12345678; 
+        if((k % 4096) == 0) {
+    		printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+        }
+  }
 
  /*
   //(2): At T2, READ HPPA2

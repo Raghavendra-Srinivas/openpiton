@@ -76,17 +76,20 @@ module hacd_core (
    hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
    //
 
+   hacd_pkg::stall_debug_bus stall_rd_dbg_bus;
+   hacd_pkg::stall_debug_bus stall_wr_dbg_bus;
    HACD_AXI_WR_BUS hawk_axi_wr_bus();
    HACD_AXI_RD_BUS hawk_axi_rd_bus();
 
 
    HACD_AXI_WR_BUS stall_axi_wr_bus(); 
    HACD_AXI_RD_BUS stall_axi_rd_bus();
-  
+ 
    hacd_pkg::hawk_cpu_ovrd_pkt_t hawk_cpu_ovrd_rdpkt,hawk_cpu_ovrd_wrpkt;
    hacd_pkg::cpu_reqpkt_t cpu_rd_reqpkt,cpu_wr_reqpkt;
 
-///hawk cpu rd stall
+
+//hawk cpu rd stall
 hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
     .clk(clk_i),
     .rst(!rst_ni),
@@ -136,13 +139,17 @@ hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
     .m_axi_aruser(stall_axi_rd_bus.axi_aruser),
     .m_axi_arvalid(stall_axi_rd_bus.axi_arvalid),
     .m_axi_arready(stall_axi_rd_bus.axi_arready),
+
+     //Response
     .m_axi_rid(stall_axi_rd_bus.axi_rid),
     .m_axi_rdata(stall_axi_rd_bus.axi_rdata),
     .m_axi_rresp(stall_axi_rd_bus.axi_rresp),
     .m_axi_rlast(stall_axi_rd_bus.axi_rlast),
     .m_axi_ruser(stall_axi_rd_bus.axi_ruser),
     .m_axi_rvalid(stall_axi_rd_bus.axi_rvalid),
-    .m_axi_rready(stall_axi_rd_bus.axi_rready)
+    .m_axi_rready(stall_axi_rd_bus.axi_rready),
+
+    .stall_rd_dbg_bus(stall_rd_dbg_bus)
 
 );
 
@@ -208,12 +215,17 @@ hawk_cpu_stall_wr u_hawk_cpu_stall_wr (
     .m_axi_wuser(stall_axi_wr_bus.axi_wuser),
     .m_axi_wvalid(stall_axi_wr_bus.axi_wvalid),
     .m_axi_wready(stall_axi_wr_bus.axi_wready),
+
+     //Response	
     .m_axi_bid(stall_axi_wr_bus.axi_bid),
     .m_axi_bresp(stall_axi_wr_bus.axi_bresp),
     .m_axi_buser(stall_axi_wr_bus.axi_buser),
     .m_axi_bvalid(stall_axi_wr_bus.axi_bvalid),
-    .m_axi_bready(stall_axi_wr_bus.axi_bready)
+    .m_axi_bready(stall_axi_wr_bus.axi_bready),
+    
+    .stall_wr_dbg_bus(stall_wr_dbg_bus)
 );
+
 
 wire compdecomp_rready;
 wire [`FIFO_PTR_WIDTH-1:0] comdecomp_rdfifo_rdptr;
@@ -449,6 +461,7 @@ hawk_comdecomp u_hawk_comdecomp(
 	//From CPU
 	.mstr1_axi_wr_bus_slv(stall_axi_wr_bus.slv),
 	.mstr1_axi_rd_bus_slv(stall_axi_rd_bus.slv),
+
 	//.mstr1_axi_wr_bus_slv(cpu_axi_wr_bus),
 	//.mstr1_axi_rd_bus_slv(cpu_axi_rd_bus),
 
@@ -458,29 +471,29 @@ hawk_comdecomp u_hawk_comdecomp(
    );
 
 
-`ifdef HAWK_FPGA_DBG
+`ifdef HAWK_FPGA //_DBG
+
+/*
 	//ILA debug
 	ila_3 ila_3_hawk_ovrd_addr (
 		.clk(clk_i),
-		.probe0({cpu_axi_wr_bus.axi_awaddr[62:0],cpu_axi_wr_bus.axi_awvalid}),
-		.probe1({hawk_cpu_ovrd_wrpkt.ppa,hawk_cpu_ovrd_wrpkt.allow_access})
+		//.probe0({cpu_axi_wr_bus.axi_awaddr[62:0],cpu_axi_wr_bus.axi_awvalid}),
+		//.probe1({hawk_cpu_ovrd_wrpkt.ppa,hawk_cpu_ovrd_wrpkt.allow_access})
+		  .probe0({'d0,tol_HT.freeListHead[9:0],tol_HT.freeListTail[9:0],prm_state,pwm_state,cu_state}),
+		  .probe1({
+			'd0,hawk_sw_ctrl[1],
+			tol_HT.uncompListHead[9:0],
+			tol_HT.uncompListTail[9:0]
+		})	
 	);
 
 	ila_3 ila_hawk_debug_states (
 		.clk(clk_i),
-		.probe0({cpu_axi_wr_bus.axi_awaddr[30:0],cpu_axi_wr_bus.axi_awvalid,stall_axi_wr_bus.axi_awaddr[30:0],stall_axi_wr_bus.axi_awvalid}),
-		.probe1({
-			prm_state, /*4bit*/
-			pwm_state, /*4bit*/
-			cu_state, /*4bit*/
-			tol_HT.freeListHead[6:0],
-			tol_HT.freeListTail[6:0],
-			tol_HT.uncompListHead[6:0],
-			tol_HT.uncompListTail[6:0]
-		})
+		.probe0({cpu_axi_rd_bus.axi_araddr[30:0],cpu_axi_rd_bus.axi_arvalid,stall_axi_rd_bus.axi_araddr[30:0],stall_axi_rd_bus.axi_arvalid}),
+		.probe1({hawk_sw_ctrl[1],cpu_axi_wr_bus.axi_awaddr[29:0],cpu_axi_wr_bus.axi_awvalid,stall_axi_wr_bus.axi_awaddr[30:0],stall_axi_wr_bus.axi_awvalid})
 	);
 
-     //
+
      ila_0 debug_hawk_wr_rd
         (
          .clk(clk_i),
@@ -529,7 +542,7 @@ hawk_comdecomp u_hawk_comdecomp(
          .probe35 (hawk_axi_rd_bus.axi_rvalid),  // output          s_axi_rvalid
          .probe39 (hawk_axi_rd_bus.axi_rready),  // input           s_axi_rready
      
-         .probe41 ('d0), //ddr_we_n),
+         .probe41 (hawk_sw_ctrl[1]), //ddr_we_n),
          .probe42 ('d0),
          .probe43 ('d0),
      
@@ -538,8 +551,9 @@ hawk_comdecomp u_hawk_comdecomp(
      
      );
 
+
      //
-     ila_0 debug_cpu_wr
+     ila_0 debug_cpu_wr_rd
         (
          .clk(clk_i),
          .probe0(!rst_ni),
@@ -587,7 +601,7 @@ hawk_comdecomp u_hawk_comdecomp(
          .probe35 (cpu_axi_rd_bus.axi_rvalid),  // output          s_axi_rvalid
          .probe39 (cpu_axi_rd_bus.axi_rready),  // input           s_axi_rready
      
-         .probe41 ('d0), //ddr_we_n),
+         .probe41 (hawk_sw_ctrl[1]), //ddr_we_n),
          .probe42 ('d0),
          .probe43 ('d0),
      
@@ -595,7 +609,126 @@ hawk_comdecomp u_hawk_comdecomp(
          .probe37 ('d0)
      
      );
+*/
 
+ila_4 ila_hawk_ain1_debug (
+   .clk(clk_i),//clk;
+   .probe0(cpu_axi_wr_bus.axi_awaddr[35:0]),  //[35:0]probe0;
+   .probe1(cpu_axi_wr_bus.axi_awvalid), //[0:0]probe1;
+   .probe2(cpu_axi_wr_bus.axi_awid),//[5:0]probe2;
+   .probe3(cpu_axi_wr_bus.axi_wdata),//[511:0]probe3;
+   .probe4(cpu_axi_wr_bus.axi_wvalid),//[0:0]probe4;
+   .probe5(cpu_axi_wr_bus.axi_bid),//[5:0]probe5;
+   .probe6(cpu_axi_wr_bus.axi_wstrb),//[63:0]probe6;
+   .probe7(cpu_axi_wr_bus.axi_bvalid),//[0:0]probe7;
+   .probe8(cpu_axi_wr_bus.axi_bresp),//[1:0]probe8;
+   .probe9(cpu_axi_wr_bus.axi_wlast),//[0:0]probe9;
+
+   .probe10(cpu_axi_rd_bus.axi_araddr[35:0]),//[35:0]probe10;
+   .probe11(cpu_axi_rd_bus.axi_arvalid),//[0:0]probe11;
+   .probe12(cpu_axi_rd_bus.axi_arid),//[5:0]probe12;
+   .probe13(cpu_axi_rd_bus.axi_rdata),//[511:0]probe13;
+   .probe14(cpu_axi_rd_bus.axi_rvalid),//[0:0]probe14;
+   .probe15(cpu_axi_rd_bus.axi_rlast),//[0:0]probe15;
+   .probe16(cpu_axi_rd_bus.axi_rresp),//[1:0]probe16;
+
+   .probe17(stall_axi_wr_bus.axi_awaddr[35:0]),  //[35:0]probe0;
+   .probe18(stall_axi_wr_bus.axi_awvalid), //[0:0]probe1;
+   .probe19(stall_axi_wr_bus.axi_awid),//[5:0]probe2;
+
+   //.probe20(stall_axi_wr_bus.axi_wdata),//[511:0]probe3;
+   .probe20({'d0, hawk_cpu_ovrd_wrpkt.ppa,hawk_cpu_ovrd_wrpkt.allow_access,tol_HT.uncompListHead,tol_HT.uncompListTail,stall_wr_dbg_bus.fsm_state,stall_wr_dbg_bus.overflow,stall_wr_dbg_bus.bus_error,stall_wr_dbg_bus.last_addr0,stall_wr_dbg_bus.last_addr1,stall_wr_dbg_bus.req_count0,stall_wr_dbg_bus.req_count1,stall_wr_dbg_bus.resp_count0,stall_wr_dbg_bus.resp_count1}),//[511:0]probe3;
+
+   .probe21(stall_axi_wr_bus.axi_wvalid),//[0:0]probe4;
+   .probe22(stall_axi_wr_bus.axi_bid),//[5:0]probe5;
+   .probe23(stall_axi_wr_bus.axi_wstrb),//[63:0]probe6;
+   .probe24(stall_axi_wr_bus.axi_bvalid),//[0:0]probe7;
+   .probe25(stall_axi_wr_bus.axi_bresp),//[1:0]probe8;
+   .probe26(stall_axi_wr_bus.axi_wlast),//[0:0]probe9;
+
+   .probe27(stall_axi_rd_bus.axi_araddr[35:0]),//[35:0]probe10;
+   .probe28(stall_axi_rd_bus.axi_arvalid),//[0:0]probe11;
+   .probe29(stall_axi_rd_bus.axi_arid),//[5:0]probe12;
+
+   //.probe30(stall_axi_rd_bus.axi_rdata),//[511:0]probe13;
+   .probe30({'d0, hawk_cpu_ovrd_rdpkt.ppa,hawk_cpu_ovrd_rdpkt.allow_access,tol_HT.freeListHead,tol_HT.freeListTail,stall_rd_dbg_bus.fsm_state,stall_rd_dbg_bus.overflow,stall_rd_dbg_bus.bus_error,stall_rd_dbg_bus.last_addr0,stall_rd_dbg_bus.last_addr1,stall_rd_dbg_bus.req_count0,stall_rd_dbg_bus.req_count1,stall_rd_dbg_bus.resp_count0,stall_rd_dbg_bus.resp_count1}),
+
+   .probe31(stall_axi_rd_bus.axi_rvalid),//[0:0]probe14;
+   .probe32(stall_axi_rd_bus.axi_rlast),//[0:0]probe15;
+   .probe33(stall_axi_rd_bus.axi_rresp),//[1:0]probe16;
+
+   .probe34(hawk_axi_wr_bus.axi_awaddr[39:0]),  //[35:0]probe0;
+   .probe35(hawk_axi_wr_bus.axi_awvalid), //[0:0]probe1;
+   .probe36(hawk_axi_wr_bus.axi_awid),//[5:0]probe2;
+   .probe37(hawk_axi_wr_bus.axi_wdata),//[511:0]probe3;
+   .probe38(hawk_axi_wr_bus.axi_wvalid),//[0:0]probe4;
+   .probe39(hawk_axi_wr_bus.axi_bid),//[5:0]probe5;
+   .probe40(hawk_axi_wr_bus.axi_wstrb),//[63:0]probe6;
+   .probe41(hawk_axi_wr_bus.axi_bvalid),//[0:0]probe7;
+   .probe42(hawk_axi_wr_bus.axi_bresp),//[1:0]probe8;
+   .probe43(hawk_axi_wr_bus.axi_wlast),//[0:0]probe9;
+
+   .probe44(hawk_axi_rd_bus.axi_araddr[39:0]),//[35:0]probe10;
+   .probe45(hawk_axi_rd_bus.axi_arvalid),//[0:0]probe11;
+   .probe46(hawk_axi_rd_bus.axi_arid),//[5:0]probe12;
+   .probe47(hawk_axi_rd_bus.axi_rdata),//[511:0]probe13;
+   .probe48(hawk_axi_rd_bus.axi_rvalid),//[0:0]probe14;
+   .probe49(hawk_axi_rd_bus.axi_rlast),//[0:0]probe15;
+   .probe50(hawk_axi_rd_bus.axi_rresp),//[1:0]probe16;
+
+   //[35:0]probe17;
+   //[0:0]probe18;
+   //[5:0]probe19;
+   //[511:0]probe20;
+   //[0:0]probe21;
+   //[5:0]probe22;
+   //[63:0]probe23;
+   //[0:0]probe24;
+   //[1:0]probe25;
+   //[0:0]probe26;
+
+   //[35:0]probe27;
+   //[0:0]probe28;
+   //[5:0]probe29;
+   //[511:0]probe30;
+   //[0:0]probe31;
+   //[0:0]probe32;
+   //[1:0]probe33;
+
+   //[39:0]probe34;
+   //[0:0]probe35;
+   //[5:0]probe36;
+   //[511:0]probe37;
+   //[0:0]probe38;
+   //[5:0]probe39;
+   //[63:0]probe40;
+   //[0:0]probe41;
+   //[1:0]probe42;
+   //[0:0]probe43;
+
+   //[39:0]probe44;
+   //[0:0]probe45;
+   //[5:0]probe46;
+   //[511:0]probe47;
+   //[0:0]probe48;
+   //[0:0]probe49;
+   //[1:0]probe50;
+
+   .probe51(mc_axi_rd_bus.axi_araddr), //[63:0]probe51;
+   .probe52(mc_axi_wr_bus.axi_awaddr), //[63:0]probe52;
+   .probe53({mc_axi_wr_bus.axi_bvalid,mc_axi_rd_bus.axi_rvalid,mc_axi_wr_bus.axi_wready,mc_axi_rd_bus.axi_rready,mc_axi_rd_bus.axi_arready,mc_axi_wr_bus.axi_awready,mc_axi_rd_bus.axi_arvalid,mc_axi_wr_bus.axi_awvalid}), //[7:0]probe53;
+   .probe54({'d0,mc_axi_wr_bus.axi_bresp,mc_axi_rd_bus.axi_rresp,mc_axi_wr_bus.axi_bid,mc_axi_rd_bus.axi_rid,mc_axi_rd_bus.axi_arid,mc_axi_wr_bus.axi_awid,mc_axi_wr_bus.axi_wvalid,mc_axi_rd_bus.axi_rlast}), //[63:0]probe54;
+   .probe55('d0), //[63:0]probe55;
+   .probe56({'d0,cu_state,pwm_state,prm_state,illegal_hawk_table_access,hawk_sw_ctrl[1]}), //[63:0]probe56;
+   .probe57({'d0}),//[63:0]probe57;
+   .probe58({'d0}),//[63:0]probe58;
+   .probe59({'d0}),//[63:0]probe59;
+   .probe60('d0),//[63:0]probe60;
+   .probe61('d0),//[63:0]probe61;
+   .probe62('d0),//[63:0]probe62;
+   .probe63('d0)//[63:0]probe63;
+
+);
 
 `endif
 

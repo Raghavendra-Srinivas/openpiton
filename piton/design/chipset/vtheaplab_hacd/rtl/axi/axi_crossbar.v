@@ -70,10 +70,10 @@ module axi_crossbar #
     parameter RUSER_WIDTH = `HACD_AXI4_USER_WIDTH,//1,
     // Number of concurrent unique IDs for each slave interface
     // S_COUNT concatenated fields of 32 bits
-    parameter S_THREADS = {S_COUNT{32'd2}},
+    parameter S_THREADS = {S_COUNT{32'd1}}, //{S_COUNT{32'd2}}, //raghav for debug
     // Number of concurrent operations for each slave interface
     // S_COUNT concatenated fields of 32 bits
-    parameter S_ACCEPT = {S_COUNT{32'd16}},
+    parameter S_ACCEPT = {S_COUNT{32'd1}}, //{S_COUNT{32'd16}}, //raghav for debug
     // Number of regions per master interface
     parameter M_REGIONS = 1,
     // Master interface base addresses
@@ -82,7 +82,7 @@ module axi_crossbar #
     parameter M_BASE_ADDR = DDR_START_ADDR, //64'hfff6100000, //0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
-    parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
+    parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd32}}}}, //{M_COUNT{{M_REGIONS{32'd24}}}},
     // Read connections between interfaces
     // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}},
@@ -91,7 +91,7 @@ module axi_crossbar #
     parameter M_CONNECT_WRITE = {M_COUNT{{S_COUNT{1'b1}}}},
     // Number of concurrent operations for each master interface
     // M_COUNT concatenated fields of 32 bits
-    parameter M_ISSUE = {M_COUNT{32'd4}},
+    parameter M_ISSUE = {M_COUNT{32'd1}},//{M_COUNT{32'd4}}, //raghav for debug
     // Secure master (fail operations based on awprot/arprot)
     // M_COUNT bits
     parameter M_SECURE = {M_COUNT{1'b0}},
