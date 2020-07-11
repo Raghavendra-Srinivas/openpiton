@@ -265,7 +265,7 @@ logic allow_cpu_access,allow_cpu_access_next;
     	m_axi_wlast_reg <= m_axi_wlast_next;
     end
 
-`ifdef HAWK_BYPASS
+`ifdef HAWK_FPGA
   //Bypass Mux Start
   always@* begin
 	if(hawk_inactive) begin

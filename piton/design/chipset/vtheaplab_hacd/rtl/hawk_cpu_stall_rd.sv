@@ -234,7 +234,7 @@ assign s_axi_rvalid = m_axi_rvalid;
 
 
 
-`ifdef HAWK_BYPASS
+`ifdef HAWK_FPGA
   //Bypass Mux Start
   always@* begin
 	if(hawk_inactive) begin
