@@ -1262,7 +1262,7 @@ assign m_axi_ruser= cpu_axi_rd_bus.axi_ruser;
 assign m_axi_rvalid= cpu_axi_rd_bus.axi_rvalid;
 assign cpu_axi_rd_bus.axi_rready =m_axi_rready;
 
-`endif //PITON_AXI4_MEM
+`endif //PITONSYS_AXI4_MEM
 
 
 `ifdef HAWK_FPGA
@@ -1278,7 +1278,7 @@ u_hacd_top (
         .cfg_rst_ni                   ( sys_rst_n),
     	.clk_i              (ui_clk                    ), 
 
-	 `ifdef PITON_AXI4_MEM 
+	 `ifdef PITONSYS_AXI4_MEM 
     		.rst_ni              (~noc_axi4_bridge_rst),
 	 `else
 		.rst_ni              (~noc_mig_bridge_rst),
@@ -1306,7 +1306,7 @@ u_hacd_top (
 
 `else
 
-`ifdef PITON_AXI4_MEM
+`ifdef PITONSYS_AXI4_MEM
 
 localparam DOWN_RATIO = `HACD_AXI4_DATA_WIDTH/`HACD_MC_AXI4_DATA_WIDTH;
     logic [DOWN_RATIO-1:0][`HACD_MC_AXI4_DATA_WIDTH-1:0]   axi_slave_w_data_i;

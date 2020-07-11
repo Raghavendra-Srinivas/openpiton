@@ -662,6 +662,7 @@ set CHIPSET_RTL_IMPL_FILES [list \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axird_master.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cpu_stall_rd.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cpu_stall_wr.sv" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_bypass_mux.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axi_xbar_wrapper.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_core.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd.sv" \
@@ -775,6 +776,7 @@ set CHIPSET_IP_FILE_PREFIXES [list \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/ddr4_axi4/ddr4_axi4" \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/axi_interconnect/axi_interconnect" \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/mig_7series_axi4/mig_7series_axi4" \
+    "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/ila_4/ila_4" \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/ila_3/ila_3" \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/ila_2/ila_2" \
     "${DV_ROOT}/design/chipset/mc/xilinx/${BOARD}/ip_cores/ila_1/ila_1" \

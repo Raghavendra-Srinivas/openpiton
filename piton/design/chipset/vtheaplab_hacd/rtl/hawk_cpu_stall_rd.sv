@@ -4,6 +4,8 @@
 //due to ATT miss
 
 `include "hacd_define.vh"
+import hacd_pkg::*;
+
 //Defaults to values from hacd_define.vh
 module hawk_cpu_stall_rd #
 (
@@ -78,7 +80,11 @@ module hawk_cpu_stall_rd #
     input  wire                     m_axi_rlast,
     input  wire [RUSER_WIDTH-1:0]   m_axi_ruser,
     input  wire                     m_axi_rvalid,
-    output wire                     m_axi_rready
+    output wire                     m_axi_rready,
+
+    //Debug
+    output hacd_pkg::stall_debug_bus stall_rd_dbg_bus
+	
 );
 
     localparam [1:0]  
@@ -88,20 +94,20 @@ module hawk_cpu_stall_rd #
     reg p_state,n_state;
 
 logic allow_cpu_access,allow_cpu_access_next;
-    reg [ID_WIDTH-1:0] m_axi_arid_reg, m_axi_arid_next;
-    reg [ADDR_WIDTH-1:0] m_axi_araddr_reg, m_axi_araddr_next;
-    reg [7:0] m_axi_arlen_reg , m_axi_arlen_next;
-    reg [2:0] m_axi_arsize_reg , m_axi_arsize_next;
-    reg [1:0] m_axi_arburst_reg , m_axi_arburst_next;
-    reg m_axi_arlock_reg, m_axi_arlock_next;
-    reg [3:0] m_axi_arcache_reg , m_axi_arcache_next;
-    reg [2:0] m_axi_arprot_reg , m_axi_arprot_next;
-    reg [3:0] m_axi_arqos_reg , m_axi_arqos_next;
-    reg [3:0] m_axi_arregion_reg , m_axi_arregion_next;
-    reg [ARUSER_WIDTH-1:0] m_axi_aruser_reg, m_axi_aruser_next;
-    reg m_axi_arvalid_reg, m_axi_arvalid_next;
+    reg [ID_WIDTH-1:0] m_axi_arid_reg, m_axi_arid_next,m_axi_arid_temp;
+    reg [ADDR_WIDTH-1:0] m_axi_araddr_reg, m_axi_araddr_next,m_axi_araddr_temp;
+    reg [7:0] m_axi_arlen_reg , m_axi_arlen_next,m_axi_arlen_temp;
+    reg [2:0] m_axi_arsize_reg , m_axi_arsize_next,m_axi_arsize_temp;
+    reg [1:0] m_axi_arburst_reg , m_axi_arburst_next,m_axi_arburst_temp;
+    reg m_axi_arlock_reg, m_axi_arlock_next,m_axi_arlock_temp;
+    reg [3:0] m_axi_arcache_reg , m_axi_arcache_next,m_axi_arcache_temp;
+    reg [2:0] m_axi_arprot_reg , m_axi_arprot_next,m_axi_arprot_temp;
+    reg [3:0] m_axi_arqos_reg , m_axi_arqos_next,m_axi_arqos_temp;
+    reg [3:0] m_axi_arregion_reg , m_axi_arregion_next,m_axi_arregion_temp;
+    reg [ARUSER_WIDTH-1:0] m_axi_aruser_reg, m_axi_aruser_next,m_axi_aruser_temp;
+    reg m_axi_arvalid_reg, m_axi_arvalid_next,m_axi_arvalid_temp;
 
-    reg s_axi_arready_reg , s_axi_arready_next;
+    reg s_axi_arready_reg , s_axi_arready_next,s_axi_arready_temp;
 
 
     wire s_read_access_vld;	
@@ -145,12 +151,12 @@ always@* begin
                     m_axi_aruser_next = s_axi_aruser;
 		
 		    allow_cpu_access_next = 1'b0; //upon valid txn, I hold myself, this can be set by only hawk
- 		   if(hawk_inactive) begin
-                    m_axi_arvalid_next = 1'b1;
-                    n_state = STATE_IDLE;
-		   end else begin	
+ 		   //if(hawk_inactive) begin
+                    //m_axi_arvalid_next = 1'b1;
+                    //n_state = STATE_IDLE;
+		   //end else begin	
                     n_state = STATE_WAIT;
-		   end
+		   //end
                 end 
             end
             STATE_WAIT: begin //Keep waiting till hawk allow me to proceed
@@ -197,7 +203,7 @@ assign s_axi_rvalid = m_axi_rvalid;
 	    allow_cpu_access <=1'b0;
 	    //s_read_access_vld_reg <=1'b0;
         end else begin
-            p_state <= n_state;
+            p_state <= hawk_inactive ? STATE_IDLE : n_state;
             m_axi_arvalid_reg <= m_axi_arvalid_next;
             s_axi_arready_reg <= s_axi_arready_next;
 
@@ -226,6 +232,63 @@ assign s_axi_rvalid = m_axi_rvalid;
            m_axi_aruser_reg <= m_axi_aruser_next;
     end
 
+
+
+`ifdef HAWK_FPGA
+  //Bypass Mux Start
+  always@* begin
+	if(hawk_inactive) begin
+    		m_axi_arid_temp = s_axi_arid;
+    		m_axi_araddr_temp = s_axi_araddr;
+    		m_axi_arlen_temp = s_axi_arlen;
+    		m_axi_arsize_temp = s_axi_arsize;
+    		m_axi_arburst_temp = s_axi_arburst;
+    		m_axi_arlock_temp = s_axi_arlock;
+    		m_axi_arcache_temp = s_axi_arcache;
+    		m_axi_arprot_temp = s_axi_arprot;
+    		m_axi_arqos_temp = s_axi_arqos;
+    		m_axi_arregion_temp = s_axi_arregion;
+    		m_axi_aruser_temp = s_axi_aruser;
+    		m_axi_arvalid_temp = s_axi_arvalid;
+
+    		s_axi_arready_temp = m_axi_arready;
+	end else begin
+    		m_axi_arid_temp = m_axi_arid_reg;
+    		m_axi_araddr_temp = m_axi_araddr_reg;
+    		m_axi_arlen_temp = m_axi_arlen_reg;
+    		m_axi_arsize_temp = m_axi_arsize_reg;
+    		m_axi_arburst_temp = m_axi_arburst_reg;
+    		m_axi_arlock_temp = m_axi_arlock_reg;
+    		m_axi_arcache_temp = m_axi_arcache_reg;
+    		m_axi_arprot_temp = m_axi_arprot_reg;
+    		m_axi_arqos_temp = m_axi_arqos_reg;
+    		m_axi_arregion_temp = m_axi_arregion_reg;
+    		m_axi_aruser_temp =  m_axi_aruser_reg;
+    		m_axi_arvalid_temp = m_axi_arvalid_reg;
+
+    		s_axi_arready_temp = s_axi_arready_reg;	
+	end
+  end
+
+
+    assign m_axi_arid = m_axi_arid_temp;
+    assign m_axi_araddr = m_axi_araddr_temp;
+    assign m_axi_arlen = m_axi_arlen_temp;
+    assign m_axi_arsize = m_axi_arsize_temp;
+    assign m_axi_arburst = m_axi_arburst_temp;
+    assign m_axi_arlock = m_axi_arlock_temp;
+    assign m_axi_arcache = m_axi_arcache_temp;
+    assign m_axi_arprot = m_axi_arprot_temp;
+    assign m_axi_arqos = m_axi_arqos_temp;
+    assign m_axi_arregion = m_axi_arregion_temp;
+    assign m_axi_aruser = ARUSER_ENABLE ? m_axi_aruser_temp : {ARUSER_WIDTH{1'b0}};
+    assign m_axi_arvalid = m_axi_arvalid_temp;
+
+    assign s_axi_arready = s_axi_arready_temp;
+
+    //Muxing End
+`else
+
     assign m_axi_arid = m_axi_arid_reg;
     assign m_axi_araddr = m_axi_araddr_reg;
     assign m_axi_arlen = m_axi_arlen_reg;
@@ -241,10 +304,70 @@ assign s_axi_rvalid = m_axi_rvalid;
 
     assign s_axi_arready = s_axi_arready_reg;
 
+`endif
+
     //hawk req packet
     assign cpu_reqpkt.hppa  = m_axi_araddr_reg[`HACD_AXI4_ADDR_WIDTH-1:12]; //4KB aligned
     wire lookup;
     assign lookup= (p_state==STATE_WAIT) && !(hawk_cpu_ovrd_pkt.allow_access | allow_cpu_access);
     assign cpu_reqpkt.valid = lookup;
+
+   //Pendign Request Tracker 
+   logic [ADDR_WIDTH-1:0] rd_addr0;
+   logic [ADDR_WIDTH-1:0] rd_addr1; 
+
+   logic [63:0] req_count0,resp_count0;
+   logic [63:0] req_count1,resp_count1;
+   logic overflow;
+   logic bus_error;
+
+    // we can't get response on same cycle for same id. and same id txn can never appear for second time without response
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+		overflow <= 1'b0;
+		req_count0 <= 'd0;
+		req_count1 <= 'd0;
+		resp_count0 <= 'd0;
+		resp_count1 <= 'd0;
+		rd_addr0<={ADDR_WIDTH{1'b1}};
+		rd_addr1<={ADDR_WIDTH{1'b1}};
+		bus_error<=1'b0;
+	end
+	else begin
+    		overflow <= overflow || (&req_count0 || &resp_count0 || &req_count1 || &resp_count1) || (s_axi_arid>1) || (s_axi_rid>1);
+                if (s_axi_arready & s_axi_arvalid) begin 
+			if(s_axi_arid=='d0 ) begin
+				rd_addr0<=s_axi_araddr;
+				req_count0<=req_count0+1;
+			end	
+			else if(s_axi_arid=='d1 ) begin
+				rd_addr1<=s_axi_araddr;
+				req_count1<=req_count1+1;
+			end
+		end
+                if (s_axi_rready && s_axi_rvalid && s_axi_rresp=='d0) begin 
+			if  (s_axi_rid=='d0) begin
+				resp_count0<=resp_count0+1;
+			end
+			else if  (s_axi_rid=='d1) begin
+				resp_count1<=resp_count1+1;
+			end
+		end
+		else if (s_axi_rready && s_axi_rvalid && s_axi_rresp!='d0) begin
+			bus_error<=1'b1;
+		end
+	end
+    end
+
+assign stall_rd_dbg_bus.last_addr0  = rd_addr0;
+assign stall_rd_dbg_bus.last_addr1  = rd_addr1;
+assign stall_rd_dbg_bus.req_count0  = req_count0;
+assign stall_rd_dbg_bus.resp_count0 = resp_count0;
+assign stall_rd_dbg_bus.req_count1  = req_count1;
+assign stall_rd_dbg_bus.resp_count1 = resp_count1;
+assign stall_rd_dbg_bus.overflow    = overflow;
+assign stall_rd_dbg_bus.bus_error   = bus_error;
+assign stall_rd_dbg_bus.fsm_state=p_state;
+
 
 endmodule

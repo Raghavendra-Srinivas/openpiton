@@ -76,9 +76,9 @@ export ARIANE_ROOT=${PITON_ROOT}/piton/design/chip/tile/ariane/
 export CXX=g++ CC=gcc
 # customize this to a fast local disk
 #For FPGA
-#export RISCV=/home/vt-cs/raghavs/vt-cs/riscv_install
+export RISCV=/home/vt-cs/raghavs/vt-cs/riscv_install
 #For Sims
-export RISCV=/home/raghavs/raghavs/riscv_install
+#export RISCV=/home/raghavs/raghavs/riscv_install
 
 export VERILATOR_ROOT=$ARIANE_ROOT/tmp/verilator-4.014/
 

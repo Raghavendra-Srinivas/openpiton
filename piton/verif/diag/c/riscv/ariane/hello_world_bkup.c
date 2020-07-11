@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 #define HACD_BASE    0xfff5100000ULL
-//#define HPPA_BASE 0x80010000ULL
+#define HPPA_BASE 0x80010000ULL
 //#define FOURKB 0x1000
 int main(int argc, char ** argv) {
 
@@ -48,11 +48,11 @@ int main(int argc, char ** argv) {
    //Read List entries
 
   //We can access 8 bytes at max on 64bit architecture, so access cacheline 8 times
-  //for (int k = 0; k < 8; k++) {
-  //  addr = (uint64_t*)(HPPA_BASE+k*0x8);
-  //  //*addr=(uint64_t) 0xABCDABCD12345678;	
-  //  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-  //}
+  for (int k = 0; k < 8; k++) {
+    addr = (uint64_t*)(HPPA_BASE+k*0x8);
+    //*addr=(uint64_t) 0xABCDABCD12345678;	
+    printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+  }
       	 
  
   //Write to HPPA Base    

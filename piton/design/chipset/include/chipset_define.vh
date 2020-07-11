@@ -89,7 +89,7 @@
     `define ADDR_TRANS_SECTION_MULT         1
 `endif
 
-`define ASM_TIMEOUT_CYCLES  64'd5000000000
+`define ASM_TIMEOUT_CYCLES  64'd1111111111111111111  //64'd5000000000
 
 `define CFG_DONE_STRING     0
 `define PASSED_STRING       1
@@ -110,7 +110,7 @@
 `define OLED_STRING "OpenPiton+ArianePrinceton & ETHZA Collaboration "
 `endif
 
-`ifdef PITON_AXI4_MEM 
+`ifdef PITONSYS_AXI4_MEM 
 	`define PITONSTREAM_SHIFT 6
 `else
 	`define PITONSTREAM_SHIFT `ADDR_TRANS_PHYS_WIDTH_ALIGN
