@@ -1,3 +1,8 @@
+//For this test to work, design should support minimum 8 LST entries and 8 ATT Entries
+//
+//
+//
+//
 //HAWK TEST
 #include <stdio.h>
 
@@ -77,7 +82,7 @@ int main(int argc, char ** argv) {
 */
 
  printf("HAWK Test Done!..\n");
-
  return 0;
+
 }
 

@@ -38,11 +38,11 @@ package hacd_pkg;
     	parameter int ATT_ENTRY_CNT= ATT_ENTRY_MAX;  
     	parameter bit [63:0] DDR_START_ADDR=  64'h0; 
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR; // 0x0
-        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + (ATT_ENTRY_MAX/8)*64'h40; //=0x400000 //8 ATT  entries can fit in one cache line //64'h1000; //0x1000
-        parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'h40;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
+        parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + (ATT_ENTRY_MAX/8)*64'd64; //=0x400000 //8 ATT  entries can fit in one cache line //64'h1000; //0x1000
+        parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'd64;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter int LIST_ENTRY_CNT=8;
+    	parameter int LIST_ENTRY_CNT= 4; //8; //512; //8;
 	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
@@ -255,7 +255,7 @@ endfunction
   function automatic integer clogb2;
       input [31:0] value;
       begin
-          value = value - 1;
+          value = (value<<1) - 1; //left shifted by 1 as it is used by only List entries and entry start from 1, we need extra to store highest value
           for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
               value = value >> 1;
           end
