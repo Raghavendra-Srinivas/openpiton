@@ -53,6 +53,20 @@ logic [FIFO_PTR_WIDTH-1:0] n_rdfifo_rdptr;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_wr_data;
 logic n_wr_req;
 
+logic send_rd_req; 
+always @(posedge clk_i or negedge rst_ni)
+begin
+	if(!rst_ni) begin
+		send_rd_req <=1'b0;
+	end
+	else if(!rd_valid)begin
+		send_rd_req <=1'b1;
+	end
+	else if(!rd_req)begin
+		send_rd_req <=1'b0;
+	end
+end
+
 always@(*) begin
 	n_state = p_state;
 	n_rd_req=1'b0;
@@ -67,6 +81,7 @@ always@(*) begin
 	  	IDLE: begin
 			if(comp_start && !rdfifo_empty) begin
 				n_state<=COMP_CHECK1;
+				n_zero_cline_cntr_curr = 'd0;
 			end
 		end
 	  COMP_CHECK1: begin
@@ -117,11 +132,11 @@ always@(*) begin
 		   n_cacheline_cnt = 'd0;
 	 end
 	 FIFO_READ_TRNSFR: begin
-	 	   n_rd_req=!rdfifo_empty && !wrfifo_full; //issue read only if read fifo non-empty and write fifo is not full
+	 	   n_rd_req=!rdfifo_empty && !wrfifo_full && send_rd_req; //issue read only if read fifo non-empty and write fifo is not full
 		   if (cacheline_cnt == 'd16) begin
 			n_state=DONE;
 		   end
-		   else if(cacheline_cnt < 'd16 && rd_valid) begin
+		   else if(cacheline_cnt < 'd16 && rd_valid && send_rd_req) begin
 			if(rd_rresp=='d0) begin
 		      		n_cacheline_cnt = cacheline_cnt+'d1;
 		   		n_wr_data = rd_data;

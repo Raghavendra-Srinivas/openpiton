@@ -38,7 +38,7 @@ int main(int argc, char ** argv) {
   printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*addr_base);
 
   //(2): At T2, T3, T4 WRITE HPPA2, 3 , 4 
-  for(int j=1;j<4;j++) {
+  for(int j=1;j<8;j++) {
   addr_base = (uint64_t*)(HPPA_BASE+(j*FOURKB)); //hppa2
   for (int i = 0; i < 64; i++) {
   	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
@@ -53,10 +53,13 @@ int main(int argc, char ** argv) {
  }
 
  //(5): At T5, READ HPPA5
- //This access should trigger COMPRESSION of VICTIM UNCOMPRESSED PAGEs to make FREE page 
- printf("Accessing Non-Guaranteed Page\n");
- addr = (uint64_t*)(HPPA_BASE+(4*FOURKB)); //hppa5
- printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+ for(int k=8;k<12;k++) {
+ 	//This access should trigger COMPRESSION of VICTIM UNCOMPRESSED PAGEs to make FREE page 
+ 	printf("Accessing Non-Guaranteed Page=%d\n",k);
+ 	addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa5
+ 	printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+ }
+
 
 /*
  //(6): At T6, READ HPPA2

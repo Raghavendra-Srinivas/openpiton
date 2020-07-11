@@ -81,7 +81,7 @@ function automatic ListEntry decode_LstEntry;
  		decode_LstEntry.prev ='d0;
  		decode_LstEntry.next =1'b0;
         	//decode
-		i= (lstEntryId[2:0] == 3'b000) ? 'd7: (lstEntryId[2:0]-1);
+		i= (lstEntryId[1:0] == 2'b00) ? 'd3: (lstEntryId[1:0]-1);
 		lst_entry=rdata[128*i+:128];
         	decode_LstEntry.way 	 	= lst_entry.way;
         	decode_LstEntry.attEntryId 	= lst_entry.attEntryId;
@@ -122,7 +122,7 @@ function automatic tol_updpkt_t get_Tolpkt;
 	//handle other table update later
 
 endfunction
-localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd64}; //{14'd1088}; //{14'd64}; //supportable compressed sizes in bytes, just one for now
+localparam logic [13:0] suprted_comp_size[IFLST_COUNT]={14'd1088}; //{14'd64}; //supportable compressed sizes in bytes, just one for now
 function automatic logic [7:0] get_idx;
 	input logic [13:0] size;
 	integer i; 

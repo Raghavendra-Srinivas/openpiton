@@ -42,7 +42,7 @@ package hacd_pkg;
         parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'h40;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter int LIST_ENTRY_CNT=4;
+    	parameter int LIST_ENTRY_CNT=8;
 	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
@@ -277,7 +277,8 @@ endfunction
   logic [clogb2(LST_ENTRY_MAX)-1:0]  IfLstTail[IFLST_COUNT];	
  } hawk_tol_ht_t;
 
-localparam [2:0] MAX_PAGE_ZSPAGE=5;
+localparam [2:0] MAX_PAGE_ZSPAGE=3; //to support naive compression //5;
+localparam [2:0] MAX_WAY_ZSPAGE=1; //to support naive compression //3;
 //Zspage
 //ZSpage Identity Way
 typedef struct packed {
