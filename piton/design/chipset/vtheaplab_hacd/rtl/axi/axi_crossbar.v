@@ -82,7 +82,7 @@ module axi_crossbar #
     parameter M_BASE_ADDR = DDR_START_ADDR, //64'hfff6100000, //0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
-    parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd30}}}}, //{M_COUNT{{M_REGIONS{32'd24}}}},
+    parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd30}}}}, //{M_COUNT{{M_REGIONS{32'd24}}}}, //raghav for debug
     // Read connections between interfaces
     // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}},

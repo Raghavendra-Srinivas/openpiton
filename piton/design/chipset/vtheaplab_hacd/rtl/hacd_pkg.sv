@@ -255,11 +255,7 @@ endfunction
   function automatic integer clogb2;
       input [31:0] value;
       begin
-<<<<<<< HEAD
           value = (value<<1) - 1; //left shifted by 1 as it is used by only List entries and entry start from 1, we need extra to store highest value
-=======
-          value = (value<<1) - 1;
->>>>>>> 17656d6d5f43bfd404bdc0ccfd607cf6c86ec642
           for (clogb2 = 0; value > 0; clogb2 = clogb2 + 1) begin
               value = value >> 1;
           end

@@ -729,8 +729,10 @@ end
 
 
 
+
 //Write Response are posted : Check
 //For now, we support only in-order support: so no need to check ID
+/*
 logic [6:0] pending_txn_cnt; //max we can have only 64 cache line in pending
 logic bus_error; 
 always @(posedge clk_i or negedge rst_ni) begin
@@ -753,8 +755,34 @@ always @(posedge clk_i or negedge rst_ni) begin
 	end
 end
 assign bresp_cmplt=pending_txn_cnt=='d1;
+*/
 
-
+logic [6:0] req_count0,resp_count0;
+logic bus_error; 
+always @(posedge clk_i or negedge rst_ni) begin
+	if(!rst_ni) begin
+		req_count0 <= 'd0;
+		resp_count0 <= 'd0;
+		bus_error<=1'b0;
+	end
+	else if(p_state==IDLE)begin
+		req_count0 <= 'd0;
+		resp_count0 <= 'd0;
+		bus_error<=bus_error;
+	end
+	else begin
+		if(wr_resppkt.bvalid && wr_resppkt.bresp!='d0) begin
+		    bus_error<=1'b1;
+		end
+		if(wr_reqpkt.awvalid && wr_rdypkt.awready) begin
+			req_count0<=req_count0+1;
+		end
+		if(wr_resppkt.bvalid && (wr_resppkt.bresp=='d0)) begin
+			resp_count0<=resp_count0+1;
+	 	end	
+	end
+end
+assign bresp_cmplt=(req_count0==resp_count0) && req_count0!=0;
 
 
 //ToL Head and Tails //move to separate module if required

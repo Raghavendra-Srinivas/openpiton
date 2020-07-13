@@ -203,7 +203,8 @@ assign s_axi_rvalid = m_axi_rvalid;
 	    allow_cpu_access <=1'b0;
 	    //s_read_access_vld_reg <=1'b0;
         end else begin
-            p_state <= hawk_inactive ? STATE_IDLE : n_state;
+            //p_state <= hawk_inactive ? STATE_IDLE : n_state;
+            p_state <= n_state;
             m_axi_arvalid_reg <= m_axi_arvalid_next;
             s_axi_arready_reg <= s_axi_arready_next;
 

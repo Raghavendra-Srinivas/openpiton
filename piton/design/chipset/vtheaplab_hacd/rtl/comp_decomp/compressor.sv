@@ -70,7 +70,7 @@ end
 always@(*) begin
 	n_state = p_state;
 	n_rd_req=1'b0;
-	n_cacheline_cnt='d0; //cacheline_cnt;
+	n_cacheline_cnt=cacheline_cnt; //'d0; //cacheline_cnt;
 	n_zero_cline_cntr_curr=zero_cline_cntr_curr;
 	n_incompressible=1'b0;
 	n_comp_done = 1'b0;
@@ -82,14 +82,15 @@ always@(*) begin
 			if(comp_start && !rdfifo_empty) begin
 				n_state<=COMP_CHECK1;
 				n_zero_cline_cntr_curr = 'd0;
+		   		n_cacheline_cnt = 'd0;
 			end
 		end
 	  COMP_CHECK1: begin
-			n_rd_req=!rdfifo_empty;
+			n_rd_req=!rdfifo_empty && send_rd_req;
 			if (cacheline_cnt == 'd64) begin
 				n_state=COMP_CHECK2;
 			end
-			else if(cacheline_cnt < 'd64 && rd_valid) begin
+			else if(cacheline_cnt < 'd64 && rd_valid && send_rd_req) begin
 				if(rd_rresp=='d0) begin
 			   		n_cacheline_cnt=cacheline_cnt+'d1;
 				 	if(rd_data =='d0) begin
@@ -201,26 +202,38 @@ end
 
 always @(posedge clk_i or negedge rst_ni) begin
 	if(!rst_ni) begin
-		cacheline_cnt<='d0;
-		zero_cline_cntr_curr <= 'd0;
+		zero_chunk_vec[0]<= 'd0;
+		zero_chunk_vec[1]<= 'd0;
+		zero_chunk_vec[2]<= 'd0;
+		zero_chunk_vec[3]<= 'd0;
 		zero_cline_cntr_prev <= 'd0;
 	end else begin
- 		if(cacheline_cnt=='d16) begin
- 		        zero_chunk_vec[0] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
-			zero_cline_cntr_prev <= zero_cline_cntr_curr;		
- 		end
- 		else if (cacheline_cnt=='d32) begin
- 		        zero_chunk_vec[1] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
-			zero_cline_cntr_prev <= zero_cline_cntr_curr;		
- 		end
- 		else if (cacheline_cnt=='d48) begin
- 		        zero_chunk_vec[2] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
-			zero_cline_cntr_prev <= zero_cline_cntr_curr;		
- 		end
- 		else if (cacheline_cnt=='d64) begin
- 		        zero_chunk_vec[3] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
-			zero_cline_cntr_prev <= zero_cline_cntr_curr;		
- 		end
+		
+		if(p_state==IDLE) begin
+			zero_chunk_vec[0]<= 'd0;
+			zero_chunk_vec[1]<= 'd0;
+			zero_chunk_vec[2]<= 'd0;
+			zero_chunk_vec[3]<= 'd0;
+			zero_cline_cntr_prev <= 'd0;
+		end
+		else if(p_state==COMP_CHECK1) begin
+ 			if(cacheline_cnt=='d16) begin
+ 			        zero_chunk_vec[0] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
+				zero_cline_cntr_prev <= zero_cline_cntr_curr;		
+ 			end
+ 			else if (cacheline_cnt=='d32) begin
+ 			        zero_chunk_vec[1] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
+				zero_cline_cntr_prev <= zero_cline_cntr_curr;		
+ 			end
+ 			else if (cacheline_cnt=='d48) begin
+ 			        zero_chunk_vec[2] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
+				zero_cline_cntr_prev <= zero_cline_cntr_curr;		
+ 			end
+ 			else if (cacheline_cnt=='d64) begin
+ 			        zero_chunk_vec[3] <= ((zero_cline_cntr_curr - zero_cline_cntr_prev) == 'd16);	
+				zero_cline_cntr_prev <= zero_cline_cntr_curr;		
+ 			end
+		end
  	end	
 end
 
