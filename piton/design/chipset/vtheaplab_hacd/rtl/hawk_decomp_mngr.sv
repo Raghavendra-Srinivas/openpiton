@@ -135,7 +135,7 @@ logic [13:0] comp_size;
 wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
-assign arvalid=p_req_arvalid;
+assign arvalid=p_decomp_req_arvalid | p_req_arvalid;
 
 logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -197,7 +197,7 @@ always@* begin
 				   if(n_decomp_rdata[47:0] == p_axireq.addr[47:0]) begin //If Iam  the iWay, pick the csize
 				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(n_decomp_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
 				      //n_burst_cnt=(get_cpage_size(n_decomp_rdata[7+2*48:2*48]) >> 6) + 1;
-				      n_burst_cnt=(n_iWayORcPagePkt.cpage_size >> 6) + 1;
+				      n_burst_cnt=(n_iWayORcPagePkt.cpage_size >> 6) ; //+ 1;
 			              n_state = SET_CPAGEFREE;
 				   end
 				   else begin
@@ -250,13 +250,17 @@ always@* begin
 			else if(p_burst_cnt=='d0) begin
 				n_decomp_start=1'b1;  
 				n_iWayORcPagePkt.cPage_byteStart=decomp_freeWay[47:0];
-				n_iWayORcPagePkt.update=1'b1;
+				//n_iWayORcPagePkt.update=1'b1;
 				n_state=DECOMP_WAIT;
 			end
 		end
 		DECOMP_WAIT: begin
+				if(decomp_done) begin
+				   	n_decomp_start=1'b0;  
+					n_iWayORcPagePkt.update=1'b1;
+				end
 			        if (zspg_updated) begin //this also makes sure, decomprssed page has been written 	
-				   n_iWayORcPagePkt.update=1'b0;
+				   	n_iWayORcPagePkt.update=1'b0;
 					//Do we need IFL push
 					if(dc_iWayORcPagePkt.pp_ifl) begin
 			           		n_state= FETCH_IFL_LST_ENTRY;
@@ -265,9 +269,6 @@ always@* begin
 			           		n_state= DONE;
 					end
 				end
-				//if(decomp_done) begin
-				//	n_state = DONE;//PUSH_IFL;
-				//end
 		end
 
 		FETCH_IFL_LST_ENTRY : begin

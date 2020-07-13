@@ -109,17 +109,18 @@ always@* begin
 		end
 		DCPAGE_TRNSFR:begin
 				//Send dummy compressed data for now
-				if(!wr_reqpkt.awvalid && !wrfifo_empty && (p_burst_cnt < 'd64)) begin
-				   if(p_burst_cnt == 'd0) begin					
-			    	   	int_wr_reqpkt.addr=iWayORcPagePkt.cPage_byteStart; //the same address will act as start of freeway for decompressed data
-				   	n_burst_cnt = p_burst_cnt + 'd1;
-				   end else begin
-				   	int_wr_reqpkt.addr=wr_reqpkt.addr+'d64;
-				   	n_burst_cnt = p_burst_cnt + 'd1;
-				   end
-				end
-				if (p_burst_cnt[6]==1'b1 && wr_reqpkt.awvalid && wr_rdypkt.awready) begin
-				      n_state=ZS_PAGE_UPDATE_ADDR;
+				if(!wr_reqpkt.awvalid ) begin
+					if( /*&& !wrfifo_empty &&*/ (p_burst_cnt < 'd64)) begin
+				   		if(p_burst_cnt == 'd0) begin					
+			    	   			int_wr_reqpkt.addr=iWayORcPagePkt.cPage_byteStart; //the same address will act as start of freeway for decompressed data
+				   		end else begin
+				   			int_wr_reqpkt.addr=wr_reqpkt.addr+'d64;
+				   		end
+				   		n_burst_cnt = p_burst_cnt + 'd1;
+			 	       		int_wr_reqpkt.awvalid=1'b1;
+					end else begin 
+					      n_state=ZS_PAGE_UPDATE_ADDR;
+					end
 				end
 		end
 		DUMMY_DCPAGE_DATA:begin

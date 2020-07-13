@@ -30,20 +30,15 @@ int main(int argc, char ** argv) {
 
   //Read from HPPAs 
   //(1): At T1, WRITE HPPA1
-  //addr_base = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
-  //for (int i = 0; i < 64; i++) {
-  //	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
-  //      *addr = (uint64_t) (i+1);
-  //}
-  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*addr_base);
-  //addr_base = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa1
-  //for (int i = 0; i < 64; i++) {
-  //	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
-  //      *addr = (uint64_t) (i+1);
-  //}
+  addr_base = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
+  for (int i = 0; i < 64; i++) {
+  	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
+	*addr = (uint64_t) (i+1);
+  }
+  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*addr_base);
 
   //(2): At T2, T3, T4 WRITE HPPA2, 3 , 4 
-  for(int j=0;j<4;j++) {
+  for(int j=1;j<8;j++) {
   addr_base = (uint64_t*)(HPPA_BASE+(j*FOURKB)); //hppa2
   for (int i = 0; i < 64; i++) {
   	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
@@ -54,11 +49,11 @@ int main(int argc, char ** argv) {
 	  *addr = (uint64_t) 0x0; // other 3 chunks with non-zero
 	}
   }
-  //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*(addr_base+(16*(LINE_SIZE/POINTER_SIZE))));
+  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*(addr_base+(16*(LINE_SIZE/POINTER_SIZE))));
  }
 
  //(5): At T5, READ HPPA5
- for(int k=4;k<5;k++) {
+ for(int k=8;k<12;k++) {
  	//This access should trigger COMPRESSION of VICTIM UNCOMPRESSED PAGEs to make FREE page 
  	printf("Accessing Non-Guaranteed Page=%d\n",k);
  	addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa5
@@ -72,14 +67,14 @@ int main(int argc, char ** argv) {
 // 	printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
 // }
 
-
+/*
  //(6): At T6, READ HPPA2
  //Access compressed page- This should trigger COMPRESSION of another 
  //VICTIM UNCOMPRESSED PAGE to free the page for hppa2
  printf("Accessing Compressed Page\n");
- addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
+ addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa1
  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-
+*/
 
  printf("HAWK Test Done!..\n");
 
