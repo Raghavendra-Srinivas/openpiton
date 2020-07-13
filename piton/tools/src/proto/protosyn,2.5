@@ -478,6 +478,7 @@ def setParserOptions(parser):
     parser.add_option("--axi4_mem", dest="axi4_mem", action="store_true", default=False)
     parser.add_option("--zeroer_off", dest="zeroer_off", action="store_true", default=False)
     parser.add_option("--hawk_fpga", dest="hawk_fpga", action="store_true", default=False)
+    parser.add_option("--hawk_naive_comp", dest="hawk_naive_comp", action="store_true", default=False)
 
     return parser
 
@@ -534,6 +535,9 @@ def makeDefList(options):
 
     if options.hawk_fpga == True:
         defines.append("HAWK_FPGA")
+
+    if options.hawk_naive_comp == True:
+        defines.append("HAWK_NAIVE_COMPRESSION")
 
     # --asic-rtl option
     if options.asic_rtl == True:

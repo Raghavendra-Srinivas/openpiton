@@ -24,11 +24,14 @@ module hawk_comdecomp (
 
     output compdecomp_wr_req,
     output [`HACD_AXI4_STRB_WIDTH -1:0] compdecomp_wr_strb,
-    output [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data
+    output [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data,
+
+    //Debug
+    output hacd_pkg::debug_compressor debug_comp
 
 );
 
-`ifndef NAIVE_COMPRESSION
+`ifndef HAWK_NAIVE_COMPRESSION
  	assign comp_size = 14'd64;
  	assign compdecomp_rready = !rdfifo_empty;
  	assign comp_done = comp_start && rdfifo_empty;
@@ -83,7 +86,9 @@ assign comp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight 
  	   .wr_data(comp_wr_data),
 	
 	   .incompressible,
- 	   .comp_done
+ 	   .comp_done,
+	   
+	   .debug_comp
  	);
 
 assign decomp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity

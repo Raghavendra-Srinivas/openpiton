@@ -44,7 +44,9 @@ module hawk_cmpresn_mngr (
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] n_comp_rdata,
     output hacd_pkg::tol_updpkt_t n_comp_tol_updpkt,
     output logic cmpresn_done,
-    output logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay	
+    output logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay,
+
+    output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr	
 );
 
 logic [`HACD_AXI4_ADDR_WIDTH-1:12] n_cmpresn_freeWay;
@@ -91,6 +93,8 @@ localparam IDLE			     ='d0,
 
 logic [7:0] size_idx;
 
+logic [15:0] zsPgCnt,n_zsPgCnt;
+
 logic [47:0] UC_ifLst_iWay[IFLST_COUNT],n_UC_ifLst_iWay[IFLST_COUNT];
 logic UC_ifLst_iWay_valid[IFLST_COUNT],n_UC_ifLst_iWay_valid[IFLST_COUNT];
 logic [13:0] n_comp_size,p_comp_size;
@@ -125,6 +129,7 @@ always@* begin
 	n_comp_rdm_reset=1'b0;
 	//lookup IF list for corresponding size
 	size_idx=get_idx(comp_size);
+	n_zsPgCnt=zsPgCnt;
 
 	case(p_state)
 		IDLE: begin
@@ -300,6 +305,7 @@ always@* begin
 				end
 			        if (zspg_updated) begin	
 					n_iWayORcPagePkt.update=1'b0;
+					n_zsPgCnt = zsPgCnt + 'd1; //just for debug//analysis
 			        	n_state=UPDATE_ATT_POP_UCMP_HEAD;
 				end
 		end
@@ -468,6 +474,7 @@ begin
 		cmpresn_done<=1'b0;
 	        cmpresn_freeWay<='d0;
 		comp_rdm_reset<=1'b0;
+		zsPgCnt<='d0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -478,6 +485,7 @@ begin
 		cmpresn_done<=n_cmpresn_done;
 	        cmpresn_freeWay<=n_cmpresn_freeWay;
 		comp_rdm_reset<=n_comp_rdm_reset;
+		zsPgCnt<=n_zsPgCnt;
 	end
 end
 
@@ -502,4 +510,10 @@ for(fl=0;fl<IFLST_COUNT;fl=fl+1) begin : ifLST_IWAY
 end : ifLST_IWAY
 endgenerate
 
+
+//Debug
+assign debug_cmp_mngr.cmp_mngr_state=p_state;
+assign debug_cmp_mngr.cmpresn_freeWay=cmpresn_freeWay;
+assign debug_cmp_mngr.cmpresn_done=cmpresn_done;
+assign debug_cmp_mngr.zsPgCnt=zsPgCnt;
 endmodule

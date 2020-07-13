@@ -83,7 +83,10 @@ module hawk_axird_master #
     input  wire                     m_axi_rlast,
     input  wire [RUSER_WIDTH-1:0]   m_axi_ruser,
     input  wire                     m_axi_rvalid,
-    output wire                     m_axi_rready
+    output wire                     m_axi_rready,
+
+    //Debug
+    output hacd_pkg::debug_rdfifo   debug_rdfifo
 );
 
 parameter LAST_OFFSET  = DATA_WIDTH;
@@ -400,5 +403,10 @@ always @(posedge clk) begin
         s_axi_r_reg <= mem_read_data_reg;
     end
 end
+
+
+//Debug
+assign debug_rdfifo.rdfifo_rdptr=rd_ptr_reg;
+assign debug_rdfifo.rdfifo_wrptr=wr_ptr_reg;
 
 endmodule

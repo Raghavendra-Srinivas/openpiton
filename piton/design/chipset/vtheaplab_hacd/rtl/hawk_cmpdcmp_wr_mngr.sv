@@ -16,7 +16,10 @@ module hawk_cmpdcmp_wr_mngr(
     input hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
     input hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
     output cmpdcmp_done,
-    output compact_done
+    output compact_done,
+
+    //Debug
+    output hacd_pkg::debug_pgwr_cmpdcmp_mngr debug_cmpdcmp_mngr 
 );
 
 localparam IDLE		  		='d0,
@@ -75,7 +78,7 @@ always@* begin
 		CPAGE_TRNSFR:begin
 				//Alternative to burst count is Tranfer till Wr-Fifo gets empty
 			 	if(/*awready &&*/ !wr_reqpkt.awvalid) begin
-			 	       `ifdef NAIVE_COMPRESSION
+			 	       `ifdef HAWK_NAIVE_COMPRESSION
 			 	         	if(p_burst_cnt<'d17/*!wrfifo_empty*/) begin
 			 	         	 	if(p_burst_cnt == 'd0) begin					
 			 	   	  	 		int_wr_reqpkt.addr=iWayORcPagePkt.cPage_byteStart; //the same address will act as start of freeway for decompressed data
@@ -172,6 +175,9 @@ begin
 	end
 end
 assign cmpdcmp_done = p_state == DONE;
+
+assign debug_cmpdcmp_mngr.cPage_byteStart=iWayORcPagePkt.cPage_byteStart;
+assign debug_cmpdcmp_mngr.cmpdcmp_mngr_state=p_state;
 
 endmodule
 

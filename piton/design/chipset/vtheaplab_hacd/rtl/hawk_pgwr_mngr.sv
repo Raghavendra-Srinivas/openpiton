@@ -39,6 +39,7 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   output wire tbl_update_done,
 
   //DEBUG
+  output hacd_pkg::debug_pgwr_cmpdcmp_mngr debug_cmpdcmp_mngr, 
   output [`FSM_WID-1:0] pwm_state,
   output wire dump_mem  //this is used to help in  DV sims to dump mem when desired during different phase during same sims
 );
@@ -816,7 +817,7 @@ hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
 
 //DEBUG
 assign pwm_state = p_state;
-
+/*
 `ifdef HAWK_FPGA
 	ila_3 ila_3_hawk_pwm (
 		.clk(clk_i),
@@ -824,6 +825,6 @@ assign pwm_state = p_state;
 		.probe1({pwm_state,init_att,init_list,init_att_done,init_list_done,p_etry_cnt,tol_updpkt.tbl_update,iWayORcPagePkt.update})
 	);
 `endif
-
+*/
 
 endmodule

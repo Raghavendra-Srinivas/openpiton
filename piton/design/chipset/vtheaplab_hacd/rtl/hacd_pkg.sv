@@ -31,11 +31,12 @@ package hacd_pkg;
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*LST_ENTRY_MAX;
-   
+  
+    parameter int HAWK_TABLE_PAGE_COUNT=((LST_ENTRY_MAX*16)/(64*64)) + ((ATT_ENTRY_MAX*8)/(64*64)) ; 
 
    `ifdef HAWK_FPGA
-    	parameter int LIST_ENTRY_CNT= LST_ENTRY_MAX; 
-    	parameter int ATT_ENTRY_CNT= ATT_ENTRY_MAX;  
+    	parameter int LIST_ENTRY_CNT= LST_ENTRY_MAX-HAWK_TABLE_PAGE_COUNT; 
+    	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'h0; 
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR; // 0x0
         parameter bit [63:0] HAWK_LIST_START= HAWK_ATT_START + (ATT_ENTRY_MAX/8)*64'h40; //=0x400000 //8 ATT  entries can fit in one cache line //64'h1000; //0x1000
@@ -331,6 +332,40 @@ typedef struct packed{
 	   logic [1:0] fsm_state;
 	   logic illegal_hawk_table_access;
    } stall_debug_bus;
+
+   typedef struct packed {
+	logic [4:0] cmp_mngr_state;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:12] cmpresn_freeWay;
+	logic [15:0] zsPgCnt;
+	logic cmpresn_done;
+   } debug_pgrd_cmp_mngr;
+
+
+
+   typedef struct packed {
+	logic [`FIFO_PTR_WIDTH-1:0] rdfifo_rdptr;
+	logic [`FIFO_PTR_WIDTH-1:0] rdfifo_wrptr;
+   } debug_rdfifo;
+   
+   typedef struct packed {
+	logic [`FIFO_PTR_WIDTH-1:0] wrfifo_rdptr;
+	logic [`FIFO_PTR_WIDTH-1:0] wrfifo_wrptr;
+   } debug_wrfifo;
+
+
+   typedef struct packed {
+	logic [3:0] cmpdcmp_mngr_state;
+	logic [47:0] cPage_byteStart;
+   } debug_pgwr_cmpdcmp_mngr;
+
+   typedef struct packed {
+	logic [6:0] cacheline_cnt;
+	logic [6:0] zero_cline_cntr_curr;
+	logic [3:0] zero_chunk_vec;
+    	logic [`HACD_AXI4_DATA_WIDTH-1:0] rd_data;
+	logic rd_valid;
+        logic [2:0] comp_state;
+   } debug_compressor; 
 
 endpackage
 
