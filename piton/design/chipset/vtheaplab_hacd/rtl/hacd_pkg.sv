@@ -42,7 +42,7 @@ package hacd_pkg;
         parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'd64;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter int LIST_ENTRY_CNT= 4; //8; //512; //8;
+    	parameter int LIST_ENTRY_CNT= 8; //8; //512; //8;
 	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
