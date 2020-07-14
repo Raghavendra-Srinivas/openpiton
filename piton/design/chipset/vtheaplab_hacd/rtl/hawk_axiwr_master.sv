@@ -91,7 +91,11 @@ module hawk_axiwr_master #
     input  wire [1:0]               m_axi_bresp,
     input  wire [BUSER_WIDTH-1:0]   m_axi_buser,
     input  wire                     m_axi_bvalid,
-    output wire                     m_axi_bready
+    output wire                     m_axi_bready,
+
+    //Debug
+    output hacd_pkg::debug_wrfifo   debug_wrfifo
+
 );
 
 parameter STRB_OFFSET  = DATA_WIDTH;
@@ -475,6 +479,11 @@ always @(posedge clk) begin
         m_axi_w_reg <= mem_read_data_reg;
     end
 end
+
+
+//Debug
+assign debug_wrfifo.wrfifo_rdptr=rd_ptr_reg;
+assign debug_wrfifo.wrfifo_wrptr=wr_ptr_reg;
 
 endmodule
 

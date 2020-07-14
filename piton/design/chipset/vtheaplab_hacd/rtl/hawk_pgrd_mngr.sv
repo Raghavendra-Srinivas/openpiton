@@ -48,7 +48,8 @@ module hawk_pgrd_mngr (
   output pgrd_mngr_ready,
 
   //DEBUG
-  output [`FSM_WID_PGRD-1:0] prm_state
+  output [`FSM_WID_PGRD-1:0] prm_state,
+  output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr	
 );
 
   //in waves, not able to obseves struct ports, so mapping for easier debug
@@ -456,12 +457,12 @@ assign iWayORcPagePkt = (p_state==COMPRESS)   ? c_iWayORcPagePkt :
 //DEBUG
 assign prm_state = p_state;
 
-`ifdef HAWK_FPGA
-	ila_3 ila_3_hawk_prm (
-		.clk(clk_i),
-		.probe0(trnsl_reqpkt.ppa),
-		.probe1({prm_state,trnsl_reqpkt.allow_access,trnsl_reqpkt.sts,trnsl_reqpkt.zpd_update,trnsl_reqpkt.zpd_cnt})
-	);
-`endif
+//`ifdef HAWK_FPGA
+//	ila_3 ila_3_hawk_prm (
+//		.clk(clk_i),
+//		.probe0(trnsl_reqpkt.ppa),
+//		.probe1({prm_state,trnsl_reqpkt.allow_access,trnsl_reqpkt.sts,trnsl_reqpkt.zpd_update,trnsl_reqpkt.zpd_cnt})
+//	);
+//`endif
 
 endmodule

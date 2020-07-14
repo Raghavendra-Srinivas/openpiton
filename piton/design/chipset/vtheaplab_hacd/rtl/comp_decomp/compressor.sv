@@ -1,3 +1,5 @@
+import hacd_pkg::*;
+
 module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     input clk_i,
     input rst_ni,
@@ -19,7 +21,10 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data,
 
     output logic incompressible,
-    output logic comp_done
+    output logic comp_done,
+
+    //Debug
+    output hacd_pkg::debug_compressor debug_comp
 );
 
 // Zero chunk metadata
@@ -82,7 +87,7 @@ always@(*) begin
 			if(comp_start && !rdfifo_empty) begin
 				n_state<=COMP_CHECK1;
 				n_zero_cline_cntr_curr = 'd0;
-		   		n_cacheline_cnt = 'd0;
+				n_cacheline_cnt='d0; 
 			end
 		end
 	  COMP_CHECK1: begin
@@ -240,6 +245,13 @@ end
 
 assign comp_size = 'd1088;
 
+//Debug
+assign debug_comp.cacheline_cnt= cacheline_cnt;
+assign debug_comp.zero_cline_cntr_curr= zero_cline_cntr_curr;
+assign debug_comp.zero_chunk_vec= zero_chunk_vec;
+assign debug_comp.rd_data= rd_data;
+assign debug_comp.rd_valid= rd_valid;
+assign debug_comp.comp_state = p_state;
 
 endmodule
 
