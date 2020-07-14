@@ -47,10 +47,12 @@ int main(int argc, char ** argv) {
 		if(i==0) {
 			for(int j=0;j<8;j++) {
 				tmp[(k*512)+8*i+j]=(uint64_t) (k+argv[0][0]);
+                		final_check+=tmp[(k*512)+8*i+j];
 			}
 		} else {
 			for(int j=0;j<8;j++) {
 	      			tmp[(k*512)+8*i]=(uint64_t) (0);
+                		final_check+=tmp[(k*512)+8*i+j];
 			}
 		}
 	}
@@ -60,12 +62,14 @@ int main(int argc, char ** argv) {
   			printf("Address of this page=%x\n ,count=%d\n",&tmp[k],count);
 	}
   }
+  printf("Computed Value On Initialized Space=%ld,Page count=%ld\n",final_check,count);
 
   printf("Number of First Array Elements Initialized=>Count=%ld\n",count);
   array_2 = (uint64_t*)(HPPA_BASE_GT_1GB);
   printf("Address of Second Array =>%0x\n",array_2);
   printf("Initializing and Computing on Second Array \n");
   count=0;
+  final_check=0;
   //Initialization
   for (int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
 	//if(k%512==0) {

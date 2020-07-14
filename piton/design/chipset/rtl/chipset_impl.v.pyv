@@ -1061,8 +1061,8 @@ uart_top        uart_top (
 `endif // PITONSYS_NO_MC
 
     // Uncomment to connect to the switch
-    // .uart_timeout_en(uart_timeout_en),
-    .uart_timeout_en            ( 1'b1                                  ),
+    .uart_timeout_en(uart_timeout_en),
+    //.uart_timeout_en            ( 1'b1                                  ),
 
     .test_start                 ( test_start                            ),
     .test_good_end              ( test_good_end                         ),

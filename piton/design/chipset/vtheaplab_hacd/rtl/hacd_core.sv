@@ -725,8 +725,8 @@ ila_4 ila_hawk_ain1_debug (
    //[0:0]probe49;
    //[1:0]probe50;
 
-   .probe51('d0),//(mc_axi_rd_bus.axi_araddr), //[63:0]probe51;
-   .probe52('d0),//(mc_axi_wr_bus.axi_awaddr), //[63:0]probe52;
+   .probe51(init_list_done),//(mc_axi_rd_bus.axi_araddr), //[63:0]probe51;
+   .probe52(init_att_done),//(mc_axi_wr_bus.axi_awaddr), //[63:0]probe52;
    .probe53('d0), //({mc_axi_wr_bus.axi_bvalid,mc_axi_rd_bus.axi_rvalid,mc_axi_wr_bus.axi_wready,mc_axi_rd_bus.axi_rready,mc_axi_rd_bus.axi_arready,mc_axi_wr_bus.axi_awready,mc_axi_rd_bus.axi_arvalid,mc_axi_wr_bus.axi_awvalid}), //[7:0]probe53;
    .probe54('d0),//({'d0,mc_axi_wr_bus.axi_bresp,mc_axi_rd_bus.axi_rresp,mc_axi_wr_bus.axi_bid,mc_axi_rd_bus.axi_rid,mc_axi_rd_bus.axi_arid,mc_axi_wr_bus.axi_awid,mc_axi_wr_bus.axi_wvalid,mc_axi_rd_bus.axi_rlast}), //[63:0]probe54;
    .probe55('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
