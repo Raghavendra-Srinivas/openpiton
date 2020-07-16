@@ -212,13 +212,13 @@ always@* begin
 			   end
 	        end
 		POP_FREE_LST: begin 
-			  if(freeLstHead!=NULL) begin 
+			  if(freeLstHead!==NULL) begin 
 			             n_axireq=get_axi_rd_pkt(freeLstHead,'d0,AXI_RD_TOL);		
 				     n_req_arvalid = 1'b1;
 				     n_state = WAIT_LST_ENTRY;
 			  end
 			  else begin
-				    if(uncompLstTail!=uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
+				    if(uncompLstTail!==uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
 				    n_state = COMPRESS;
 				    end else begin  //handle other cases later, moving to IDLE for now
 				    n_state = IDLE;

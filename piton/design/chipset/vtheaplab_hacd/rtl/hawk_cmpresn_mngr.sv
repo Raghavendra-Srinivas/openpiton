@@ -93,7 +93,7 @@ localparam IDLE			     ='d0,
 
 logic [7:0] size_idx;
 
-logic [15:0] zsPgCnt,n_zsPgCnt;
+logic [31:0] zsPgCnt,n_zsPgCnt;
 
 logic [47:0] UC_ifLst_iWay[IFLST_COUNT],n_UC_ifLst_iWay[IFLST_COUNT];
 logic UC_ifLst_iWay_valid[IFLST_COUNT],n_UC_ifLst_iWay_valid[IFLST_COUNT];
@@ -130,6 +130,9 @@ always@* begin
 	//lookup IF list for corresponding size
 	size_idx=get_idx(comp_size);
 	n_zsPgCnt=zsPgCnt;
+	
+	
+	n_cmpresn_freeWay=cmpresn_freeWay;
 
 	case(p_state)
 		IDLE: begin
@@ -340,7 +343,8 @@ always@* begin
 				  	// For (2) and (3) we, need to make present
 				  	// list_entry way as nxtWay_ptr in Iway
 				  	// 
-			          	if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< (c_iWayORcPagePkt.iWay_ptr+4096) ) begin
+			          	//if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< (c_iWayORcPagePkt.iWay_ptr+4096) ) begin
+			          	if (!c_iWayORcPagePkt.zspage_full) begin
 				  	      n_iWayORcPagePkt.update=1'b1;
 				  	end
 				  	else begin

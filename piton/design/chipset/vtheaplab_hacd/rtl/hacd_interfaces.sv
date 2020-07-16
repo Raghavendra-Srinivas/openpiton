@@ -26,7 +26,7 @@ interface HACD_AXI_WR_BUS #(
     logic                              axi_awready;
 
     // AXI Write Data Channel Signals
-    //logic  [`HACD_AXI4_ID_WIDTH     -1:0]   axi_wid;
+    logic  [`HACD_AXI4_ID_WIDTH     -1:0]   axi_wid;
     logic  [`HACD_AXI4_DATA_WIDTH   -1:0]   axi_wdata;
     logic  [`HACD_AXI4_STRB_WIDTH   -1:0]   axi_wstrb;
     logic                              axi_wlast;
@@ -55,7 +55,7 @@ interface HACD_AXI_WR_BUS #(
 		  output axi_awvalid,
 		  input axi_awready,
 
-	      	  //output    axi_wid,
+	      	  output    axi_wid,
                   output    axi_wdata,
                   output    axi_wstrb,
                   output    axi_wlast,
@@ -84,7 +84,7 @@ interface HACD_AXI_WR_BUS #(
 		  input axi_awvalid,
 		  output axi_awready,
 
-	      	  //input    axi_wid,
+	      	  input    axi_wid,
                   input    axi_wdata,
                   input    axi_wstrb,
                   input    axi_wlast,
@@ -206,7 +206,7 @@ interface HACD_MC_AXI_WR_BUS #(
     logic                              axi_awready;
 
     // AXI Write Data Channel Signals
-    //logic  [`HACD_MC_AXI4_ID_WIDTH     -1:0]   axi_wid;
+    logic  [`HACD_MC_AXI4_ID_WIDTH     -1:0]   axi_wid;
     logic  [`HACD_MC_AXI4_DATA_WIDTH   -1:0]   axi_wdata;
     logic  [`HACD_MC_AXI4_STRB_WIDTH   -1:0]   axi_wstrb;
     logic                              axi_wlast;
@@ -235,7 +235,7 @@ interface HACD_MC_AXI_WR_BUS #(
 		  output axi_awvalid,
 		  input axi_awready,
 
-	      	  //output    axi_wid,
+	      	  output    axi_wid,
                   output    axi_wdata,
                   output    axi_wstrb,
                   output    axi_wlast,
@@ -264,7 +264,7 @@ interface HACD_MC_AXI_WR_BUS #(
 		  input axi_awvalid,
 		  output axi_awready,
 
-	      	  //input    axi_wid,
+	      	  input    axi_wid,
                   input    axi_wdata,
                   input    axi_wstrb,
                   input    axi_wlast,
@@ -384,7 +384,7 @@ interface HACD_AXI_XBAR_WR_BUS #(
     logic                              axi_awready;
 
     // AXI Write Data Channel Signals
-    //logic  [`HACD_AXI4_ID_WIDTH     -1:0]   axi_wid;
+    logic  [`HACD_AXI4_ID_WIDTH     -1:0]   axi_wid;
     logic  [`HACD_AXI4_DATA_WIDTH   -1:0]   axi_wdata;
     logic  [`HACD_AXI4_STRB_WIDTH   -1:0]   axi_wstrb;
     logic                              axi_wlast;
@@ -413,7 +413,7 @@ interface HACD_AXI_XBAR_WR_BUS #(
 		  output axi_awvalid,
 		  input axi_awready,
 
-	      	  //output    axi_wid,
+	      	  output    axi_wid,
                   output    axi_wdata,
                   output    axi_wstrb,
                   output    axi_wlast,
@@ -442,7 +442,7 @@ interface HACD_AXI_XBAR_WR_BUS #(
 		  input axi_awvalid,
 		  output axi_awready,
 
-	      	  //input    axi_wid,
+	      	  input    axi_wid,
                   input    axi_wdata,
                   input    axi_wstrb,
                   input    axi_wlast,
