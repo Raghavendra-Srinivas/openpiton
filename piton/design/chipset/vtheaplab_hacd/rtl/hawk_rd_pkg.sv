@@ -152,8 +152,9 @@ function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	iway_ptr=rdata[(48-1)+0 : 0]; 
 	
 	cpage_size=suprted_comp_size[md.size];
-	
-	//cpage byte start
+        pkt.zspage_full = 1'b0;
+
+	//cpage byte start //Supproting only one way with 3 pages
 	if(md.way_vld[0]) begin
 		if          (!md.pg_vld[0]) begin
 				pkt.cPage_byteStart=iway_ptr+ZS_OFFSET; //first page
@@ -172,6 +173,9 @@ function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 					md.page2=md.page1+cpage_size;
 					md.pg_vld[2]=1'b1;
 				end //not handling other cases for now 
+		end else begin
+		//Not handling for airtight layout. For navie compression, set iway full condition as pp_ifl below
+        			pkt.zspage_full = 1'b1;
 		end
 	end //not handling other ways for now
 

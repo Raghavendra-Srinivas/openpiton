@@ -496,6 +496,7 @@ assign chipset_intf_data_noc3   = filter_chip_noc3_data;
 assign chip_filter_noc3_ready  = cpu_mem_traffic ? chipset_intf_rdy_noc3 : 1'b1;
 
 `ifdef PITONSYS_UART_BOOT
+wire raghav_test_end_temp;
 test_end_checker test_end_checker(
     .clk                    (chipset_clk),
     .rst_n                  (chipset_rst_n),
@@ -506,8 +507,9 @@ test_end_checker test_end_checker(
 
     .uart_boot_en           (uart_boot_en),
     .test_good_end          (test_good_end),
-    .test_bad_end           (test_bad_end)
+    .test_bad_end           (raghav_test_end_temp) //(test_bad_end) //raghav commented
 );
+    assign test_bad_end = uart_timeout_en ? raghav_test_end_temp : 1'b0;
 `else
     assign test_good_end = 1'b0;
     assign test_bad_end = 1'b0;

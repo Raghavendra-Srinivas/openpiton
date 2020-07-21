@@ -736,7 +736,7 @@ ila_4 ila_hawk_ain1_debug (
    .probe58({'d0,tol_HT.IfLstTail[0],tol_HT.IfLstHead[0],tol_HT.incompListHead,tol_HT.incompListTail}),//[511:0]probe61;
    .probe59({'d0,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec}),//[511:0]probe63; //for compressor
    .probe60(debug_comp.rd_data),//[511:0]probe57; 
-   .probe61({'d0,iWayORcPagePkt.zsPgMd.page2,iWayORcPagePkt.zsPgMd.page1,iWayORcPagePkt.zsPgMd.page0,iWayORcPagePkt.zsPgMd.way_vld,iWayORcPagePkt.zsPgMd.pg_vld,iWayORcPagePkt.iWay_ptr,iWayORcPagePkt.cpage_size,iWayORcPagePkt.cPage_byteStart,iWayORcPagePkt.update,iWayORcPagePkt.comp_decomp,iWayORcPagePkt.pp_ifl}),//[511:0]probe58; 
+   .probe61({'d0,iWayORcPagePkt.zsPgMd.page2,iWayORcPagePkt.zsPgMd.page1,iWayORcPagePkt.zsPgMd.page0,iWayORcPagePkt.zsPgMd.way_vld,iWayORcPagePkt.zsPgMd.pg_vld,iWayORcPagePkt.iWay_ptr,iWayORcPagePkt.cpage_size,iWayORcPagePkt.cPage_byteStart,iWayORcPagePkt.update,iWayORcPagePkt.comp_decomp,iWayORcPagePkt.pp_ifl,debug_cmp_mngr.zsPgCnt}),//[511:0]probe58; 
    .probe62('d0),//[0]probe58; 
    .probe63('d0)//[0]probe62;
 
