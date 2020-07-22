@@ -2723,7 +2723,7 @@ sub parse_args
   push (@{$opt{config_rtl}}, "PITON_ARIANE")   if ($opt{ariane});
   push (@{$opt{config_rtl}}, "WT_DCACHE")      if ($opt{ariane});
 
-  push (@{$opt{config_rtl}}, "NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
+  push (@{$opt{config_rtl}}, "HAWK_NAIVE_COMPRESSION") if ($opt{naive_compression}) ;
   push (@{$opt{config_rtl}}, "HAWK_SIMS") if ($opt{hawk_sims}) ;
 
   if ($opt{pico} or $opt{pico_het} or $opt{ariane}) {

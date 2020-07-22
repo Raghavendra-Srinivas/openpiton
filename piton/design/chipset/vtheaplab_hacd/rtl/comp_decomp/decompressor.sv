@@ -71,6 +71,7 @@ always@(*) begin
 	  	IDLE: begin
 			if(decomp_start && !rdfifo_empty) begin
 				n_state<=METADATA;
+				n_chunk_exp_done='d0;
 			end
 		end
 		METADATA: begin

@@ -295,11 +295,11 @@ always@* begin
 				if(decomp_mngr_done) begin 
 					n_trnsl_reqpkt.ppa=decomp_freeWay; //dcomp done, so this way is expanded with needed page, send it over trnls packet
 					n_trnsl_reqpkt.sts=UNCOMP;
-					n_trnsl_reqpkt.allow_access=1'b1;
 				        if(freeLstHead!=NULL) begin //If i just uncompressed compressed page to popped way from free list, i need tol update
 					  n_state = TBL_UPDATE;
 					end else begin //it must be called from COMPRESS, so it internally updated necessary tol
 					  n_state = IDLE;
+					  n_trnsl_reqpkt.allow_access=1'b1;
 					end
 				end
 		end
