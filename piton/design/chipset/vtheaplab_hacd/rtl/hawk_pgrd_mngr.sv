@@ -49,7 +49,8 @@ module hawk_pgrd_mngr (
 
   //DEBUG
   output [`FSM_WID_PGRD-1:0] prm_state,
-  output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr	
+  output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr,	
+  output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr	
 );
 
   //in waves, not able to obseves struct ports, so mapping for easier debug

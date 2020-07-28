@@ -70,6 +70,8 @@ module hacd_core (
    wire rdm_reset;
    wire [3:0] prm_state;
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
+   hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
+	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    //
@@ -271,7 +273,10 @@ end
 	assign axiwr_master_wdata =  wr_reqpkt.data;
 
 `endif
+
 hacd_pkg::debug_compressor debug_comp;
+hacd_pkg::debug_decompressor debug_decomp;
+
 wire incompressible;
 
 hawk_comdecomp u_hawk_comdecomp(
@@ -298,7 +303,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .compdecomp_wr_strb(compdecomp_wr_strb),
      .compdecomp_wr_data(compdecomp_wr_data),
 
-     .debug_comp
+     .debug_comp,
+     .debug_decomp
 );
 
 
@@ -624,9 +630,9 @@ hawk_comdecomp u_hawk_comdecomp(
 
 ila_4 ila_hawk_ain1_debug (
    .clk(clk_i),//clk;
-   .probe0('d0),//(cpu_axi_wr_bus.axi_awaddr[35:0]),  //[35:0]probe0;
-   .probe1('d0),//(cpu_axi_wr_bus.axi_awvalid), //[0:0]probe1;
-   .probe2('d0),//(cpu_axi_wr_bus.axi_awid),//[5:0]probe2;
+   .probe0('d0), //(hawk_reg_inactive_ctrl), //'d0),//(cpu_axi_wr_bus.axi_awaddr[35:0]),  //[35:0]probe0;
+   .probe1('d0), //(hawk_axi_wr_bus.axi_awready), //'d0),//(cpu_axi_wr_bus.axi_awvalid), //[0:0]probe1;
+   .probe2('d0), //(hawk_axi_wr_bus.axi_wready), //('d0),//(cpu_axi_wr_bus.axi_awid),//[5:0]probe2;
    .probe3('d0),//(cpu_axi_wr_bus.axi_wdata),//[511:0]probe3;
    .probe4('d0),//(cpu_axi_wr_bus.axi_wvalid),//[0:0]probe4;
    .probe5('d0),//(cpu_axi_wr_bus.axi_bid),//[5:0]probe5;
@@ -733,8 +739,11 @@ ila_4 ila_hawk_ain1_debug (
     
    .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access,hawk_sw_ctrl[1]}), //[511:0]probe56; //for all states
    .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state}),//[511:0]probe60;   //pgwr mangaer->compdecomp manager
-   .probe58({'d0,tol_HT.IfLstTail[0],tol_HT.IfLstHead[0],tol_HT.incompListHead,tol_HT.incompListTail}),//[511:0]probe61;
-   .probe59({'d0,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec}),//[511:0]probe63; //for compressor
+   .probe58({'d0,debug_decmp_mngr.decomp_mngr_done,debug_decmp_mngr.decomp_freeWay,debug_decmp_mngr.DeCompPgCnt,debug_decmp_mngr.decmp_mngr_state, tol_HT.IfLstTail[0],tol_HT.IfLstHead[0],tol_HT.incompListHead,tol_HT.incompListTail}),//[511:0]probe61;
+
+   //.probe59({'d0,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec}),//[511:0]probe63; //for compressor
+   .probe59({'d0,debug_decomp.wr_data,debug_decomp.cacheline_cnt,debug_decomp.wr_req,debug_decomp.zero_chunk_vec,debug_decomp.chunk_exp_done,debug_decomp.decomp_state}),//[511:0]probe63; //for compressor
+
    .probe60(debug_comp.rd_data),//[511:0]probe57; 
    .probe61({'d0,iWayORcPagePkt.zsPgMd.page2,iWayORcPagePkt.zsPgMd.page1,iWayORcPagePkt.zsPgMd.page0,iWayORcPagePkt.zsPgMd.way_vld,iWayORcPagePkt.zsPgMd.pg_vld,iWayORcPagePkt.iWay_ptr,iWayORcPagePkt.cpage_size,iWayORcPagePkt.cPage_byteStart,iWayORcPagePkt.update,iWayORcPagePkt.comp_decomp,iWayORcPagePkt.pp_ifl,debug_cmp_mngr.zsPgCnt}),//[511:0]probe58; 
    .probe62('d0),//[0]probe58; 

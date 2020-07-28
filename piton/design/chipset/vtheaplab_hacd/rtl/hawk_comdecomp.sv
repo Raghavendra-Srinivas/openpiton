@@ -27,7 +27,8 @@ module hawk_comdecomp (
     output [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data,
 
     //Debug
-    output hacd_pkg::debug_compressor debug_comp
+    output hacd_pkg::debug_compressor debug_comp,
+    output hacd_pkg::debug_decompressor debug_decomp
 
 );
 
@@ -113,7 +114,9 @@ assign decomp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tigh
  	   .wr_req(decomp_wr_req),
  	   .wr_data(decomp_wr_data),
 	
- 	   .decomp_done
+ 	   .decomp_done,
+
+	   .debug_decomp
  	);
 
 `endif

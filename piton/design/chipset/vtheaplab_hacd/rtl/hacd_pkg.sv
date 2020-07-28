@@ -343,6 +343,8 @@ typedef struct packed{
 
 
 
+
+
    typedef struct packed {
 	logic [`FIFO_PTR_WIDTH-1:0] rdfifo_rdptr;
 	logic [`FIFO_PTR_WIDTH-1:0] rdfifo_wrptr;
@@ -367,6 +369,24 @@ typedef struct packed{
 	logic rd_valid;
         logic [2:0] comp_state;
    } debug_compressor; 
+
+////////////////////
+
+   typedef struct packed {
+	logic [4:0] decmp_mngr_state;
+	logic [`HACD_AXI4_ADDR_WIDTH-1:12] decomp_freeWay;
+	logic [31:0] DeCompPgCnt;
+	logic decomp_mngr_done;
+   } debug_pgrd_decmp_mngr;
+
+   typedef struct packed {
+	logic [6:0] cacheline_cnt;
+    	logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data;
+	logic wr_req;
+	logic [3:0] zero_chunk_vec;
+	logic [3:0] chunk_exp_done;
+        logic [2:0] decomp_state;
+   } debug_decompressor;
 
 endpackage
 
