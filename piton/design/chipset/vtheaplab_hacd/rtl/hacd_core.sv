@@ -490,26 +490,38 @@ hawk_comdecomp u_hawk_comdecomp(
 
 `ifdef HAWK_FPGA //_DBG
 
-/*
 	//ILA debug
 	ila_3 ila_3_hawk_ovrd_addr (
 		.clk(clk_i),
+		.probe0({stall_wr_dbg_bus.req_count0}),
+		.probe1({stall_wr_dbg_bus.req_count1}),
+		.probe2({stall_wr_dbg_bus.resp_count0}),
+		.probe3({stall_wr_dbg_bus.resp_count1}),
+		.probe4({stall_rd_dbg_bus.req_count0}),
+		.probe5({stall_rd_dbg_bus.req_count1}),
+		.probe6({stall_rd_dbg_bus.resp_count0}),
+		.probe7({stall_rd_dbg_bus.resp_count1}),
+		.probe8({stall_wr_dbg_bus.last_addr0,stall_wr_dbg_bus.bus_error}),
+		.probe9({stall_wr_dbg_bus.last_addr1}),
+		.probe10({stall_rd_dbg_bus.last_addr0,stall_rd_dbg_bus.bus_error}),
+		.probe11({stall_rd_dbg_bus.last_addr1})
 		//.probe0({cpu_axi_wr_bus.axi_awaddr[62:0],cpu_axi_wr_bus.axi_awvalid}),
 		//.probe1({hawk_cpu_ovrd_wrpkt.ppa,hawk_cpu_ovrd_wrpkt.allow_access})
-		  .probe0({'d0,tol_HT.freeListHead[9:0],tol_HT.freeListTail[9:0],prm_state,pwm_state,cu_state}),
-		  .probe1({
-			'd0,hawk_sw_ctrl[1],
-			tol_HT.uncompListHead[9:0],
-			tol_HT.uncompListTail[9:0]
-		})	
+		//  .probe0({'d0,tol_HT.freeListHead[9:0],tol_HT.freeListTail[9:0],prm_state,pwm_state,cu_state}),
+		//  .probe1({
+		//	'd0,hawk_sw_ctrl[1],
+		//	tol_HT.uncompListHead[9:0],
+		//	tol_HT.uncompListTail[9:0]
+		//})	
 	);
 
-	ila_3 ila_hawk_debug_states (
-		.clk(clk_i),
-		.probe0({cpu_axi_rd_bus.axi_araddr[30:0],cpu_axi_rd_bus.axi_arvalid,stall_axi_rd_bus.axi_araddr[30:0],stall_axi_rd_bus.axi_arvalid}),
-		.probe1({hawk_sw_ctrl[1],cpu_axi_wr_bus.axi_awaddr[29:0],cpu_axi_wr_bus.axi_awvalid,stall_axi_wr_bus.axi_awaddr[30:0],stall_axi_wr_bus.axi_awvalid})
-	);
+	//ila_3 ila_hawk_debug_states (
+	//	.clk(clk_i),
+	//	.probe0({cpu_axi_rd_bus.axi_araddr[30:0],cpu_axi_rd_bus.axi_arvalid,stall_axi_rd_bus.axi_araddr[30:0],stall_axi_rd_bus.axi_arvalid}),
+	//	.probe1({hawk_sw_ctrl[1],cpu_axi_wr_bus.axi_awaddr[29:0],cpu_axi_wr_bus.axi_awvalid,stall_axi_wr_bus.axi_awaddr[30:0],stall_axi_wr_bus.axi_awvalid})
+	//);
 
+/*
 
      ila_0 debug_hawk_wr_rd
         (
@@ -628,6 +640,7 @@ hawk_comdecomp u_hawk_comdecomp(
      );
 */
 
+/*
 ila_4 ila_hawk_ain1_debug (
    .clk(clk_i),//clk;
    .probe0('d0), //(hawk_reg_inactive_ctrl), //'d0),//(cpu_axi_wr_bus.axi_awaddr[35:0]),  //[35:0]probe0;
@@ -750,7 +763,7 @@ ila_4 ila_hawk_ain1_debug (
    .probe63('d0)//[0]probe62;
 
 );
-
+*/
 `endif
 
 

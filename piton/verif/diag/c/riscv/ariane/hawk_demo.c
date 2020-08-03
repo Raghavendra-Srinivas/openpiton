@@ -5,11 +5,11 @@
 //1GB=260094 Availabel pages for Program Data
 
 //Test1
-	#define ARRAY1_SIZE 260000 //120000
-	#define ARRAY2_SIZE 130000 //120000
+//	#define ARRAY1_SIZE 260000 //120000
+//	#define ARRAY2_SIZE 130000 //120000
 //Test2
-//	#define ARRAY1_SIZE 260094
-//	#define ARRAY2_SIZE 173394
+	#define ARRAY1_SIZE 260094
+	#define ARRAY2_SIZE 173394
 
 //ARRAY1
 #define ARRAY1_NUM_PAGES ARRAY1_SIZE  

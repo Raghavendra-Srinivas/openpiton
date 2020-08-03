@@ -1464,7 +1464,7 @@ axi_size_conv_DOWNSIZE #
 
 `endif
 
-/*
+
 ila_1 debug_hawk_mc 
    (.clk(ui_clk),
     .probe0(1'b0), //(ui_clk),
@@ -1520,9 +1520,9 @@ ila_1 debug_hawk_mc
     .probe37 ('d0)
 
 );
-*/
 
 /*
+
 ila_0 debug_hawk_noc_axi 
    (.clk(ui_clk),
     .probe0(1'b0), //(ui_clk),
@@ -1578,8 +1578,8 @@ ila_0 debug_hawk_noc_axi
     .probe37 ('d0)
 
 );
-*/
 
+*/
 
 /*
   input clk;
