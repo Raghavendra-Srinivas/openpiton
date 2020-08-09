@@ -70,7 +70,7 @@ always@(*) begin
 	case(p_state) 
 	  	IDLE: begin
 			if(decomp_start && !rdfifo_empty) begin
-				n_state<=METADATA;
+				n_state = METADATA;
 				n_chunk_exp_done='d0;
 			end
 		end
@@ -204,8 +204,8 @@ begin
 
 		rd_req<=1'b0;
 
-		wr_data='d0;
-		wr_req=1'b0;
+		wr_data<='d0;
+		wr_req<=1'b0;
 	
 		decomp_done<=1'b0;
 	end
