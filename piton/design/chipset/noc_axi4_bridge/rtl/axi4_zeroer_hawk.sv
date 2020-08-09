@@ -34,111 +34,111 @@ module axi4_zeroer (
     output  init_calib_complete_out,
 
     // AXI interface in
-    input wire  [`AXI4_ID_WIDTH     -1:0]     s_axi_awid,
-    input wire  [`AXI4_ADDR_WIDTH   -1:0]     s_axi_awaddr,
-    input wire  [`AXI4_LEN_WIDTH    -1:0]     s_axi_awlen,
-    input wire  [`AXI4_SIZE_WIDTH   -1:0]     s_axi_awsize,
-    input wire  [`AXI4_BURST_WIDTH  -1:0]     s_axi_awburst,
+    input wire  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]     s_axi_awid,
+    input wire  [`HAWK_MC_AXI4_ADDR_WIDTH   -1:0]     s_axi_awaddr,
+    input wire  [`HAWK_MC_AXI4_LEN_WIDTH    -1:0]     s_axi_awlen,
+    input wire  [`HAWK_MC_AXI4_SIZE_WIDTH   -1:0]     s_axi_awsize,
+    input wire  [`HAWK_MC_AXI4_BURST_WIDTH  -1:0]     s_axi_awburst,
     input wire                                s_axi_awlock,
-    input wire  [`AXI4_CACHE_WIDTH  -1:0]     s_axi_awcache,
-    input wire  [`AXI4_PROT_WIDTH   -1:0]     s_axi_awprot,
-    input wire  [`AXI4_QOS_WIDTH    -1:0]     s_axi_awqos,
-    input wire  [`AXI4_REGION_WIDTH -1:0]     s_axi_awregion,
-    input wire  [`AXI4_USER_WIDTH   -1:0]     s_axi_awuser,
+    input wire  [`HAWK_MC_AXI4_CACHE_WIDTH  -1:0]     s_axi_awcache,
+    input wire  [`HAWK_MC_AXI4_PROT_WIDTH   -1:0]     s_axi_awprot,
+    input wire  [`HAWK_MC_AXI4_QOS_WIDTH    -1:0]     s_axi_awqos,
+    input wire  [`HAWK_MC_AXI4_REGION_WIDTH -1:0]     s_axi_awregion,
+    input wire  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]     s_axi_awuser,
     input wire                                s_axi_awvalid,
     output reg                                s_axi_awready,
 
-    input wire   [`AXI4_ID_WIDTH     -1:0]    s_axi_wid,
-    input wire   [`AXI4_DATA_WIDTH   -1:0]    s_axi_wdata,
-    input wire   [`AXI4_STRB_WIDTH   -1:0]    s_axi_wstrb,
+    input wire   [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    s_axi_wid,
+    input wire   [`HAWK_MC_AXI4_DATA_WIDTH   -1:0]    s_axi_wdata,
+    input wire   [`HAWK_MC_AXI4_STRB_WIDTH   -1:0]    s_axi_wstrb,
     input wire                                s_axi_wlast,
-    input wire   [`AXI4_USER_WIDTH   -1:0]    s_axi_wuser,
+    input wire   [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    s_axi_wuser,
     input wire                                s_axi_wvalid,
     output reg                                s_axi_wready,
 
-    input wire   [`AXI4_ID_WIDTH     -1:0]    s_axi_arid,
-    input wire   [`AXI4_ADDR_WIDTH   -1:0]    s_axi_araddr,
-    input wire   [`AXI4_LEN_WIDTH    -1:0]    s_axi_arlen,
-    input wire   [`AXI4_SIZE_WIDTH   -1:0]    s_axi_arsize,
-    input wire   [`AXI4_BURST_WIDTH  -1:0]    s_axi_arburst,
+    input wire   [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    s_axi_arid,
+    input wire   [`HAWK_MC_AXI4_ADDR_WIDTH   -1:0]    s_axi_araddr,
+    input wire   [`HAWK_MC_AXI4_LEN_WIDTH    -1:0]    s_axi_arlen,
+    input wire   [`HAWK_MC_AXI4_SIZE_WIDTH   -1:0]    s_axi_arsize,
+    input wire   [`HAWK_MC_AXI4_BURST_WIDTH  -1:0]    s_axi_arburst,
     input wire                                s_axi_arlock,
-    input wire   [`AXI4_CACHE_WIDTH  -1:0]    s_axi_arcache,
-    input wire   [`AXI4_PROT_WIDTH   -1:0]    s_axi_arprot,
-    input wire   [`AXI4_QOS_WIDTH    -1:0]    s_axi_arqos,
-    input wire   [`AXI4_REGION_WIDTH -1:0]    s_axi_arregion,
-    input wire   [`AXI4_USER_WIDTH   -1:0]    s_axi_aruser,
+    input wire   [`HAWK_MC_AXI4_CACHE_WIDTH  -1:0]    s_axi_arcache,
+    input wire   [`HAWK_MC_AXI4_PROT_WIDTH   -1:0]    s_axi_arprot,
+    input wire   [`HAWK_MC_AXI4_QOS_WIDTH    -1:0]    s_axi_arqos,
+    input wire   [`HAWK_MC_AXI4_REGION_WIDTH -1:0]    s_axi_arregion,
+    input wire   [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    s_axi_aruser,
     input wire                                s_axi_arvalid,
     output reg                                s_axi_arready,
 
-    output reg  [`AXI4_ID_WIDTH     -1:0]     s_axi_rid,
-    output reg  [`AXI4_DATA_WIDTH   -1:0]     s_axi_rdata,
-    output reg  [`AXI4_RESP_WIDTH   -1:0]     s_axi_rresp,
+    output reg  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]     s_axi_rid,
+    output reg  [`HAWK_MC_AXI4_DATA_WIDTH   -1:0]     s_axi_rdata,
+    output reg  [`HAWK_MC_AXI4_RESP_WIDTH   -1:0]     s_axi_rresp,
     output reg                                s_axi_rlast,
-    output reg  [`AXI4_USER_WIDTH   -1:0]     s_axi_ruser,
+    output reg  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]     s_axi_ruser,
     output reg                                s_axi_rvalid,
     input wire                                s_axi_rready,
 
-    output reg  [`AXI4_ID_WIDTH     -1:0]     s_axi_bid,
-    output reg  [`AXI4_RESP_WIDTH   -1:0]     s_axi_bresp,
-    output reg  [`AXI4_USER_WIDTH   -1:0]     s_axi_buser,
+    output reg  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]     s_axi_bid,
+    output reg  [`HAWK_MC_AXI4_RESP_WIDTH   -1:0]     s_axi_bresp,
+    output reg  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]     s_axi_buser,
     output reg                                s_axi_bvalid,
     input wire                                s_axi_bready,    
 
     // AXI interface out
-    output reg  [`AXI4_ID_WIDTH     -1:0]     m_axi_awid,
-    output reg  [`AXI4_ADDR_WIDTH   -1:0]     m_axi_awaddr,
-    output reg  [`AXI4_LEN_WIDTH    -1:0]     m_axi_awlen,
-    output reg  [`AXI4_SIZE_WIDTH   -1:0]     m_axi_awsize,
-    output reg  [`AXI4_BURST_WIDTH  -1:0]     m_axi_awburst,
+    output reg  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]     m_axi_awid,
+    output reg  [`HAWK_MC_AXI4_ADDR_WIDTH   -1:0]     m_axi_awaddr,
+    output reg  [`HAWK_MC_AXI4_LEN_WIDTH    -1:0]     m_axi_awlen,
+    output reg  [`HAWK_MC_AXI4_SIZE_WIDTH   -1:0]     m_axi_awsize,
+    output reg  [`HAWK_MC_AXI4_BURST_WIDTH  -1:0]     m_axi_awburst,
     output reg                                m_axi_awlock,
-    output reg  [`AXI4_CACHE_WIDTH  -1:0]     m_axi_awcache,
-    output reg  [`AXI4_PROT_WIDTH   -1:0]     m_axi_awprot,
-    output reg  [`AXI4_QOS_WIDTH    -1:0]     m_axi_awqos,
-    output reg  [`AXI4_REGION_WIDTH -1:0]     m_axi_awregion,
-    output reg  [`AXI4_USER_WIDTH   -1:0]     m_axi_awuser,
+    output reg  [`HAWK_MC_AXI4_CACHE_WIDTH  -1:0]     m_axi_awcache,
+    output reg  [`HAWK_MC_AXI4_PROT_WIDTH   -1:0]     m_axi_awprot,
+    output reg  [`HAWK_MC_AXI4_QOS_WIDTH    -1:0]     m_axi_awqos,
+    output reg  [`HAWK_MC_AXI4_REGION_WIDTH -1:0]     m_axi_awregion,
+    output reg  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]     m_axi_awuser,
     output reg                                m_axi_awvalid,
     input  wire                               m_axi_awready,
 
-    output reg   [`AXI4_ID_WIDTH     -1:0]    m_axi_wid,
-    output reg   [`AXI4_DATA_WIDTH   -1:0]    m_axi_wdata,
-    output reg   [`AXI4_STRB_WIDTH   -1:0]    m_axi_wstrb,
+    output reg   [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    m_axi_wid,
+    output reg   [`HAWK_MC_AXI4_DATA_WIDTH   -1:0]    m_axi_wdata,
+    output reg   [`HAWK_MC_AXI4_STRB_WIDTH   -1:0]    m_axi_wstrb,
     output reg                                m_axi_wlast,
-    output reg   [`AXI4_USER_WIDTH   -1:0]    m_axi_wuser,
+    output reg   [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    m_axi_wuser,
     output reg                                m_axi_wvalid,
     input  wire                               m_axi_wready,
 
-    output reg   [`AXI4_ID_WIDTH     -1:0]    m_axi_arid,
-    output reg   [`AXI4_ADDR_WIDTH   -1:0]    m_axi_araddr,
-    output reg   [`AXI4_LEN_WIDTH    -1:0]    m_axi_arlen,
-    output reg   [`AXI4_SIZE_WIDTH   -1:0]    m_axi_arsize,
-    output reg   [`AXI4_BURST_WIDTH  -1:0]    m_axi_arburst,
+    output reg   [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    m_axi_arid,
+    output reg   [`HAWK_MC_AXI4_ADDR_WIDTH   -1:0]    m_axi_araddr,
+    output reg   [`HAWK_MC_AXI4_LEN_WIDTH    -1:0]    m_axi_arlen,
+    output reg   [`HAWK_MC_AXI4_SIZE_WIDTH   -1:0]    m_axi_arsize,
+    output reg   [`HAWK_MC_AXI4_BURST_WIDTH  -1:0]    m_axi_arburst,
     output reg                                m_axi_arlock,
-    output reg   [`AXI4_CACHE_WIDTH  -1:0]    m_axi_arcache,
-    output reg   [`AXI4_PROT_WIDTH   -1:0]    m_axi_arprot,
-    output reg   [`AXI4_QOS_WIDTH    -1:0]    m_axi_arqos,
-    output reg   [`AXI4_REGION_WIDTH -1:0]    m_axi_arregion,
-    output reg   [`AXI4_USER_WIDTH   -1:0]    m_axi_aruser,
+    output reg   [`HAWK_MC_AXI4_CACHE_WIDTH  -1:0]    m_axi_arcache,
+    output reg   [`HAWK_MC_AXI4_PROT_WIDTH   -1:0]    m_axi_arprot,
+    output reg   [`HAWK_MC_AXI4_QOS_WIDTH    -1:0]    m_axi_arqos,
+    output reg   [`HAWK_MC_AXI4_REGION_WIDTH -1:0]    m_axi_arregion,
+    output reg   [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    m_axi_aruser,
     output reg                                m_axi_arvalid,
     input  wire                               m_axi_arready,
 
-    input  wire  [`AXI4_ID_WIDTH     -1:0]    m_axi_rid,
-    input  wire  [`AXI4_DATA_WIDTH   -1:0]    m_axi_rdata,
-    input  wire  [`AXI4_RESP_WIDTH   -1:0]    m_axi_rresp,
+    input  wire  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    m_axi_rid,
+    input  wire  [`HAWK_MC_AXI4_DATA_WIDTH   -1:0]    m_axi_rdata,
+    input  wire  [`HAWK_MC_AXI4_RESP_WIDTH   -1:0]    m_axi_rresp,
     input  wire                               m_axi_rlast,
-    input  wire  [`AXI4_USER_WIDTH   -1:0]    m_axi_ruser,
+    input  wire  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    m_axi_ruser,
     input  wire                               m_axi_rvalid,
     output reg                                m_axi_rready,
 
-    input  wire  [`AXI4_ID_WIDTH     -1:0]    m_axi_bid,
-    input  wire  [`AXI4_RESP_WIDTH   -1:0]    m_axi_bresp,
-    input  wire  [`AXI4_USER_WIDTH   -1:0]    m_axi_buser,
+    input  wire  [`HAWK_MC_AXI4_ID_WIDTH     -1:0]    m_axi_bid,
+    input  wire  [`HAWK_MC_AXI4_RESP_WIDTH   -1:0]    m_axi_bresp,
+    input  wire  [`HAWK_MC_AXI4_USER_WIDTH   -1:0]    m_axi_buser,
     input  wire                               m_axi_bvalid,
     output reg                                m_axi_bready
 );
 
 localparam reg [63:0] BOARD_MEM_SIZE_MB = `BOARD_MEM_SIZE_MB;
-localparam reg [`AXI4_ADDR_WIDTH-1:0] MAX_MEM_ADDR      = (BOARD_MEM_SIZE_MB * 2**20);
-localparam REQUESTS_NEEDED  = MAX_MEM_ADDR / `AXI4_STRB_WIDTH; // basically max addr divided by size of one request
+localparam reg [`HAWK_MC_AXI4_ADDR_WIDTH-1:0] MAX_MEM_ADDR      = (BOARD_MEM_SIZE_MB * 2**20);
+localparam REQUESTS_NEEDED  = MAX_MEM_ADDR / `HAWK_MC_AXI4_STRB_WIDTH; // basically max addr divided by size of one request
 localparam MAX_OUTSTANDING = 16;
 
 wire zeroer_req_val;
@@ -146,10 +146,10 @@ wire zeroer_wdata_val; //raghav
 wire zeroer_resp_rdy;
 wire req_go;
 wire resp_go;
-reg [`AXI4_ADDR_WIDTH-1:0] req_sent;
-reg [`AXI4_ADDR_WIDTH-1:0] resp_got;
+reg [`HAWK_MC_AXI4_ADDR_WIDTH-1:0] req_sent;
+reg [`HAWK_MC_AXI4_ADDR_WIDTH-1:0] resp_got;
 reg [3:0] outstanding;
-wire [`AXI4_ADDR_WIDTH-1:0] zeroer_addr;
+wire [`HAWK_MC_AXI4_ADDR_WIDTH-1:0] zeroer_addr;
 wire zeroer_wlast;
 
 assign zeroer_req_val = init_calib_complete_in 
@@ -239,43 +239,44 @@ end
 assign init_calib_complete_out = (req_sent == REQUESTS_NEEDED) & 
                                  (resp_got == REQUESTS_NEEDED);
 
-assign zeroer_addr = req_sent * `AXI4_STRB_WIDTH;
+assign zeroer_addr = req_sent * `HAWK_MC_AXI4_STRB_WIDTH;
 //assign zeroer_wlast = zeroer_req_val;
 assign zeroer_wlast =  m_axi_wvalid_reg ; //zeroer_wdata_val; //raghav
 
 always @(*) begin
     if (~init_calib_complete_out) begin
-        m_axi_awid = `AXI4_ID_WIDTH'b0;
+        m_axi_awid = `HAWK_MC_AXI4_ID_WIDTH'b0;
         m_axi_awaddr = zeroer_addr;
-        m_axi_awlen = `AXI4_LEN_WIDTH'b0;
-        m_axi_awsize = `AXI4_SIZE_WIDTH'b110;
-        m_axi_awburst = `AXI4_BURST_WIDTH'b01;
+        m_axi_awlen = `HAWK_MC_AXI4_LEN_WIDTH'b0;
+        m_axi_awsize = `HAWK_MC_AXI4_SIZE_WIDTH'b110;
+        m_axi_awburst = `HAWK_MC_AXI4_BURST_WIDTH'b01;
         m_axi_awlock = 1'b0;
-        m_axi_awcache = `AXI4_CACHE_WIDTH'b11;
-        m_axi_awprot = `AXI4_PROT_WIDTH'b10;
-        m_axi_awqos = `AXI4_QOS_WIDTH'b0;
-        m_axi_awregion = `AXI4_REGION_WIDTH'b0;
-        m_axi_awuser = `AXI4_USER_WIDTH'b0;
+        m_axi_awcache = `HAWK_MC_AXI4_CACHE_WIDTH'b11;
+        m_axi_awprot = `HAWK_MC_AXI4_PROT_WIDTH'b10;
+        m_axi_awqos = `HAWK_MC_AXI4_QOS_WIDTH'b0;
+        m_axi_awregion = `HAWK_MC_AXI4_REGION_WIDTH'b0;
+        m_axi_awuser = `HAWK_MC_AXI4_USER_WIDTH'b0;
         m_axi_awvalid = m_axi_awvalid_reg; //zeroer_req_val;
 
-        m_axi_wid = `AXI4_ID_WIDTH'b0;
-        m_axi_wdata = {`AXI4_DATA_WIDTH{1'b0}};
-        m_axi_wstrb = {`AXI4_STRB_WIDTH{1'b1}};
+        m_axi_wid = `HAWK_MC_AXI4_ID_WIDTH'b0;
+        //m_axi_wdata = (zeroer_addr >= 'h04000000) ? {`HAWK_MC_AXI4_DATA_WIDTH{1'b0}} : {`HAWK_MC_AXI4_DATA_WIDTH{1'b1}};
+        m_axi_wdata = {`HAWK_MC_AXI4_DATA_WIDTH{1'b0}};
+        m_axi_wstrb = {`HAWK_MC_AXI4_STRB_WIDTH{1'b1}};
         m_axi_wlast = zeroer_wlast;
-        m_axi_wuser = `AXI4_USER_WIDTH'b0;
+        m_axi_wuser = `HAWK_MC_AXI4_USER_WIDTH'b0;
         m_axi_wvalid = m_axi_wvalid_reg ; //zeroer_wdata_val; //zeroer_req_val; //raghav
 
-        m_axi_arid = `AXI4_ID_WIDTH'b0;
-        m_axi_araddr = `AXI4_ADDR_WIDTH'b0;
-        m_axi_arlen = `AXI4_LEN_WIDTH'b0;
-        m_axi_arsize = `AXI4_SIZE_WIDTH'b110;
-        m_axi_arburst = `AXI4_BURST_WIDTH'b01;
+        m_axi_arid = `HAWK_MC_AXI4_ID_WIDTH'b0;
+        m_axi_araddr = `HAWK_MC_AXI4_ADDR_WIDTH'b0;
+        m_axi_arlen = `HAWK_MC_AXI4_LEN_WIDTH'b0;
+        m_axi_arsize = `HAWK_MC_AXI4_SIZE_WIDTH'b110;
+        m_axi_arburst = `HAWK_MC_AXI4_BURST_WIDTH'b01;
         m_axi_arlock = 1'b0;
-        m_axi_arcache = `AXI4_CACHE_WIDTH'b11;
-        m_axi_arprot = `AXI4_PROT_WIDTH'b10;
-        m_axi_arqos = `AXI4_QOS_WIDTH'b0;
-        m_axi_arregion = `AXI4_REGION_WIDTH'b0;
-        m_axi_aruser = `AXI4_USER_WIDTH'b0;
+        m_axi_arcache = `HAWK_MC_AXI4_CACHE_WIDTH'b11;
+        m_axi_arprot = `HAWK_MC_AXI4_PROT_WIDTH'b10;
+        m_axi_arqos = `HAWK_MC_AXI4_QOS_WIDTH'b0;
+        m_axi_arregion = `HAWK_MC_AXI4_REGION_WIDTH'b0;
+        m_axi_aruser = `HAWK_MC_AXI4_USER_WIDTH'b0;
         m_axi_arvalid = 1'b0;
 
         m_axi_rready = 1'b0;
@@ -284,15 +285,15 @@ always @(*) begin
         s_axi_awready = 1'b0;
         s_axi_wready = 1'b0;
         s_axi_arready = 1'b0;
-        s_axi_rid = `AXI4_ID_WIDTH'b0;
-        s_axi_rdata = `AXI4_DATA_WIDTH'b0;
-        s_axi_rresp = `AXI4_RESP_WIDTH'b0;
+        s_axi_rid = `HAWK_MC_AXI4_ID_WIDTH'b0;
+        s_axi_rdata = `HAWK_MC_AXI4_DATA_WIDTH'b0;
+        s_axi_rresp = `HAWK_MC_AXI4_RESP_WIDTH'b0;
         s_axi_rlast = 1'b0;
-        s_axi_ruser = `AXI4_USER_WIDTH'b0;
+        s_axi_ruser = `HAWK_MC_AXI4_USER_WIDTH'b0;
         s_axi_rvalid = 1'b0;
-        s_axi_bid = `AXI4_ID_WIDTH'b0;
-        s_axi_bresp = `AXI4_RESP_WIDTH'b0;
-        s_axi_buser = `AXI4_USER_WIDTH'b0;
+        s_axi_bid = `HAWK_MC_AXI4_ID_WIDTH'b0;
+        s_axi_bresp = `HAWK_MC_AXI4_RESP_WIDTH'b0;
+        s_axi_buser = `HAWK_MC_AXI4_USER_WIDTH'b0;
         s_axi_bvalid = 1'b0;
     end
 
@@ -350,6 +351,7 @@ always @(*) begin
 
 end
 
+/*
 ila_3 zeroer_debug (
 		.clk(clk),
 		.probe0({'d0,m_axi_wlast,m_axi_wvalid,m_axi_awvalid,p_state}),
@@ -365,6 +367,6 @@ ila_3 zeroer_debug (
 		.probe10('d0),
 		.probe11('d0)
 );
-
+*/
 
 endmodule

@@ -20,6 +20,7 @@ module hacd #
   input cfg_rst_ni                   ,
        input logic clk_i,
        input logic rst_ni,
+       input uart_boot_en,
        input [1:0] hawk_sw_ctrl,
        output infl_interrupt,
        output defl_interrupt,
@@ -63,6 +64,7 @@ hacd_regs hacd_regs (
 hacd_core u_hacd_core (
   .rst_ni,
   .clk_i,  
+  .uart_boot_en,
   .hawk_sw_ctrl(hawk_sw_ctrl),
   .hawk_reg_inactive_ctrl(hawk_reg_inactive_ctrl),
 
