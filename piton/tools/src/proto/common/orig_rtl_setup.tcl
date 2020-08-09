@@ -636,40 +636,7 @@ set CHIPSET_RTL_IMPL_FILES [list \
     "${DV_ROOT}/design/chipset/io_ctrl/rtl/uart_reseter.v" \
     "${DV_ROOT}/design/chipset/io_ctrl/rtl/fake_boot_ctrl.v" \
     "${DV_ROOT}/design/chipset/io_ctrl/rtl/eth_top.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_pkg.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_rd_pkg.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_regs.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/priority_encoder.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/arbiter.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_crossbar.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_crossbar_addr.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_crossbar_rd.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_crossbar_wr.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_register_wr.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_register_rd.v" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_size_conv_DOWNSIZE.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_interfaces.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/compressor.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/decompressor.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axiwr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cmpdcmp_wr_mngr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_pgwr_mngr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_comdecomp.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cmpresn_mngr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_decomp_mngr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_zsp_compacter.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_pgrd_mngr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_ctrl_unit.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axiwr_master.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axird_master.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cpu_stall_rd.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cpu_stall_wr.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_bypass_mux.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axi_xbar_wrapper.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_core.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd.sv" \
-    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_top.sv" \
-    "${DV_ROOT}/design/chipset/hawk_mc/rtl/hawk_mc_top.sv" \
+    "${DV_ROOT}/design/chipset/mc/rtl/mc_top.sv" \
     "${DV_ROOT}/design/chipset/mc/rtl/f1_mc_top.v" \
     "${DV_ROOT}/design/chipset/mc/rtl/noc_mig_bridge.v" \
     "${DV_ROOT}/design/chipset/mc/rtl/memory_zeroer.v" \
@@ -682,7 +649,7 @@ set CHIPSET_RTL_IMPL_FILES [list \
     "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/noc_axi4_bridge_buffer.v" \
     "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/noc_axi4_bridge_sram_data.v" \
     "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/noc_axi4_bridge_sram_req.v" \
-    "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/axi4_zeroer_hawk.sv" \
+    "${DV_ROOT}/design/chipset/noc_axi4_bridge/rtl/axi4_zeroer.v" \
     "${DV_ROOT}/design/chipset/axi_sd_bridge/rtl/axi_sd_bridge.v" \
     "${DV_ROOT}/design/chipset/axi_sd_bridge/rtl/spi_master.v" \
     "${DV_ROOT}/design/chipset/axi_sd_bridge/rtl/init_sd.v" \

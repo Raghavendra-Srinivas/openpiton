@@ -41,7 +41,10 @@ module hawk_decomp_mngr (
     output logic p_decomp_req_arvalid,
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] n_decomp_rdata,
     output hacd_pkg::tol_updpkt_t n_decomp_tol_updpkt,
-    output logic decomp_mngr_done
+    output logic decomp_mngr_done,
+
+    //Debug
+    output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr	
 );
 
 //timign issue on fpga for below one signal
@@ -159,6 +162,8 @@ iWayORcPagePkt_t n_iWayORcPagePkt;
 integer i;
 logic n_decomp_mngr_done;
 logic n_decomp_rdm_reset;
+logic [31:0] DeCompPgCnt,n_DeCompPgCnt;
+
 always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
@@ -176,6 +181,7 @@ always@* begin
 	//n_iWayORcPagePkt.update=1'b0;
 	n_burst_cnt=p_burst_cnt;	
 	n_decomp_rdm_reset=1'b0;
+	n_DeCompPgCnt=DeCompPgCnt;
 
 	case(p_state)
 		IDLE: begin
@@ -311,6 +317,7 @@ always@* begin
 		end
 		DONE: begin
 					n_decomp_mngr_done=1'b1;
+					n_DeCompPgCnt=DeCompPgCnt+'d1;
 					n_state = IDLE; //we are done  
 		end
 		DECOMP_MNGR_ERROR: begin
@@ -336,6 +343,7 @@ begin
 		decomp_rdm_reset<=1'b0;
 		p_decomp_req_arvalid <= 1'b0;
 		p_decomp_axireq<='d0;
+		DeCompPgCnt<='d0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -347,7 +355,15 @@ begin
 		decomp_rdm_reset<=n_decomp_rdm_reset;
 		p_decomp_req_arvalid <= n_decomp_req_arvalid;
 		p_decomp_axireq<=n_decomp_axireq;
+		DeCompPgCnt<=n_DeCompPgCnt;
 	end
 end
+
+//Debug
+assign debug_decmp_mngr.decmp_mngr_state=p_state;
+assign debug_decmp_mngr.decomp_freeWay=decomp_freeWay;
+assign debug_decmp_mngr.DeCompPgCnt=DeCompPgCnt;
+assign debug_decmp_mngr.decomp_mngr_done=decomp_mngr_done;
+
 
 endmodule

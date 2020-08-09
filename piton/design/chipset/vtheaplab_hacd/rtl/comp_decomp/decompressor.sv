@@ -18,7 +18,10 @@ module decompressor #(parameter FIFO_PTR_WIDTH=6)  (
     output logic wr_req,
     output logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data,
 
-    output logic decomp_done
+    output logic decomp_done,
+
+    //Debug
+    output hacd_pkg::debug_decompressor debug_decomp
 );
 
 
@@ -228,5 +231,14 @@ begin
 		decomp_done <= n_decomp_done;
 	end
 end
+
+//Debug
+assign debug_decomp.cacheline_cnt=cacheline_cnt;
+assign debug_decomp.wr_data=wr_data;
+assign debug_decomp.wr_req=wr_req;
+assign debug_decomp.zero_chunk_vec= zero_chunk_vec;
+assign debug_decomp.chunk_exp_done=chunk_exp_done;
+assign debug_decomp.decomp_state=p_state;
+
 endmodule
 
