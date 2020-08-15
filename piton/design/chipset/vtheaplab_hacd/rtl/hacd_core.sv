@@ -737,15 +737,15 @@ ila_4 ila_hawk_ain1_debug (
    .probe55('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
     
    .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access,hawk_sw_ctrl[1]}), //[511:0]probe56; //for all states
-   .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state}),//[511:0]probe60;   //pgwr mangaer->compdecomp manager
-   .probe58({'d0,debug_decmp_mngr.decomp_mngr_done,debug_decmp_mngr.decomp_freeWay,debug_decmp_mngr.DeCompPgCnt,debug_decmp_mngr.decmp_mngr_state, tol_HT.IfLstTail[0],tol_HT.IfLstHead[0],tol_HT.incompListHead,tol_HT.incompListTail}),//[511:0]probe61;
+   .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec,debug_decmp_mngr.addr1}),//[511:0]probe63; //for compressor
+   .probe58({'d0,debug_decmp_mngr.decomp_mngr_done,debug_decmp_mngr.decomp_freeWay,debug_decmp_mngr.DeCompPgCnt,debug_decmp_mngr.decmp_mngr_state,tol_HT.incompListHead,tol_HT.incompListTail,debug_decmp_mngr.addr2}),//[511:0]probe61;
+//tol_HT.IfLstTail[0],tol_HT.IfLstHead[0]
+   .probe59({'d0,debug_decomp.cacheline_cnt,debug_decomp.wr_req,debug_decomp.zero_chunk_vec,debug_decomp.chunk_exp_done,debug_decomp.decomp_state}),//[511:0]probe63; //for compressor
 
-   .probe59({'d0,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec}),//[511:0]probe63; //for compressor
-   //.probe59({'d0,debug_decomp.wr_data,debug_decomp.cacheline_cnt,debug_decomp.wr_req,debug_decomp.zero_chunk_vec,debug_decomp.chunk_exp_done,debug_decomp.decomp_state}),//[511:0]probe63; //for compressor
-
-   .probe60(debug_comp.rd_data),//[511:0]probe57; 
+    //.probe60(debug_comp.rd_data),//[511:0]probe57; 
+   .probe60(debug_decomp.wr_data),//[511:0]probe57; 
    .probe61({'d0,iWayORcPagePkt.zsPgMd.page2,iWayORcPagePkt.zsPgMd.page1,iWayORcPagePkt.zsPgMd.page0,iWayORcPagePkt.zsPgMd.way_vld,iWayORcPagePkt.zsPgMd.pg_vld,iWayORcPagePkt.iWay_ptr,iWayORcPagePkt.cpage_size,iWayORcPagePkt.cPage_byteStart,iWayORcPagePkt.update,iWayORcPagePkt.comp_decomp,iWayORcPagePkt.pp_ifl,debug_cmp_mngr.zsPgCnt}),//[511:0]probe58; 
-   .probe62('d0),//[0]probe58; 
+   .probe62(debug_decomp.ila_trigger),//[0]probe58; 
    .probe63('d0)//[0]probe62;
 
 );

@@ -23,7 +23,7 @@ Description: Peripheral address map for OpenPiton+Ariane configurations.
         <name>mem</name>
         <base>0x80000000</base>
         <!-- 1GB -->
-        <length>0x80000000</length>
+        <length>0x40000000</length>
     </port>
     <port>
         <name>iob</name>

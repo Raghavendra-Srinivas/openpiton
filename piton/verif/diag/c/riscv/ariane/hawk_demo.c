@@ -8,8 +8,9 @@
 //	#define ARRAY1_SIZE 260000 //120000
 //	#define ARRAY2_SIZE 130000 //120000
 //Test2
-	#define ARRAY1_SIZE 260094
-	#define ARRAY2_SIZE 173394
+	#define ARRAY1_SIZE         260000 //260094
+	#define ARRAY1_COMPUTE_SIZE 260000 //260094
+	#define ARRAY2_SIZE         120000
 
 //ARRAY1
 #define ARRAY1_NUM_PAGES ARRAY1_SIZE  
@@ -18,6 +19,8 @@
 #define ARRAY2_NUM_PAGES ARRAY2_SIZE  
 #define ARRAY2_NUM_WORDS (4096/8)*ARRAY2_NUM_PAGES
 
+#define ARRAY1_NUM_COMPUTE_PAGES  ARRAY1_COMPUTE_SIZE
+#define ARRAY1_NUM_COMPUTE_WORDS (4096/8)*ARRAY1_NUM_COMPUTE_PAGES
 //Array Declarations
 uint64_t array2[ARRAY2_NUM_WORDS];
 uint64_t array1[ARRAY1_NUM_WORDS];
@@ -41,14 +44,29 @@ int main(int argc, char ** argv) {
   for (int k = 0; k < (ARRAY1_NUM_WORDS); k++) {
 	track_addr=&array1[k];
 	if((uintptr_t)track_addr % 4096==0) {
+	//if((k%512)<127) {
 			count++;
 			array1[k]=(uint64_t) (count+10);
-                	final_check+=array1[k];
 	}
 	else {
 			array1[k]=(uint64_t) (0);
 	}
   }
+
+  count=0;
+  final_check=0;
+  printf("Computing on Array1...!\n");
+  for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {
+        final_check+=array1[k];
+	if(k%512==0) {
+			count++;
+	}
+	if(k% (50000*512)==0){
+		printf("Working on Page %ld to Page %ld..\n",count,count+50000);
+	}
+  }
+
+  printf("---------------------------\n");
   printf("Computed Value On Array1=%ld\n",final_check);
   printf("---------------------------\n");
 
@@ -56,7 +74,9 @@ int main(int argc, char ** argv) {
   //Initilization and Computation on Array2
   count=0;
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
-	if(k%512==0) {
+	track_addr=&array2[k];
+	if((uintptr_t)track_addr % 4096==0) {
+	//if((k%512)<127) {
 			count++;
 			array2[k]=(uint64_t) (k+1);
 	}
@@ -68,7 +88,7 @@ int main(int argc, char ** argv) {
   final_check=0;
   printf("Computing on Array2...!\n");
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
-                	final_check+=array2[k];
+        final_check+=array2[k];
 	if(k%512==0) {
 			count++;
 	}
@@ -85,11 +105,10 @@ int main(int argc, char ** argv) {
   count=0; 
   final_check=0;
   printf("Re-Computing on Array1...!\n");
-  for (int k = 0; k < (ARRAY1_NUM_WORDS); k++) {
-	track_addr=&array1[k];
-	if((uintptr_t)track_addr % 4096==0) {
-        		count++;
-                	final_check+=array1[k];
+  for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {
+        final_check+=array1[k];
+	if(k%512==0) {
+        	count++;
 	}
 	if(k% (50000*512)==0){
 		printf("Working on Page %ld to Page %ld..\n",count,count+50000);

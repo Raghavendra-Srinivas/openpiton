@@ -60,6 +60,9 @@ begin
 	end
 end
 
+//debug
+logic ila_trigger,n_ila_trigger;
+
 always@(*) begin
 	n_state = p_state;
 	n_rd_req=1'b0;
@@ -69,6 +72,7 @@ always@(*) begin
 	n_decomp_done = 1'b0;
 	n_ld_rdfifo_rdptr = 1'b0;
 	n_chunk_exp_done = chunk_exp_done;
+	n_ila_trigger=1'b0;
 
 	case(p_state) 
 	  	IDLE: begin
@@ -168,6 +172,15 @@ always@(*) begin
 	 	          end
 	 	          else if(cacheline_cnt < 'd16 && rd_valid && send_rd_req) begin
 				if(rd_rresp=='d0) begin
+					if(cacheline_cnt==0 ) begin
+					   if(rd_data[511:64]!=0) begin 
+						n_ila_trigger=1'b1;
+					   end	
+					end else begin
+					   if(rd_data!=0) begin 
+						n_ila_trigger=1'b1;
+					   end	
+					end
 	 	             		n_cacheline_cnt = cacheline_cnt+'d1;
 	 	          		n_wr_data = rd_data;
 	 	       			n_wr_req  = 1'b1;
@@ -211,6 +224,9 @@ begin
 		wr_req<=1'b0;
 	
 		decomp_done<=1'b0;
+
+		ila_trigger<=1'b0;
+
 	end
 	else begin
 		p_state<=n_state;
@@ -229,6 +245,8 @@ begin
 		wr_req<=n_wr_req;
 
 		decomp_done <= n_decomp_done;
+		
+		ila_trigger<=n_ila_trigger;
 	end
 end
 
@@ -239,6 +257,7 @@ assign debug_decomp.wr_req=wr_req;
 assign debug_decomp.zero_chunk_vec= zero_chunk_vec;
 assign debug_decomp.chunk_exp_done=chunk_exp_done;
 assign debug_decomp.decomp_state=p_state;
+assign debug_decomp.ila_trigger=ila_trigger;
 
 endmodule
 

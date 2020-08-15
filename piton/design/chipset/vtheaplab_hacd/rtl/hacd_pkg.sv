@@ -27,7 +27,7 @@ package hacd_pkg;
     parameter int BYTE=8;
 
     parameter int COMPRESSION_RATIO=2; //4;
-    parameter int DRAM_SIZE=1<<30; ////1GB
+    parameter int DRAM_SIZE=1<<29; //1<<30; ////1GB
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*LST_ENTRY_MAX;
@@ -370,6 +370,8 @@ typedef struct packed{
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] decomp_freeWay;
 	logic [31:0] DeCompPgCnt;
 	logic decomp_mngr_done;
+	logic [39:0] addr1;
+	logic [39:0] addr2;
    } debug_pgrd_decmp_mngr;
 
    typedef struct packed {
@@ -379,6 +381,7 @@ typedef struct packed{
 	logic [3:0] zero_chunk_vec;
 	logic [3:0] chunk_exp_done;
         logic [2:0] decomp_state;
+	logic ila_trigger;
    } debug_decompressor;
 
    typedef struct packed {
