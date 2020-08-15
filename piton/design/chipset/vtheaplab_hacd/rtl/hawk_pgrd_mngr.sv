@@ -20,6 +20,10 @@ module hawk_pgrd_mngr (
   output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
   output hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
 	
+  //handhskakewiht cpage migrator
+  input migrate_start,
+  output migrate_done,
+
   //from compressor
   input logic [13:0] comp_size,
   output logic comp_start,

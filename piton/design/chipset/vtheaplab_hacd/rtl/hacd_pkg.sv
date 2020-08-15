@@ -43,7 +43,7 @@ package hacd_pkg;
         parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'd64;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter int LIST_ENTRY_CNT= 8; //8; //512; //8;
+    	parameter int LIST_ENTRY_CNT= 12; //8; //512; //8;
 	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
@@ -198,13 +198,6 @@ package hacd_pkg;
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 	logic allow_access;
  } hawk_cpu_ovrd_pkt_t;
-
-  
-
-
-
-
-
 
 //helper fucntins
 function automatic logic [511:0] get_8byte_byteswap;
@@ -387,6 +380,13 @@ typedef struct packed{
 	logic [3:0] chunk_exp_done;
         logic [2:0] decomp_state;
    } debug_decompressor;
+
+   typedef struct packed {
+	logic [6:0] cacheline_cnt;
+    	logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data;
+	logic wr_req;
+        logic [2:0] migrate_state;
+   } debug_migrator;
 
 endpackage
 
