@@ -37,7 +37,8 @@ logic [6:0] zero_cline_cntr_prev;
 logic [2:0] zero_chunk_cnt;
 wire compress;
 assign zero_chunk_cnt = zero_chunk_vec[0] + zero_chunk_vec[1] + zero_chunk_vec[2] + zero_chunk_vec[3];
-assign compress = zero_cline_cntr_curr =='h3F;  //zero_chunk_cnt >= 3;
+//assign compress = zero_cline_cntr_curr =='h3F;  
+assign compress = zero_chunk_cnt >= 3;
 //assign compress = zero_chunk_cnt == 3;  //This needs exactly any 3 chunks to be zero, so all 4 chunks as zero would go as in-compressible page
 
 localparam [2:0] IDLE=0,

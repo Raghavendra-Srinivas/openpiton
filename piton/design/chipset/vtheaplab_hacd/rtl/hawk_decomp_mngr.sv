@@ -138,7 +138,8 @@ logic [13:0] comp_size;
 wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
-assign arvalid=p_decomp_req_arvalid | p_req_arvalid;
+//assign arvalid=p_decomp_req_arvalid | p_req_arvalid;
+assign arvalid=p_req_arvalid;
 
 logic [`HACD_AXI4_RESP_WIDTH-1:0] rresp;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
@@ -169,7 +170,7 @@ always@* begin
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_decomp_axireq.addr= p_axireq.addr;
 	n_decomp_axireq.arlen = 8'd0; //by default, one beat
-	n_decomp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
+	n_decomp_req_arvalid = !arready && arvalid; //1'b0; 	       //fsm decides when to send packet
         n_decomp_rready=1'b1;     
 	n_decomp_rdata=p_rdata;
 	n_decomp_tol_updpkt.tbl_update=1'b0;
@@ -278,11 +279,14 @@ always@* begin
 		end
 
 		FETCH_IFL_LST_ENTRY : begin
-				if(arready && !arvalid) begin
+				if(/*arready && */ !arvalid) begin
 				           n_decomp_axireq = get_axi_rd_pkt(lst_entry_id,'d0,AXI_RD_TOL); 
 				           n_decomp_req_arvalid = 1'b1;
-				           n_state = WAIT_IFL_LST_ENTRY;
+				           //n_state = WAIT_IFL_LST_ENTRY;
 				end 
+				if(arready && arvalid) begin
+				           n_state = WAIT_IFL_LST_ENTRY;
+				end
 		end
 		WAIT_IFL_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
@@ -341,8 +345,8 @@ begin
 		dc_iWayORcPagePkt<='d0;
 		decomp_mngr_done<=1'b0;
 		decomp_rdm_reset<=1'b0;
-		p_decomp_req_arvalid <= 1'b0;
-		p_decomp_axireq<='d0;
+		//p_decomp_req_arvalid <= 1'b0;
+		//p_decomp_axireq<='d0;
 		DeCompPgCnt<='d0;
 	end
 	else begin
@@ -353,16 +357,20 @@ begin
 		dc_iWayORcPagePkt<=n_iWayORcPagePkt;
 		decomp_mngr_done<=n_decomp_mngr_done;
 		decomp_rdm_reset<=n_decomp_rdm_reset;
-		p_decomp_req_arvalid <= n_decomp_req_arvalid;
-		p_decomp_axireq<=n_decomp_axireq;
+		//p_decomp_req_arvalid <= n_decomp_req_arvalid;
+		//p_decomp_axireq<=n_decomp_axireq;
 		DeCompPgCnt<=n_DeCompPgCnt;
 	end
 end
 
+assign  p_decomp_req_arvalid = n_decomp_req_arvalid;
+assign  p_decomp_axireq = n_decomp_axireq;
 //Debug
 assign debug_decmp_mngr.decmp_mngr_state=p_state;
 assign debug_decmp_mngr.decomp_freeWay=decomp_freeWay;
 assign debug_decmp_mngr.DeCompPgCnt=DeCompPgCnt;
+assign debug_decmp_mngr.addr1={'d0,p_burst_cnt}; //p_decomp_axireq.addr;
+assign debug_decmp_mngr.addr2='d0; //p_axireq.addr[39:0];
 assign debug_decmp_mngr.decomp_mngr_done=decomp_mngr_done;
 
 

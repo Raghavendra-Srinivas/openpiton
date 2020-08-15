@@ -91,7 +91,8 @@ localparam IDLE			='d0,
 	   COMPRESS		='d11,
 	   DECOMPRESS		='d12,
 	   COMPACT		='d13,
-	   BUS_ERROR		='d14;
+	   BUS_ERROR		='d14,
+	   UNCOMPRESS_LIST_EMPTY='d15;
 
 
 
@@ -107,14 +108,14 @@ assign rlast = rd_resppkt.rlast;
 assign rdata = rd_resppkt.rdata;
 assign rresp =  rd_resppkt.rresp;
 
-axi_rd_pld_t p_axireq,n_axireq;
-trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
+hacd_pkg::axi_rd_pld_t p_axireq,n_axireq;
+hacd_pkg::trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
 
 logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
-tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
-tol_updpkt_t n_comp_tol_updpkt;
-tol_updpkt_t n_decomp_tol_updpkt;
-tol_updpkt_t n_cmpt_tol_updpkt;
+hacd_pkg::tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
+hacd_pkg::tol_updpkt_t n_comp_tol_updpkt;
+hacd_pkg::tol_updpkt_t n_decomp_tol_updpkt;
+hacd_pkg::tol_updpkt_t n_cmpt_tol_updpkt;
 
 
 //handshakes with comp_manager
@@ -222,7 +223,7 @@ always@* begin
 				    if(uncompLstTail!==uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
 				    n_state = COMPRESS;
 				    end else begin  //handle other cases later, moving to IDLE for now
-				    n_state = IDLE;
+				    n_state = UNCOMPRESS_LIST_EMPTY; //IDLE;
 				    end 
 			  end
 		end
@@ -313,6 +314,9 @@ always@* begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets
 			   n_state = BUS_ERROR;
+		end
+		UNCOMPRESS_LIST_EMPTY : begin
+			   n_state = UNCOMPRESS_LIST_EMPTY;
 		end
 	endcase
 end
