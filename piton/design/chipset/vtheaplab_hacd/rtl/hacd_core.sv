@@ -72,7 +72,8 @@ module hacd_core (
    wire [3:0] prm_state;
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
    hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
-	
+
+   wire migrate_start,migrate_done;	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    //
@@ -95,15 +96,20 @@ module hacd_core (
 
 logic [`HACD_AXI4_ADDR_WIDTH   -1:0] cpu_araddr;
 logic [`HACD_AXI4_ADDR_WIDTH   -1:0] cpu_awaddr;
-always @* begin
-     	if(uart_boot_en) begin
-     		cpu_araddr = cpu_axi_rd_bus.axi_araddr;
-     		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
-     	end else begin
-     		cpu_araddr = cpu_axi_rd_bus.axi_araddr-64'h80000000;
-     		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr-64'h80000000;
-     	end
-end
+`ifdef HAWK_SIMS
+ assign cpu_araddr = cpu_axi_rd_bus.axi_araddr;
+ assign cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
+`else
+ always @* begin
+      	if(uart_boot_en) begin
+      		cpu_araddr = cpu_axi_rd_bus.axi_araddr;
+      		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
+      	end else begin
+      		cpu_araddr = cpu_axi_rd_bus.axi_araddr-64'h80000000;
+      		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr-64'h80000000;
+      	end
+ end
+`endif
 
 //hawk cpu rd stall
 hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
@@ -250,7 +256,7 @@ wire comdecomp_ld_rdfifo_rdptr;
 logic axird_master_rready,axird_master_rvalid;
 logic comp_decomp_rd_valid;
 always@* begin
- if(comp_start || decomp_start) begin //rready from comp_decmp unit and rdata goes to it
+ if(comp_start || decomp_start || migrate_start) begin //rready from comp_decmp unit and rdata goes to it
 	axird_master_rready  = compdecomp_rready;	
         comp_decomp_rd_valid = axird_master_rvalid; 
         rd_resppkt.rvalid = 1'b0;
@@ -288,6 +294,7 @@ end
 
 hacd_pkg::debug_compressor debug_comp;
 hacd_pkg::debug_decompressor debug_decomp;
+hacd_pkg::debug_migrator debug_migrate;
 
 wire incompressible;
 
@@ -300,6 +307,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .incompressible,
      .decomp_start,
      .decomp_done,
+     .migrate_start,
+     .migrate_done,
      //.rdfifo_rdptr_rst,
      .rdfifo_empty,
      .wrfifo_full,
@@ -316,7 +325,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .compdecomp_wr_data(compdecomp_wr_data),
 
      .debug_comp,
-     .debug_decomp
+     .debug_decomp,
+     .debug_migrate
 );
 
 
