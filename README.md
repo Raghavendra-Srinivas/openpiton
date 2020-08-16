@@ -4,6 +4,9 @@ HAWK is open source accelerator to support hardware acceleration of OS-controlle
 For the prototype demonstation, Genesys 2 board with Kintex-7 has beend used. It uses OpenPiton Research Platform as the baselien SoC. Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully demonstrates execution of the bare metal microbechmarks that cosumes 1.7GB on 1GB DRAM. HAWK is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
+More details on HAWK will be added soon.
+Please refer below sectiosn to get familiar with OpenPiton Research Platform
+
 
 
 
