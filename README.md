@@ -2,7 +2,7 @@ Hi,
 
 This is HAWK(Hardware Accelration for OS-Controlled Memory Compression) project.
 
-####![OpenPiton Logo](/docs/openpiton_logo_black.png?raw=true)
+
 
 # OpenPiton Research Platform   [![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=cloud/piton_git_push_master)](https://jenkins.princeton.edu/job/cloud/job/piton_git_push_master/)
 
@@ -519,3 +519,5 @@ The following items are currently under development and will be released soon.
 - Performance enhancements (cache re-parameterization, write-buffer throughput).
 
 Stay tuned!
+
+####![OpenPiton Logo](/docs/openpiton_logo_black.png?raw=true)
