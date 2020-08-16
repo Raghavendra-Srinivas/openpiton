@@ -1,8 +1,8 @@
 # Hardware Acceleration for OS-Controlled Memory Compression(HAWK) 
 
-HAWK is open source accelerator to support hardware acceleration of OS-controlled memory compression. It can be easily plugged into any SoC (system On chip) supporting AXI interface.
+HAWK is open source accelerator to support hardware acceleration of OS-controlled memory compression. It can be easily plugged into any SoC (system On chip) supporting AXI interface. It is compression/Decompression algorithm agnositc, so any avalaible asic compressor/decompressor units can be integrated with minimal effort if theuy are made compliant to interface specification as specified below.
 For the prototype demonstation, Genesys 2 board with Kintex-7 has beend used. It uses OpenPiton Research Platform as the baselien SoC. Accelerator consumes only %X of logic on FPGA and %Y of power.
-Demo successfully demonstrates the functionality of HAWK by using 1GB DRAM as 1.7GB DRAM with bare metal microbechmarks.
+Demo successfully demonstrates execution of the bare metal microbechmarks that cosumes 1.7GB on 1GB DRAM. HAWK is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
 
 
