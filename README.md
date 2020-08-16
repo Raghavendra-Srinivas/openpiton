@@ -5,7 +5,7 @@ For the prototype demonstation, Genesys 2 board with Kintex-7 has beend used. It
 Demo successfully demonstrates execution of the bare metal microbechmarks that cosumes 1.7GB on 1GB DRAM. HAWK is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
 More details on HAWK will be added soon.
-Please refer below sectiosn to get familiar with OpenPiton Research Platform
+Please refer below sections to get familiar with OpenPiton Research Platform from Princeton University.
 
 
 
