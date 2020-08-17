@@ -18,7 +18,7 @@ OpenPiton is the world's first open source, general purpose, multithreaded manyc
 
 OpenPiton has been published in ASPLOS 2016: Jonathan Balkind, Michael McKeown, Yaosheng Fu, Tri Nguyen, Yanqi Zhou, Alexey Lavrov, Mohammad Shahrad, Adi Fuchs, Samuel Payne, Xiaohua Liang, Matthew Matl, and David Wentzlaff. "OpenPiton: An Open Source Manycore Research Framework." In Proceedings of the 21st International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS '16), April 2016.
 
-#### Find out more
+#### Find out more 
 
 - More information about OpenPiton is available at www.openpiton.org
 - [Follow us on Twitter!](https://www.twitter.com/openpiton)
