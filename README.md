@@ -1,11 +1,16 @@
 # Hardware Acceleration for OS-Controlled Memory Compression(HAWK) 
 
-HAWK is open source accelerator to support hardware acceleration of OS-controlled memory compression. It can be easily plugged into any SoC (system On chip) supporting AXI interface. It is compression/Decompression algorithm agnositc, so any avalaible asic compressor/decompressor units can be integrated with minimal effort if theuy are made compliant to interface specification as specified below.
-For the prototype demonstation, Genesys 2 board with Kintex-7 has beend used. It uses OpenPiton Research Platform as the baselien SoC. Accelerator consumes only %X of logic on FPGA and %Y of power.
+HAWK is open source accelerator to support hardware acceleration of OS-controlled memory compression. It is SoC (System on Chip) and Compression Algorithm agnostic. So, It can be easily plugged into any SoC (system On chip). It currently supports AXI interfaces which is industry standard and most commonly used.Any avalaible asic compressor/decompressor units can be integrated with minimal effort if they are made compliant to interface specification which would be released soon.
+For the prototype demonstration, Genesys 2 board with Kintex-7 has been used. Prototype uses OpenPiton Research Platform as the baselien SoC*. 
+Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully demonstrates execution of the bare metal microbechmarks that cosumes 1.7GB on 1GB DRAM. HAWK is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
-More details on HAWK will be added soon.
-Please refer below sections to get familiar with OpenPiton Research Platform from Princeton University.
+# Stay tuned - More details on HAWK will be added soon.
+
+
+
+# *SoC Platform Details:
+Please refer below sections to get familiar with OpenPiton Research Platform .Thanks to PULP "http://pulp.mycpanel.princeton.edu/" of Princeton University! for their Open source RISCV based SoC and for their excellent support!. 
 
 
 
