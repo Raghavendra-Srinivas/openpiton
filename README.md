@@ -9,7 +9,7 @@ Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX
 
 
 # *SoC Platform Details:
-Please refer below sections to get familiar with OpenPiton Research Platform .Thanks to PULP "http://pulp.mycpanel.princeton.edu/" of Princeton University! for their Open source RISCV based SoC and for their excellent support!. 
+Please refer below sections to get familiar with OpenPiton Research Platform .Thanks to "https://parallel.princeton.edu/openpiton/" of Princeton University! for their Open source RISCV based SoC!. 
 
 
 # OpenPiton Research Platform   [![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=cloud/piton_git_push_master)](https://jenkins.princeton.edu/job/cloud/job/piton_git_push_master/)
