@@ -256,9 +256,9 @@ end
 lst_enry_id=cnt;
 
 foreach(MEM[addr]) begin
-  $display("--------------------------cache line boundary ----------------------------------------------------");
   if( addr >= HAWK_ATT_START && addr < HAWK_LIST_START) 
   begin
+  $display("--------------------------cache line boundary ----------------------------------------------------");
     for (int i=0;i<2;i++) begin
        cacheline=MEM[addr][i];
        //8byteSwap within 8byte word
@@ -290,6 +290,7 @@ foreach(MEM[addr]) begin
     end //for
   end//if
   else if ( addr >= HAWK_LIST_START && addr < HAWK_PPA_START) begin
+  $display("--------------------------cache line boundary ----------------------------------------------------");
      for (int i=0;i<2;i++) begin
        cacheline=MEM[addr][i];
        //reverseswap=MEM[addr][i];
@@ -367,8 +368,10 @@ foreach(MEM[addr]) begin
   end //if
   else begin //normal data
     //for (int i=0;i<2;i++) begin
-      //cacheline=MEM[addr][i];
-      $display("CACHE/DRAM ADDR: %0h , Data=%0h", addr, {MEM[addr][1], MEM[addr][0]});
+      ////cacheline=MEM[addr][i];
+
+      //$display("--------------------------cache line boundary ----------------------------------------------------");
+      //$display("CACHE/DRAM ADDR: %0h , Data=%0h", addr, {MEM[addr][1], MEM[addr][0]});
   end
 end //foreach
   return 1;

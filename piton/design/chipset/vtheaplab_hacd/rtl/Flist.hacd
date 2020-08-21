@@ -21,6 +21,7 @@ hacd.sv
 hacd_top.sv
 comp_decomp/compressor.sv
 comp_decomp/decompressor.sv
+comp_decomp/migrator.sv
 axi/priority_encoder.v
 axi/arbiter.v
 axi/axi_crossbar.v

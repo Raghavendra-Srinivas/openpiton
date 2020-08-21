@@ -1,3 +1,4 @@
+
 //HAWK TEST
 #include <stdio.h>
 
@@ -14,7 +15,7 @@
 #define LINE_SIZE 64
 #define POINTER_SIZE 8
 
-#define LST_ENTRY_CNT 8
+#define LST_ENTRY_CNT 12
 
 int main(int argc, char ** argv) {
   uint64_t *addr;
@@ -48,8 +49,8 @@ int main(int argc, char ** argv) {
   addr_base = (uint64_t*)(HPPA_BASE+(j*FOURKB)); //hppa2
   for (int i = 0; i < 64; i++) {
   	addr = (uint64_t*)(addr_base+i*(LINE_SIZE/POINTER_SIZE)); 
-        if (i<16) {
-          *addr = (uint64_t) (i+1); //first chunk with non-zero
+        if (i<1) {
+          *addr = (uint64_t) addr; //(i+1); //first chunk with non-zero
         }
         else {
           *addr = (uint64_t) 0x0; // other 3 chunks with zero
@@ -59,21 +60,15 @@ int main(int argc, char ** argv) {
   //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr_base,*(addr_base));
  }
 
- //(6): At T6, READ HPPA2
- //Access compressed page- This should trigger COMPRESSION of another 
- //VICTIM UNCOMPRESSED PAGE to free the page for hppa2
- printf("Accessing Compressed Page\n");
- addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
- printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
-
  //(5): At T5, READ HPPA5
- for(int k=LST_ENTRY_CNT;k<LST_ENTRY_CNT+1;k++) {
+ for(int k=LST_ENTRY_CNT;k<LST_ENTRY_CNT+5;k++) {
  	//This access should trigger COMPRESSION of VICTIM UNCOMPRESSED PAGEs to make FREE page 
  	printf("Accessing Non-Guaranteed Page=%d\n",k);
  	addr = (uint64_t*)(HPPA_BASE+(k*FOURKB)); //hppa5
  	printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
  }
 
+//Trigger Decompressions
  //(6): At T6, READ HPPA2
  //Access compressed page- This should trigger COMPRESSION of another 
  //VICTIM UNCOMPRESSED PAGE to free the page for hppa2
@@ -81,13 +76,18 @@ int main(int argc, char ** argv) {
  addr = (uint64_t*)(HPPA_BASE+(0*FOURKB)); //hppa1
  printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
 
- //printf("Accessing Compressed Page\n");
- //addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa1
- //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+ printf("Accessing Compressed Page\n");
+ addr = (uint64_t*)(HPPA_BASE+(3*FOURKB)); //hppa1
+ printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
 
- //printf("Accessing Compressed Page\n");
- //addr = (uint64_t*)(HPPA_BASE+(2*FOURKB)); //hppa1
- //printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+ printf("Accessing Compressed Page\n");
+ addr = (uint64_t*)(HPPA_BASE+(5*FOURKB)); //hppa1
+ printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
+
+//Below access should be in pending till compaction is completed
+ printf("Accessing Compressed Page\n");
+ addr = (uint64_t*)(HPPA_BASE+(1*FOURKB)); //hppa1
+ printf("HACD: Accesing Memory on 0x%llx, data = 0x%llx\n",addr,*addr);
 
  printf("HAWK Test Done!..\n");
 
