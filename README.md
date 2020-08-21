@@ -1,4 +1,16 @@
-![OpenPiton Logo](/docs/openpiton_logo_black.png?raw=true)
+# PAPER UNDER SUBMISSION-TITLE TO BE RELEASED SOON (XXXX)
+
+XXXX is open source accelerator to support hardware acceleration of XXXXXXX. It is SoC (System on Chip) and Compression Algorithm agnostic. So, It can be easily plugged into any SoC (system On chip). It currently supports AXI interfaces which is industry standard and most commonly used.Any avalaible asic compressor/decompressor units can be integrated with minimal effort if they are made compliant to interface specification which would be released soon.
+For the prototype demonstration, Genesys 2 board with Kintex-7 has been used. Prototype uses OpenPiton Research Platform as the baselien SoC*. 
+Accelerator consumes only %X of logic on FPGA and %Y of power.
+Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX". XXXX is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
+
+# Stay tuned - More details on XXXX will be added soon.
+
+
+# *SoC Platform Details:
+Please refer below sections to get familiar with OpenPiton Research Platform .Thanks to "https://parallel.princeton.edu/openpiton/" of Princeton University! for their Open source RISCV based SoC!. 
+
 
 # OpenPiton Research Platform   [![Build Status](https://jenkins.princeton.edu/buildStatus/icon?job=cloud/piton_git_push_master)](https://jenkins.princeton.edu/job/cloud/job/piton_git_push_master/)
 
@@ -6,7 +18,7 @@ OpenPiton is the world's first open source, general purpose, multithreaded manyc
 
 OpenPiton has been published in ASPLOS 2016: Jonathan Balkind, Michael McKeown, Yaosheng Fu, Tri Nguyen, Yanqi Zhou, Alexey Lavrov, Mohammad Shahrad, Adi Fuchs, Samuel Payne, Xiaohua Liang, Matthew Matl, and David Wentzlaff. "OpenPiton: An Open Source Manycore Research Framework." In Proceedings of the 21st International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS '16), April 2016.
 
-#### Find out more
+#### Find out more 
 
 - More information about OpenPiton is available at www.openpiton.org
 - [Follow us on Twitter!](https://www.twitter.com/openpiton)
@@ -515,3 +527,5 @@ The following items are currently under development and will be released soon.
 - Performance enhancements (cache re-parameterization, write-buffer throughput).
 
 Stay tuned!
+
+####![OpenPiton Logo](/docs/openpiton_logo_black.png?raw=true)
