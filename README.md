@@ -6,24 +6,36 @@ Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX". XXXX is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
 # Steps to Prototype XXXX on FPGA with Openpiton
-Step 0:  
-You have installed Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
-Step 1:  
+### Step 0:  
+Installed Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
+### Step 1:  
 Clone the Database:  
 git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-dev  
-Step 2:   
+### Step 2:   
 Setup the workspace.  
 1. cd openpitonHawk  
 2. source sourceme.sh  
 3. For the fist time, source the script that step 2 suggests  
-Step 3:  
+### Step 3:  
 Compile, Implement and Generate Bit file for FPGA.  
 cd build.  
 Run "protosyn -b genesys2 -d system --core=ariane --axi4_mem --uart-dmw ddr --hawk_fpga --hawk_naive_comp"  
 
 Wait for 45mins-1 hour to get FPGA bitstream file.  
-Step 4:  
-Configure the FPGA with bitstream file.  
+### Step 4:  
+Configure the FPGA with bitstream file.
+vivado &  
+Open Hardware Manager  
+Connect FPGA with JTAG-USB port, and UART-USB ports to Host.  
+Auto-detect FPGA from Hardware Manager, then program the bitfile.  
+### Step 5:
+Execute Micro-benchmark or OS.  
+#### Bare Metal test execution  
+Set the SW7 (switch 7) position to ON on FPGA board.This setting loads the executable file onto DRAM or BRAM, then execute bera metal test/micro-benchmark on RISC-V core of Openpiton.  
+Go to terminal and excute below.  
+pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p ttyUSB0
+
+SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the below Openpiton for more details on this.   
 
 
 
