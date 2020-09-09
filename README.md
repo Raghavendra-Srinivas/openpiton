@@ -33,7 +33,9 @@ Execute Micro-benchmark or OS.
 #### Bare Metal test execution  
 Set the SW7 (switch 7) position to ON on FPGA board.This setting loads the executable file onto DRAM or BRAM, then execute bera metal test/micro-benchmark on RISC-V core of Openpiton.  
 Go to terminal and excute below.  
-pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p ttyUSB0
+pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p ttyUSB0  
+You may have to grant permission on USB device  
+sudo chmod ugo+rwx /dev/ttyUSB0
 
 SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the below Openpiton for more details on this.   
 
