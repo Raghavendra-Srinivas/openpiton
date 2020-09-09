@@ -5,6 +5,20 @@ For the prototype demonstration, Genesys 2 board with Kintex-7 has been used. Pr
 Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX". XXXX is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
+# Steps to Prototype XXXX on FPGA with Openpiton
+Step 1:
+Clone the Database:
+git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-dev
+Step 2: 
+Setup the workspace.
+1. cd openpitonHawk
+2. source sourceme.sh
+3. For the fist time, source the script that step 2 suggests
+Step 3:
+Compile, Implement and Generate Bit file for FPGA.
+cd build.
+
+
 # Stay tuned - More details on XXXX will be added soon.
 
 
