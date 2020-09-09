@@ -7,7 +7,7 @@ Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX
 
 # Steps to Prototype XXXX on FPGA with Openpiton
 ### Step 0:  
-Installed Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
+Install Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
 ### Step 1:  
 Clone the Database:  
 git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-dev  
