@@ -31,7 +31,8 @@ Auto-detect FPGA from Hardware Manager, then program the bitfile.
 ### Step 5:
 Execute Micro-benchmark or OS.  
 #### Bare Metal test execution  
-Set the SW7 (switch 7) position to ON on FPGA board.This setting loads the executable file onto DRAM or BRAM, then execute bera metal test/micro-benchmark on RISC-V core of Openpiton.  
+Set the SW7 (switch 7) position to ON on FPGA board.This setting loads the executable file onto DRAM or BRAM, then execute bera metal test or micro-benchmark on RISC-V core of Openpiton.  
+The file "tests.txt" under build folder should have name of the "C test" file. The tests should be placed in the folder "./piton/verif/diag/c/riscv/ariane/". Currently, the test "hawk.demo.c" is tested.  
 Go to terminal and excute below.  
 pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p ttyUSB0  
 You may have to grant permission on USB device  
