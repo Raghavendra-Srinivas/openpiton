@@ -38,7 +38,8 @@ pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p 
 You may have to grant permission on USB device  
 sudo chmod ugo+rwx /dev/ttyUSB0
 
-SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the below Openpiton for more details on this.   
+SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the next section -"Openpiton Research Platform" for more details on this.  
+
 
 
 
