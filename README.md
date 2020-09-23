@@ -6,6 +6,7 @@ Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX". XXXX is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
 # Steps to Prototype XXXX on FPGA with Openpiton
+## Steps to generate FPGA bit steam file
 ### Step 0:  
 Install Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
 ### Step 1:  
@@ -40,7 +41,10 @@ sudo chmod ugo+rwx /dev/ttyUSB0
 
 SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the next section -"Openpiton Research Platform" for more details on this.  
 
-
+## Steps to build your linux image and bbl (boot loader)
+Use the openpiton branch of ariane-sdk to build your own Linux images. Necessary steps are also described in README. See repo here: https://github.com/pulp-platform/ariane-sdk/tree/openpiton.
+If you change the following lines to point to another Linux repo then you can update to different version of Linux. https://github.com/pulp-platform/ariane-sdk/blob/openpiton/configs/buildroot\_defconfig\#L18-L20
+Steps to create new driver or driver updates remains the same as one handles to buidl new image from standard linux repo.
 
 
 
