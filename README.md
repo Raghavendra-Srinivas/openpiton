@@ -42,9 +42,9 @@ sudo chmod ugo+rwx /dev/ttyUSB0
 SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the next section -"Openpiton Research Platform" for more details on this.  
 
 ## Steps to build your own linux image and bbl (boot loader)
-Use the openpiton branch of ariane-sdk to build your own Linux images. Necessary steps are also described in README. See repo here: https://github.com/pulp-platform/ariane-sdk/tree/openpiton.
-If you change the following lines to point to another Linux repo then you can update to different version of Linux. https://github.com/pulp-platform/ariane-sdk/blob/openpiton/configs/buildroot\_defconfig\#L18-L20
-Steps to create new driver or driver updates remains the same as one handles to buidl new image from standard linux repo.
+Use the openpiton branch of ariane-sdk to build your own Linux images. Necessary steps are also described in README. See repo here: https://github.com/pulp-platform/ariane-sdk/tree/openpiton.  
+If you change the following lines to point to another Linux repo then you can update to different version of Linux. https://github.com/pulp-platform/ariane-sdk/blob/openpiton/configs/buildroot\_defconfig\#L18-L20. 
+Steps to create new driver or driver updates remains the same as one handles to buidl new image from standard linux repo.  
 
 
 
