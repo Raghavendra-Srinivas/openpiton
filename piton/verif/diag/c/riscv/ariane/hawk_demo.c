@@ -8,9 +8,9 @@
 //	#define ARRAY1_SIZE 260000 //120000
 //	#define ARRAY2_SIZE 130000 //120000
 //Test2
-	#define ARRAY1_SIZE         260000 //260094
-	#define ARRAY1_COMPUTE_SIZE 260000 //260094
-	#define ARRAY2_SIZE         120000
+	#define ARRAY1_SIZE         230094 //260094
+	#define ARRAY1_COMPUTE_SIZE 230094 //260094
+	#define ARRAY2_SIZE         100000
 
 //ARRAY1
 #define ARRAY1_NUM_PAGES ARRAY1_SIZE  
@@ -42,9 +42,9 @@ int main(int argc, char ** argv) {
   //Step (1)
   //Initialization and Computation on Array1
   for (int k = 0; k < (ARRAY1_NUM_WORDS); k++) {
-	track_addr=&array1[k];
-	if((uintptr_t)track_addr % 4096==0) {
-	//if((k%512)<127) {
+	//track_addr=&array1[k];
+	//if((uintptr_t)track_addr % 4096==0) {
+	if(k%512==0) {
 			count++;
 			array1[k]=(uint64_t) (count+10);
 	}
@@ -74,14 +74,14 @@ int main(int argc, char ** argv) {
   //Initilization and Computation on Array2
   count=0;
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
-	track_addr=&array2[k];
-	if((uintptr_t)track_addr % 4096==0) {
-	//if((k%512)<127) {
+	//track_addr=&array2[k];
+	//if((uintptr_t)track_addr % 4096==0) {
+	if(k%512==0) {
 			count++;
 			array2[k]=(uint64_t) (k+1);
 	}
 	else {
-			array2[k]=(uint64_t) (0);
+			array2[k]=(uint64_t) (k);
 	}
   }
   count=0;
