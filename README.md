@@ -52,12 +52,13 @@ Steps to create new driver or driver updates remains the same as one handles to 
  openpitonHawk/hawk_results/HAWK Demo Result 1p36GB.pdf
 # Benchmark:
  openpitonHawk/piton/verif/diag/c/riscv/ariane/hawk_demo.c  
+   
  Check memory usage from the hawk_demo.c usign standard linux commands on your host machine as below.  
- Compile: gcc hawk_demo.c -o hawk_demo.o
+ Compile: gcc hawk_demo.c -o hawk_demo.o  
  Run:/usr/bin/time -v ./hawk_demo.o  
  Check for parameter "Maximum resident set size" which is one of the results that is printed by /usr/bin/time. The above test should give below value.  
  Maximum resident set size (kbytes): 1361680  
- Then run the same test on FPGA as descirbed in Step 5 and compare the compuated values with those obtained from running a test on normal machine.  
+ Then run the same test on FPGA as described in 'Step 5' above and compare the compuated values with those obtained from running a test on a normal linux machine.   
  
 
 
