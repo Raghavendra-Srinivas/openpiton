@@ -5,6 +5,63 @@ For the prototype demonstration, Genesys 2 board with Kintex-7 has been used. Pr
 Accelerator consumes only %X of logic on FPGA and %Y of power.
 Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX". XXXX is demonstrated for it's functionality with help of naive compression or decompression technique. Using other known compression algorithms increases the compression ratio thus providing better MUF (Memory Utilization factors).
 
+# Steps to Prototype XXXX on FPGA with Openpiton
+## Steps to generate FPGA bit steam file
+### Step 0:  
+Install Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
+### Step 1:  
+Clone the Database:  
+git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-dev  
+### Step 2:   
+Setup the workspace.  
+1. cd openpitonHawk  
+2. source sourceme.sh  
+3. For the fist time, source the script that step 2 suggests  
+### Step 3:  
+Compile, Implement and Generate Bit file for FPGA.  
+cd build.  
+Run "protosyn -b genesys2 -d system --core=ariane --axi4_mem --uart-dmw ddr --hawk_fpga --hawk_naive_comp"  
+
+Wait for 45mins-1 hour to get FPGA bitstream file.  
+### Step 4:  
+Configure the FPGA with bitstream file.
+vivado &  
+Open Hardware Manager  
+Connect FPGA with JTAG-USB port, and UART-USB ports to Host.  
+Auto-detect FPGA from Hardware Manager, then program the bitfile.  
+### Step 5:
+Execute Micro-benchmark or OS.  
+#### Bare Metal test execution  
+Set the SW7 (switch 7) position to ON on FPGA board.This setting loads the executable file onto DRAM or BRAM, then execute bera metal test or micro-benchmark on RISC-V core of Openpiton.  
+The file "tests.txt" under build folder should have name of the "C test" file. The tests should be placed in the folder "./piton/verif/diag/c/riscv/ariane/". Currently, the test "hawk.demo.c" is tested.  
+Go to terminal and excute below.  
+pitonstream -b genesys2 -d system -f ./tests.txt --core=ariane --storage=ddr -p ttyUSB0  
+You may have to grant permission on USB device  
+sudo chmod ugo+rwx /dev/ttyUSB0
+
+SW7 in OFF position loads the image from SD card to FPGA DRAM and boots the RISC-V core. SD card needs to be loaded with OS. Check steps from the next section -"Openpiton Research Platform" for more details on this.  
+
+## Steps to build your own linux image and bbl (boot loader)
+Use the openpiton branch of ariane-sdk to build your own Linux images. Necessary steps are also described in README. See repo here: https://github.com/pulp-platform/ariane-sdk/tree/openpiton.  
+If you change the following lines to point to another Linux repo then you can update to different version of Linux. https://github.com/pulp-platform/ariane-sdk/blob/openpiton/configs/buildroot\_defconfig\#L18-L20. 
+Steps to create new driver or driver updates remains the same as one handles to buidl new image from standard linux repo.  
+
+
+
+# Demo Result (Reproducible):
+ openpitonHawk/hawk_results/HAWK Demo Result 1p36GB.pdf
+# Benchmark:
+ openpitonHawk/piton/verif/diag/c/riscv/ariane/hawk_demo.c  
+   
+ Check memory usage from the hawk_demo.c usign standard linux commands on your host machine as below.  
+ Compile: gcc hawk_demo.c -o hawk_demo.o  
+ Run:/usr/bin/time -v ./hawk_demo.o  
+ Check for parameter "Maximum resident set size" which is one of the results that is printed by /usr/bin/time. The above test should give below value.  
+ Maximum resident set size (kbytes): 1361680  
+ Then run the same test on FPGA as described in 'Step 5' above and compare the compuated values with those obtained from running a test on a normal linux machine.   
+ 
+
+
 # Stay tuned - More details on XXXX will be added soon.
 
 
