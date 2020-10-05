@@ -90,7 +90,7 @@ function automatic ListEntry decode_LstEntry;
 endfunction
 
 
-typedef enum {TOL_ALLOCATE_PPA,TOL_COMPRESS,TOL_DECODE_LST_ENTRY} TOL_UPDATE_TYPE;
+typedef enum {TOL_ALLOCATE_PPA,TOL_COMPRESS} TOL_UPDATE_TYPE;
 
 function automatic tol_updpkt_t get_Tolpkt;
 	input [clogb2(LST_ENTRY_MAX)-1:0] lstEntryId;
@@ -100,8 +100,7 @@ function automatic tol_updpkt_t get_Tolpkt;
 	input TOL_UPDATE_TYPE p_state;
 	ListEntry list_entry;
 
-	//if(p_state == TOL_ALLOCATE_PPA) begin 
-	if(p_state == TOL_DECODE_LST_ENTRY) begin 
+	if(p_state == TOL_ALLOCATE_PPA) begin 
 		//allocate_ppa: we have picked entry from freelist and moving it to uncompressed list
 		 get_Tolpkt.attEntryId=attEntryId;
 		 get_Tolpkt.tolEntryId=lstEntryId;
@@ -143,7 +142,6 @@ endfunction
 
 function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
-	input logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
 	iWayORcPagePkt_t pkt;
 	ZsPg_Md_t md;
 	logic [47:0] iway_ptr,nxtway_ptr;
@@ -160,19 +158,19 @@ function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	if(md.way_vld[0]) begin
 		if          (!md.pg_vld[0]) begin
 				pkt.cPage_byteStart=iway_ptr+ZS_OFFSET; //first page
-				md.page0=attEntryId ; //NEW_UPDATE_RAGHAV //iway_ptr+ZS_OFFSET;
+				md.page0=iway_ptr+ZS_OFFSET;
 				md.pg_vld[0]=1'b1;
 			//chk for 4KB crossover
 		end else if (!md.pg_vld[1]) begin
 				if (md.page0+(2*cpage_size)< (iway_ptr+4096)) begin
-					pkt.cPage_byteStart=iway_ptr+ZS_OFFSET+cpage_size; //NEW_UPDATE_RAGHAV //md.page0+cpage_size;
-					md.page1=attEntryId; //NEW_UPDATE_RAGHAV //md.page0+cpage_size;
+					pkt.cPage_byteStart=md.page0+cpage_size;
+					md.page1=md.page0+cpage_size;
 					md.pg_vld[1]=1'b1;
 				end //not handling other cases for now 
 		end else if (!md.pg_vld[2]) begin
 				if (md.page1+(2*cpage_size)< (iway_ptr+4096)) begin
-					pkt.cPage_byteStart=iway_ptr+ZS_OFFSET+(cpage_size<<1); //NEW_UPDATE_RAGHAV //md.page1+cpage_size;
-					md.page2=attEntryId; //NEW_UPDATE_RAGHAV //md.page1+cpage_size;
+					pkt.cPage_byteStart=md.page1+cpage_size;
+					md.page2=md.page1+cpage_size;
 					md.pg_vld[2]=1'b1;
 				end //not handling other cases for now 
 		end else begin

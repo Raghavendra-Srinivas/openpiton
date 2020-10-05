@@ -89,8 +89,7 @@ localparam IDLE			     ='d0,
 	   ATT_UPDATE_FREEWAY_ENTRY  ='d19,
 	   DONE			     ='d20,	
 	   COMP_MNGR_ERROR	     ='d21,
-	   BUS_ERROR		     ='d22,
-	   PLACE_HOLDER		     ='d23;
+	   BUS_ERROR		     ='d22;
 
 logic [7:0] size_idx;
 
@@ -116,7 +115,7 @@ always@* begin
         n_comp_rready=1'b1;     
 	n_comp_rdata=p_rdata;
 	n_comp_tol_updpkt='d0; //.tbl_update=1'b0;
-	n_comp_tol_updpkt.TOL_UPDATE_ONLY='d0;
+	//n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
 	n_iWayORcPagePkt=c_iWayORcPagePkt;
@@ -265,7 +264,7 @@ always@* begin
 			end
 		end
 		DECODE_ZSPGE_IWAY: begin
-			   n_iWayORcPagePkt=getFreeCpage_ZsPageiWay(p_rdata,p_listEntry.attEntryId);
+			   n_iWayORcPagePkt=getFreeCpage_ZsPageiWay(p_rdata);
 			   n_state=MIGRATE_TO_ZSPAGE;
 		end
 		PREP_ZSPAGE_MD:begin
@@ -277,8 +276,7 @@ always@* begin
 					ZsPg_Md.size=get_idx(comp_size);
 					ZsPg_Md.way0=p_listEntry.way; //myself is way to store compressed page
 					ZsPg_Md.way_vld[0]=1'b1;	
-					//ZsPg_Md.page0=(p_listEntry.way<<12)+ZS_OFFSET; //myself is the page plus offset of metadata &  2 pointers
-					ZsPg_Md.page0=p_listEntry.attEntryId; //NEW_UPDATE_RAGHAV
+					ZsPg_Md.page0=(p_listEntry.way<<12)+ZS_OFFSET; //myself is the page plus offset of metadata &  2 pointers
 					ZsPg_Md.pg_vld[0]=1'b1;	
 					//send this packet and way_addr pg write to write compressed page, 
 					//send tol_update packet to PWM to update uncompressTail 
@@ -390,7 +388,7 @@ always@* begin
 				  	n_comp_tol_updpkt.lstEntry=p_listEntry;
 				  	n_comp_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
 					//n_comp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart; //this is not rewuried for tol update only
-					n_comp_tol_updpkt.TOL_UPDATE_ONLY='d1; 
+					n_comp_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
 					n_comp_tol_updpkt.src_list=IFL_SIZE1;
 					n_comp_tol_updpkt.dst_list=IFL_DETACH; 
 					n_comp_tol_updpkt.ifl_idx=get_idx(c_iWayORcPagePkt.cpage_size);
@@ -465,9 +463,6 @@ always@* begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets
 			   n_state = BUS_ERROR;
-		end
-		PLACE_HOLDER : begin
-			   n_state = PLACE_HOLDER;
 		end
 	endcase
 end

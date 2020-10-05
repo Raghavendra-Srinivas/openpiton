@@ -4,7 +4,7 @@
 `include "hacd_define.vh"
 import hacd_pkg::*;
 import hawk_rd_pkg::*;
-`define FSM_WID_PGRD 5
+`define FSM_WID_PGRD 4
 module hawk_pgrd_mngr (
 
   input clk_i,
@@ -12,8 +12,7 @@ module hawk_pgrd_mngr (
 
   input hacd_pkg::att_lkup_reqpkt_t lkup_reqpkt,
   output logic rdm_reset,
-
-  input  [1:0] hawk_sw_ctrl,
+ 
   //handshake with PWM
   input zspg_updated,
   input zspg_migrated,
@@ -21,10 +20,6 @@ module hawk_pgrd_mngr (
   output hacd_pkg::iWayORcPagePkt_t iWayORcPagePkt,
   output hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
 	
-  //handhskakewiht cpage migrator
-  output logic migrate_start,
-  input migrate_done,
-
   //from compressor
   input logic [13:0] comp_size,
   output logic comp_start,
@@ -96,10 +91,7 @@ localparam IDLE			='d0,
 	   COMPRESS		='d11,
 	   DECOMPRESS		='d12,
 	   COMPACT		='d13,
-	   BUS_ERROR		='d14,
-	   UNCOMPRESS_LIST_EMPTY='d15,
-	   WAIT_STATE		='d16,
-	   WAIT_STATE2		='d17;
+	   BUS_ERROR		='d14;
 
 
 
@@ -119,7 +111,7 @@ hacd_pkg::axi_rd_pld_t p_axireq,n_axireq;
 hacd_pkg::trnsl_reqpkt_t n_trnsl_reqpkt,p_trnsl_reqpkt;
 
 logic [clogb2(ATT_ENTRY_MAX)-1:0] n_attEntryId,p_attEntryId;
-hacd_pkg::tol_updpkt_t n_tol_updpkt,p_tol_updpkt,prm_tol_updpkt;
+hacd_pkg::tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
 hacd_pkg::tol_updpkt_t n_comp_tol_updpkt;
 hacd_pkg::tol_updpkt_t n_decomp_tol_updpkt;
 hacd_pkg::tol_updpkt_t n_cmpt_tol_updpkt;
@@ -172,7 +164,7 @@ always@* begin
 				n_attEntryId=lkup_reqpkt.hppa-(HPPA_BASE_ADDR>>12)+1; //entry id starts from 1
 				n_state=LOOKUP_ATT;
 			end
-		 	else if (compact_req && hawk_sw_ctrl[1]) begin
+		 	else if (compact_req) begin
 				n_state=COMPACT;
 			end
 	
@@ -230,7 +222,7 @@ always@* begin
 				    if(uncompLstTail!==uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
 				    n_state = COMPRESS;
 				    end else begin  //handle other cases later, moving to IDLE for now
-				    n_state = UNCOMPRESS_LIST_EMPTY; //IDLE;
+				    n_state = IDLE;
 				    end 
 			  end
 		end
@@ -249,16 +241,16 @@ always@* begin
 				     //decode freeway from freelist from read
 				     //data
 
-				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,'d0,p_rdata,TOL_DECODE_LST_ENTRY); //TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
-					//if(lkup_reqpkt.zeroBlkWr) begin
-					//	n_tol_updpkt.zpd_cnt='d1;
-					//end
+				     n_tol_updpkt=get_Tolpkt(freeLstHead,p_attEntryId,'d0,p_rdata,TOL_ALLOCATE_PPA); //freelisthead tells, which tol entry we need
+					if(lkup_reqpkt.zeroBlkWr) begin
+						n_tol_updpkt.zpd_cnt='d1;
+					end
 				     //If caller of POP_FREE_LST was
 				     //decompressor state then go back  
 					if(p_trnsl_reqpkt.sts==STS_COMP) begin //if this call because targeted acccess is on compressed page, go to decompress state to expand page on this freeWay
 						n_decomp_freeWay=n_tol_updpkt.lstEntry.way<<12;
-			   		        n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa>>12; // attEntry ppa will be where compressed page is stored
-						n_state = WAIT_STATE; //DECOMPRESS; 
+			   		        n_decomp_cPage_byteStart=p_trnsl_reqpkt.ppa; // attEntry ppa will be where compressed page is stored
+						n_state = DECOMPRESS; 
 					end
 					else begin
 				     		n_state = ALLOCATE_PPA;
@@ -300,24 +292,17 @@ always@* begin
 					end
 				end		
 		end
-		WAIT_STATE: begin //workaround patch: Need better fix later
-			    n_state=DECOMPRESS;
-		end
 		DECOMPRESS: begin
 				if(decomp_mngr_done) begin 
 					n_trnsl_reqpkt.ppa=decomp_freeWay; //dcomp done, so this way is expanded with needed page, send it over trnls packet
 					n_trnsl_reqpkt.sts=UNCOMP;
 				        if(freeLstHead!=NULL) begin //If i just uncompressed compressed page to popped way from free list, i need tol update
-					  n_state = WAIT_STATE2;
+					  n_state = TBL_UPDATE;
 					end else begin //it must be called from COMPRESS, so it internally updated necessary tol
 					  n_state = IDLE;
 					  n_trnsl_reqpkt.allow_access=1'b1;
 					end
 				end
-		end
-		WAIT_STATE2: begin //workaround patch: Need better fix later
-			    n_tol_updpkt = prm_tol_updpkt; //qucik workaround->need beter fix for it later
-			    n_state=TBL_UPDATE;
 		end
 		COMPACT:begin
 				if(compact_done) begin
@@ -328,9 +313,6 @@ always@* begin
 			   //assert trigger, connect it to spare LED.
 			   //Stay here forever unless, user resets
 			   n_state = BUS_ERROR;
-		end
-		UNCOMPRESS_LIST_EMPTY : begin
-			   n_state = UNCOMPRESS_LIST_EMPTY;
 		end
 	endcase
 end
@@ -394,7 +376,6 @@ begin
 	if(!rst_ni) begin
 		p_trnsl_reqpkt<='d0;
 		p_tol_updpkt <='d0;
-		prm_tol_updpkt <='d0;
 	end
 	else begin
 		//Tranalstion Request : It can be att hit or tbl update
@@ -402,9 +383,6 @@ begin
 		p_tol_updpkt <=  (p_state==COMPRESS) ? n_comp_tol_updpkt : 
 				 (p_state==DECOMPRESS) ? n_decomp_tol_updpkt : 
 			         (p_state==COMPACT) ? n_cmpt_tol_updpkt : n_tol_updpkt;
-		if(p_state==WAIT_STATE) begin
-			prm_tol_updpkt<=n_tol_updpkt; //qucik workaround->need beter fix for it later
-		end
 	end
 end
 

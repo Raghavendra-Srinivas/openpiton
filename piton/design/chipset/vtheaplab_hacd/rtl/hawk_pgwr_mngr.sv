@@ -55,7 +55,7 @@ logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstHead[IFLST_COUNT],IfLstHead[IFLST_COUNT
 logic [clogb2(LST_ENTRY_MAX)-1:0] n_IfLstTail[IFLST_COUNT],IfLstTail[IFLST_COUNT];
 
 //debug
-wire [clogb2(LST_ENTRY_MAX)-1:0] iflst_head,iflst_tail;
+wire [clogb2(LST_ENTRY_MAX)-1:0] iflst_head;
 assign iflst_head=IfLstHead[0];
 assign iflst_tail=IfLstTail[0];
 //
@@ -423,17 +423,7 @@ always@* begin
 				n_freeListHead = 'd1;
 			end
 			else if(tol_updpkt.tbl_update) begin
-	        		if      (tol_updpkt.TOL_UPDATE_ONLY==1) begin //it used for TOL update only (both on src and dst lists)
-			  	     	if (p_tol_updpkt.src_list==IFL_SIZE1) begin
-						if (IfLstTail[0] != IfLstHead[0]) begin //FIXME 
-							n_state=TOL_SLST_UPDATE;
-						end else begin
-				     	  		n_IfLstHead[0] = NULL;
-				     	  		n_IfLstTail[0] = NULL;
-				     	  		n_state = TOL_DLST_UPDATE1;
-						end	
-					end
-				end else if (tol_updpkt.TOL_UPDATE_ONLY==2) begin //it is used for TOL update only but only to add IFL detached entry to dst list
+	        		if(tol_updpkt.TOL_UPDATE_ONLY) begin
 					n_state=TOL_DLST_UPDATE1;
 				end else begin
 					n_state=ATT_UPDATE;
@@ -544,7 +534,7 @@ always@* begin
 					case(p_tol_updpkt.src_list)
 					 FREE  : OPC=POP_HEAD;
 					 UNCOMP: OPC=POP_HEAD;
-					 IFL_SIZE1  : OPC=POP_TAIL; //HEAD;
+					 IFL_SIZE1  : OPC=POP_HEAD;
 					 IFL_DETACH :  OPC=PUSH_HEAD;
 					endcase
 			  		if(/*awready &&*/ !awvalid) begin
@@ -564,8 +554,7 @@ always@* begin
 					 UNCOMP  : n_uncompListHead=p_tol_updpkt.lstEntry.next; 	
 					 IFL_SIZE1: begin
 						k=p_tol_updpkt.ifl_idx;
-						//n_IfLstHead[k]=p_tol_updpkt.lstEntry.next;
-						n_IfLstTail[k]=p_tol_updpkt.lstEntry.prev;
+						n_IfLstHead[k]=p_tol_updpkt.lstEntry.next;
 					 end
 					 //IFL_DETACH : ; we done' have to
 					 //maintain list for fully occupied
@@ -577,7 +566,7 @@ always@* begin
 		end
 		TOL_DLST_UPDATE1: begin
 					case(p_tol_updpkt.dst_list)
-					 FREE  : OPC=PUSH_TAIL;
+					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
 					 INCOMP : OPC=PUSH_HEAD;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
@@ -598,11 +587,7 @@ always@* begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 						k=p_tol_updpkt.ifl_idx;
 				     //Update DLST HEAD/TAIL
-					if (p_tol_updpkt.dst_list==FREE && (freeListTail==NULL)) begin //for uncomp list as destination, it is push back
-					   	n_freeListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
-					   	n_freeListHead=p_tol_updpkt.tolEntryId; //I will become the head	
-				                n_state = WAIT_BRESP;
-					end else if (p_tol_updpkt.dst_list==UNCOMP && (uncompListTail==NULL)) begin //for uncomp list as destination, it is push back
+					if (p_tol_updpkt.dst_list==UNCOMP && (uncompListTail==NULL)) begin //for uncomp list as destination, it is push back
 					   	n_uncompListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
 					   	n_uncompListHead=p_tol_updpkt.tolEntryId; //I will become the head	
 				                n_state = WAIT_BRESP;
@@ -628,7 +613,7 @@ always@* begin
 		end
 		TOL_DLST_UPDATE2: begin
 					case(p_tol_updpkt.dst_list)
-					 FREE  : OPC=PUSH_TAIL;
+					 //FREE  : OPC=POP_HEAD;
 					 UNCOMP    : OPC=PUSH_TAIL;
 					 INCOMP    : OPC=PUSH_HEAD;
 					 IFL_SIZE1 : OPC=PUSH_HEAD;
@@ -647,9 +632,6 @@ always@* begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 					if(p_tol_updpkt.dst_list==UNCOMP) begin //for uncomp list as destination, it is push back
 						n_uncompListTail=p_tol_updpkt.tolEntryId; // I would become tail	
-					end
-					else if(p_tol_updpkt.dst_list==FREE) begin //for free list as destination, it is push back
-						n_freeListTail=p_tol_updpkt.tolEntryId; // I would become tail	
 					end
 					else if(p_tol_updpkt.dst_list==INCOMP) begin //for incomp list as destination, it is push front/head
 						n_incompListHead=p_tol_updpkt.tolEntryId; // I would become head
@@ -825,7 +807,7 @@ always @(posedge clk_i or negedge rst_ni) begin
 end
 genvar if_h;
 generate 
-for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin :IFL_HEADTAIL
+for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin
 	always @(posedge clk_i or negedge rst_ni)
 	begin
 		if(!rst_ni) begin
@@ -839,7 +821,7 @@ for(if_h=0;if_h<IFLST_COUNT;if_h=if_h+1) begin :IFL_HEADTAIL
 	end
 assign tol_HT.IfLstHead[if_h]=IfLstHead[if_h];
 assign tol_HT.IfLstTail[if_h]=IfLstTail[if_h];
-end : IFL_HEADTAIL
+end
 endgenerate
 
 //share with pgrd manager

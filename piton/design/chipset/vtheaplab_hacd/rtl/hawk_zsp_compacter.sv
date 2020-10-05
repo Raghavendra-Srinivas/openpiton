@@ -3,7 +3,7 @@ import hacd_pkg::*;
 import hawk_rd_pkg::*;
 `define FSM_WID_COMPCTR 5
 
-module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=3)(
+module hawk_zsp_compacter (
     input clk_i,
     input rst_ni,
     
@@ -18,10 +18,6 @@ module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=3)(
     //handshake with PWM
     input zspg_migrated,	
     output logic cmpt_rdm_reset,
-
-    //handhskakewiht cpage migrator
-    output logic migrate_start,
-    input migrate_done,
 
     //from AXI FIFO
     input wire rdfifo_full,
@@ -54,31 +50,28 @@ localparam [`FSM_WID_COMPCTR-1:0]
 	   DECODE_SRC_LST_ENTRY	     ='d3,
 	   FETCH_SRC_PAGE	     ='d4,
 	   WAIT_SRC_PAGE	     ='d5,
-	   CHK_SRC_PAGE	     	     ='d6,
-	   PEEK_IFL_HEAD	     ='d7,
-	   WAIT_IFL_HEAD	     ='d8,
-	   DECODE_DST_LST_ENTRY	     ='d9,
-	   FETCH_DST_PAGE	     ='d10,
-	   WAIT_DST_PAGE	     ='d11,
-	   RESET_FIFO_PTRS	     ='d12,	
-	   WAIT_RESET 		     ='d13,
-	   BURST_READ_START	     ='d14,
-	   BURST_READ		     ='d15,
-	   MIGRATE_1		     ='d16,
-	   MIGRATE_2		     ='d17,
-	   ATT_UPDATE		     ='d18,
-	   PUSH_FREEWAY		     ='d19,
-	   DETACH_IFL_HEAD	     ='d20,
-	   DETACH_IFL_HEAD_MD_UPDATE ='d21,
-	   ZSPAGE_UPDATE	     ='d22,
-	   DONE			     ='d23,
-	   BUS_ERROR		     ='d24;
+	   PEEK_IFL_HEAD	     ='d6,
+	   WAIT_IFL_HEAD	     ='d7,
+	   DECODE_DST_LST_ENTRY	     ='d8,
+	   FETCH_DST_PAGE	     ='d9,
+	   WAIT_DST_PAGE	     ='d10,
+	   RESET_FIFO_PTRS	     ='d11,	
+	   WAIT_RESET 		     ='d12,
+	   BURST_READ_START	     ='d13,
+	   BURST_READ		     ='d14,
+	   MIGRATE		     ='d15,
+	   PUSH_FREEWAY		     ='d16,
+	   DETACH_IFL_HEAD	     ='d17,
+	   ZSPAGE_UPDATE	     ='d18,
+	   DONE			     ='d19,
+	   BUS_ERROR		     ='d20;
+
+localparam [3:0] FREEPAGE_CNT=4;
+localparam [3:0] COMPACT_THRSHLD=1;
 
 typedef struct packed{
 	ZsPg_Md_t src_md;
 	ZsPg_Md_t dst_md;
-	logic [clogb2(ATT_ENTRY_MAX)-1:0] curr_src_pageid;
-	//logic [clogb2(ATT_ENTRY_MAX)-1:0] curr_dst_pageid;
 	logic src_empty;
 	logic dst_full;
 	logic [47:0] src_iWay_ptr;
@@ -89,7 +82,6 @@ zsPageCompactPkt_t n_zscpt_pkt,p_zscpt_pkt;
 
 assign zspg_mig_pkt = p_zscpt_pkt.mig_pkt;
 
-//Protoype limitation: Each Zspage is made up of one way holding 3 pages
 function automatic  zsPageCompactPkt_t getMigratePkt;
 	input zsPageCompactPkt_t pkt;
 	input state_t p_state;
@@ -97,57 +89,34 @@ function automatic  zsPageCompactPkt_t getMigratePkt;
 	//default
 	getMigratePkt=pkt;
 
-	if	(p_state == WAIT_SRC_PAGE || p_state == PEEK_IFL_TAIL) begin 
+	if	(p_state == FETCH_SRC_PAGE || p_state == PEEK_IFL_TAIL) begin 
 		if(pkt.src_md.way_vld[0]) begin
 			if    (pkt.src_md.pg_vld[0]) begin
-				getMigratePkt.mig_pkt.src_cpage_ptr=pkt.src_iWay_ptr+ZS_OFFSET ;//pkt.src_md.page0;
-			 	getMigratePkt.curr_src_pageid=pkt.src_md.page0;
+				getMigratePkt.mig_pkt.src_cpage_ptr=pkt.src_md.page0;
 				getMigratePkt.src_md.pg_vld[0]=1'b0; //reset
 			end else if (pkt.src_md.pg_vld[1]) begin
-				getMigratePkt.mig_pkt.src_cpage_ptr=pkt.src_iWay_ptr+ZS_OFFSET + get_cpage_size(pkt.src_md.size);//pkt.src_md.page1;
-			 	getMigratePkt.curr_src_pageid=pkt.src_md.page1;
+				getMigratePkt.mig_pkt.src_cpage_ptr=pkt.src_md.page1;
 				getMigratePkt.src_md.pg_vld[1]=1'b0; //reset
-			end else if (pkt.src_md.pg_vld[2]) begin
-				getMigratePkt.mig_pkt.src_cpage_ptr=pkt.src_iWay_ptr+ZS_OFFSET + (get_cpage_size(pkt.src_md.size)<<1);//pkt.src_md.page2;
-			 	getMigratePkt.curr_src_pageid=pkt.src_md.page2;
-				getMigratePkt.src_md.pg_vld[2]=1'b0; //reset
 			end
 		end
-		getMigratePkt.src_empty=~|pkt.src_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+		getMigratePkt.src_empty=~|getMigratePkt.src_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
 		`ifndef SYNTH
 			$display("RAGHAV_DEBUG FECTH_SRC_PAGE = %0h, src empty=%0d",getMigratePkt.mig_pkt.src_cpage_ptr,getMigratePkt.src_empty);
 		`endif
 	end 	
-        else if (p_state == WAIT_DST_PAGE || p_state == PEEK_IFL_HEAD) begin
-		`ifndef SYNTH
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD ZSpage Size- %0h",pkt.dst_md.size );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD way_vld- %0h", pkt.dst_md.way_vld );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD pg_vld- %0b",pkt.dst_md.pg_vld );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD way0- %0h",pkt.dst_md.way0 );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD page0- %0h",pkt.dst_md.page0 );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD page1- %0h",pkt.dst_md.page1 );
-			$display ("HAWK_DEBUG:ZSPGA_CMPT IFL_HEAD page2- %0h",pkt.dst_md.page2 );
-		`endif
-		if(pkt.dst_md.way_vld[0]) begin //way is valid, look for invalid pages
-			if    (!pkt.dst_md.pg_vld[0]) begin 	     //page0 is invalid
-				getMigratePkt.mig_pkt.dst_cpage_ptr=pkt.dst_iWay_ptr+ZS_OFFSET ;//pkt.dst_md.page0;
-				getMigratePkt.dst_md.pg_vld[0]=1'b1; //set as valid
-			end else if (!pkt.dst_md.pg_vld[1]) begin
-				getMigratePkt.mig_pkt.dst_cpage_ptr=pkt.dst_iWay_ptr+ZS_OFFSET + get_cpage_size(pkt.dst_md.size);//pkt.dst_md.page1;
-				getMigratePkt.dst_md.pg_vld[1]=1'b1; //reset
-			end else if (!pkt.dst_md.pg_vld[2]) begin
-				getMigratePkt.mig_pkt.dst_cpage_ptr=pkt.dst_iWay_ptr+ZS_OFFSET + (get_cpage_size(pkt.dst_md.size)<<1);//pkt.dst_md.page2;
-				getMigratePkt.dst_md.pg_vld[2]=1'b1; //reset
-			`ifndef SYNTH
-				$display ("HAWK_DEBUG:ZSPGA_CMPT 2nd page IFL_HEAD pg_vld- %0h",pkt.dst_md.pg_vld );
-			`endif
+        else if (p_state == FETCH_DST_PAGE || p_state == PEEK_IFL_HEAD) begin
+		if(pkt.dst_md.way_vld[0]) begin
+			if    (pkt.dst_md.pg_vld[0]) begin
+				getMigratePkt.mig_pkt.dst_cpage_ptr=pkt.dst_md.page0;
+				getMigratePkt.dst_md.pg_vld[0]=1'b0; //reset
+			end else if (pkt.dst_md.pg_vld[1]) begin
+				getMigratePkt.mig_pkt.dst_cpage_ptr=pkt.dst_md.page1;
+				getMigratePkt.dst_md.pg_vld[1]=1'b0; //reset
 			end
 		end
-		//else begin end //prototype supports only one way for now
-
-		getMigratePkt.dst_full=&pkt.dst_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+		getMigratePkt.dst_full=&getMigratePkt.dst_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
 		`ifndef SYNTH
-			$display("RAGHAV_DEBUG IFL HEAD/DST = %0h, dst full=%0d",getMigratePkt.mig_pkt.dst_cpage_ptr,getMigratePkt.dst_full);
+			$display("RAGHAV_DEBUG FECTH_DST_PAGE = %0h, dst full=%0d",getMigratePkt.mig_pkt.dst_cpage_ptr,getMigratePkt.dst_full);
 		`endif
 	end
 endfunction
@@ -167,8 +136,6 @@ logic n_cmpt_rdm_reset;
 logic [5:0] n_burst_cnt,p_burst_cnt;
 ListEntry p_src_listEntry,n_src_listEntry;
 ListEntry p_dst_listEntry,n_dst_listEntry;
-logic n_migrate_start;
-
 always@* begin
 //default
 	n_state=p_state;	       //be in same state unless fsm decides to jump
@@ -178,21 +145,14 @@ always@* begin
         n_cmpt_rready=1'b1;     
 	n_cmpt_rdata=p_rdata;
 	n_cmpt_tol_updpkt.tbl_update=1'b0;
-	n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d0;
+	n_cmpt_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_burst_cnt=p_burst_cnt;	
 	n_cmpt_rdm_reset=1'b0;
-	n_migrate_start=migrate_start;
-	n_zscpt_pkt=p_zscpt_pkt;
-
 	//lookup IF list for corresponding size
 	case(p_state)
 		IDLE: begin
 			if(compact_trig && (tol_HT.IfLstHead[0] != tol_HT.IfLstTail[0])) begin //We need 256 different triggers here
 				n_state=PEEK_IFL_TAIL;
-				//Initialize src and dst : empty and full conditions
-				n_zscpt_pkt.src_empty=1'b1;
-				n_zscpt_pkt.dst_full=1'b1;
-				$display("RAGHAV_DEBUG: ZsPage Compact Operation is Active");				   
 			end
 		end
 		PEEK_IFL_TAIL: begin
@@ -234,36 +194,11 @@ always@* begin
 				     n_zscpt_pkt.src_md=rdata[(50*8-1)+2*48:2*48];
 				     n_zscpt_pkt.src_iWay_ptr=rdata[(48-1)+0 : 0];
 				     n_zscpt_pkt= getMigratePkt(n_zscpt_pkt,p_state);  
-				     n_state = CHK_SRC_PAGE;
+				     n_state = PEEK_IFL_HEAD;
 				end
 				else n_state = BUS_ERROR;
 			  end
 		end
-		//Check if Source ZsPage, If it is empty then directly put the way as free way
-		CHK_SRC_PAGE: begin
-			if (tol_HT.IfLstHead[0] != tol_HT.IfLstTail[0]) begin //This is check if we have not hit case only one entry without compaction 
-				if(p_zscpt_pkt.src_empty) begin
-				   	if(pgwr_mngr_ready) begin 
-						//n_cmpt_tol_updpkt.attEntryId=
-						n_cmpt_tol_updpkt.tolEntryId=tol_HT.IfLstTail[0] ; //((p_zscpt_pkt.src_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
-					  	n_cmpt_tol_updpkt.lstEntry=p_src_listEntry;
-					  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; 
-						n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d1; 
-						n_cmpt_tol_updpkt.src_list=IFL_SIZE1;
-						n_cmpt_tol_updpkt.dst_list=FREE; 
-						n_cmpt_tol_updpkt.ifl_idx=p_zscpt_pkt.src_md.size;
-						n_cmpt_tol_updpkt.tbl_update=1'b1;		
-					end
-					if(tbl_update_done) begin
-						n_state = PEEK_IFL_TAIL; 
-					end
-				end else begin
-					    n_state = PEEK_IFL_HEAD;
-				end
-			end else begin
-					    n_state = ZSPAGE_UPDATE;
-			end
-		end 
 		PEEK_IFL_HEAD: begin
 			if(p_zscpt_pkt.dst_full) begin
 				if(arready && !arvalid) begin
@@ -316,7 +251,7 @@ always@* begin
 		WAIT_RESET: begin
 			   n_cmpt_rdm_reset = 1'b0;
 			   n_state=BURST_READ_START;
-			   n_burst_cnt=(get_cpage_size(p_zscpt_pkt.src_md.size) >> 6); //+ 1;
+			   n_burst_cnt=(get_cpage_size(p_zscpt_pkt.src_md.size) >> 6) + 1;
 		end
 		BURST_READ_START: begin
         		n_cmpt_rready=1'b0;     
@@ -337,36 +272,14 @@ always@* begin
 				n_burst_cnt = p_burst_cnt-'d1;
 			end 
 			else if(p_burst_cnt=='d0) begin
-				n_migrate_start=1'b1;
-				n_state=MIGRATE_1;
+				n_zscpt_pkt.mig_pkt.migrate=1'b1;
+				n_state=MIGRATE;
 			end
 		end
-		MIGRATE_1:begin
-        		n_cmpt_rready=1'b0;     
-				if(migrate_done) begin
-					n_migrate_start=1'b0;
-					n_zscpt_pkt.mig_pkt.migrate=1'b1;
-					n_state=MIGRATE_2;
-				end
-		end
-		MIGRATE_2: begin
-        		n_cmpt_rready=1'b0;     
+		MIGRATE: begin
 			        if (zspg_migrated) begin  	
 				   n_zscpt_pkt.mig_pkt.migrate=1'b0;
-			           n_state= ATT_UPDATE;
-				end
-		end
-		ATT_UPDATE: begin
-			   	if(pgwr_mngr_ready) begin 
-					n_cmpt_tol_updpkt.attEntryId=p_zscpt_pkt.curr_src_pageid;
-					n_cmpt_tol_updpkt.lstEntry.way=p_zscpt_pkt.mig_pkt.dst_cpage_ptr;//now ATT way if freeway
-					n_cmpt_tol_updpkt.ATT_UPDATE_ONLY=1'b1;
-					n_cmpt_tol_updpkt.ATT_STS=STS_COMP;
-					n_cmpt_tol_updpkt.zpd_cnt='d0; //else zero
-					n_cmpt_tol_updpkt.tbl_update=1'b1;		
-				end
-				if(tbl_update_done) begin   
-					n_cmpt_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
+					//Do we need IFL push
 					if(p_zscpt_pkt.src_empty) begin
 			           		n_state= PUSH_FREEWAY;
 					end
@@ -381,67 +294,47 @@ always@* begin
 					//n_cmpt_tol_updpkt.attEntryId=
 					n_cmpt_tol_updpkt.tolEntryId=((p_zscpt_pkt.src_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
 				  	n_cmpt_tol_updpkt.lstEntry=p_src_listEntry;
-				  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; 
-					n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d1;
+				  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; //p_attEntryId;
+					n_cmpt_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
 					n_cmpt_tol_updpkt.src_list=IFL_SIZE1;
 					n_cmpt_tol_updpkt.dst_list=FREE; 
 					n_cmpt_tol_updpkt.ifl_idx=p_zscpt_pkt.src_md.size;
 					n_cmpt_tol_updpkt.tbl_update=1'b1;		
 				end
 				if(tbl_update_done) begin
-					if (p_zscpt_pkt.dst_full) begin
-						n_state = DETACH_IFL_HEAD; 
-					end else begin
-						n_state = ZSPAGE_UPDATE;
-					end
+					n_state = DETACH_IFL_HEAD; 
 				end
 				$display("RAGHAV_DEBUG:In PUSH_FREEWAY");
 		end
 		DETACH_IFL_HEAD : begin
+				if (p_zscpt_pkt.dst_full) begin
 			   		if(pgwr_mngr_ready) begin 
-					$display("RAGHAV_DEBUG:In DETACH_IFL_HEAD");				   
 						//n_cmpt_tol_updpkt.attEntryId=
-						n_cmpt_tol_updpkt.tolEntryId=tol_HT.IfLstHead[0]; //FIXME:remove hardcoded value//((p_zscpt_pkt.dst_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
+						n_cmpt_tol_updpkt.tolEntryId=((p_zscpt_pkt.dst_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
 					  	n_cmpt_tol_updpkt.lstEntry=p_dst_listEntry;
 					  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; 
-						n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d1;  
+						n_cmpt_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
 						n_cmpt_tol_updpkt.src_list=IFL_SIZE1; 
 						n_cmpt_tol_updpkt.dst_list=IFL_DETACH; 
 						n_cmpt_tol_updpkt.ifl_idx=p_zscpt_pkt.dst_md.size;
 						n_cmpt_tol_updpkt.tbl_update=1'b1;		
 					end
 					if(tbl_update_done) begin
-						n_state = DETACH_IFL_HEAD_MD_UPDATE; 
+						n_state = ZSPAGE_UPDATE; 
 					end
-		end
-		DETACH_IFL_HEAD_MD_UPDATE:begin
-			   			if(pgwr_mngr_ready) begin 
-							n_zscpt_pkt.mig_pkt.dst_cpage_ptr=p_zscpt_pkt.dst_iWay_ptr;
-							n_zscpt_pkt.mig_pkt.src_cpage_ptr='d0; //FIXME: not supporting protoype
-							n_zscpt_pkt.mig_pkt.md=p_zscpt_pkt.dst_md;
-							n_zscpt_pkt.mig_pkt.zspg_update=1'b1;
-						end
-			        		if (zspg_migrated) begin  	
-				   			n_zscpt_pkt.mig_pkt.zspg_update=1'b0;
-							n_state = ZSPAGE_UPDATE;
-						end
+				end
+				$display("RAGHAV_DEBUG:In DETACH_IFL_HEAD");				   
 		end
 		ZSPAGE_UPDATE:begin
 				if (tol_HT.IfLstHead[0] == tol_HT.IfLstTail[0]) begin //full compaction done? then send zspage update for final entry that is src entry that remained
-					if (tol_HT.IfLstTail[0]!=hacd_pkg::NULL) begin //one entry in IFL 
-			   			if(pgwr_mngr_ready) begin 
-							n_zscpt_pkt.mig_pkt.dst_cpage_ptr=p_zscpt_pkt.src_iWay_ptr;
-							n_zscpt_pkt.mig_pkt.src_cpage_ptr='d0; //FIXME: not supporting protoype
-							n_zscpt_pkt.mig_pkt.md=p_zscpt_pkt.src_md;
-							n_zscpt_pkt.mig_pkt.zspg_update=1'b1;
-						end
-			        		if (zspg_migrated) begin  	
-				   			n_zscpt_pkt.mig_pkt.zspg_update=1'b0;
-							n_state = DONE;
-						end
+			   		if(pgwr_mngr_ready) begin 
+						n_zscpt_pkt.mig_pkt.src_cpage_ptr=p_zscpt_pkt.src_iWay_ptr;
+						n_zscpt_pkt.mig_pkt.md=p_zscpt_pkt.src_md;
+						n_zscpt_pkt.mig_pkt.zspg_update=1'b1;
 					end
-					else begin
-							n_state = DONE;
+			        	if (zspg_migrated) begin  	
+				   		n_zscpt_pkt.mig_pkt.zspg_update=1'b0;
+						n_state = DONE;
 					end
 				end else begin 
 						n_state = PEEK_IFL_TAIL;
@@ -462,52 +355,37 @@ always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		p_state <= IDLE;
-	 	p_zscpt_pkt.src_md <= 'd0;
-	 	p_zscpt_pkt.dst_md <='d0;
-	 	p_zscpt_pkt.src_iWay_ptr <='d0;
-	 	p_zscpt_pkt.dst_iWay_ptr <='d0;
-	 	p_zscpt_pkt.mig_pkt <='d0;
-		p_zscpt_pkt.src_empty<=1'b1;
-		p_zscpt_pkt.dst_full <=1'b1;
-
-		p_burst_cnt<='d0;
+		p_zscpt_pkt <= 'd0;
 	        cmpt_rdm_reset <=1'b0;
 		p_src_listEntry <='d0;
 		p_dst_listEntry <='d0;
-		migrate_start<=1'b0;
-
 	end
 	else begin
  		p_state <= n_state;	
 		p_zscpt_pkt <= n_zscpt_pkt;
-
-		p_burst_cnt<=n_burst_cnt;
 	        cmpt_rdm_reset <= n_cmpt_rdm_reset;
 		p_src_listEntry <= n_src_listEntry;
 		p_dst_listEntry <= n_dst_listEntry;
-		migrate_start<=n_migrate_start;
 	end
 end
 
 
 
 
-logic [15:0] freepage_count; //[IFLST_COUNT];
+logic [FREEPAGE_CNT-1:0] freepage_count; //[IFLST_COUNT];
 always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		freepage_count<='d0;
 	end
-	else if (compact_done) begin
-		freepage_count<='d0;
-	end
 	else if (decomp_mngr_done) begin
 		freepage_count<= freepage_count + 'd1;
 	end
+	else if (zspg_migrated && freepage_count >'d0) begin
+		freepage_count<= freepage_count - 'd1;
+	end
 end
-
-//Compact if there are enough compressed pages got decompressed
-assign compact_req = (freepage_count >= FREE_CPAGE_COMPACT_THRSHLD)  && !compact_done;
-assign compact_done= (p_state==DONE); // && (tol_HT.IfLstHead[0] == tol_HT.IfLstTail[0]);
+assign compact_req = 1'b0; //(freepage_count >= COMPACT_THRSHLD);
+assign compact_done= (p_state==DONE) && (tol_HT.IfLstHead[0] == tol_HT.IfLstTail[0]);
 assign zspg_cmpact_pkt=p_zscpt_pkt;
 endmodule

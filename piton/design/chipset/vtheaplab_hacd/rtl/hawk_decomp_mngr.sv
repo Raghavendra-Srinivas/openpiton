@@ -77,63 +77,58 @@ localparam IDLE			     ='d0,
 ///////////
 function automatic iWayORcPagePkt_t setCpageFree_ZsPageiWay;
 	input logic [`HACD_AXI4_DATA_WIDTH-1:0] rdata;
-	input logic [clogb2(ATT_ENTRY_MAX)-1:0] attEntryId;
-	//input logic [47:0] cPage_byteStart;
+	input logic [47:0] cPage_byteStart;
 	input state_t p_state;
 	input iWayORcPagePkt_t pkt_in;
 	iWayORcPagePkt_t pkt;
-	iWayORcPagePkt_t nxt_pkt;
 
-	//current packet
 	pkt.zsPgMd=rdata[(50*8-1)+2*48:2*48]; //50 bytes on LSB
 	pkt.nxtWay_ptr=rdata[(48-1)+48:48];
 	pkt.iWay_ptr=rdata[(48-1)+0 : 0];  
 	pkt.cpage_size=suprted_comp_size[pkt.zsPgMd.size];
 	pkt.update=1'b0;
-	//next pkt assignment
+ 	
         //Zspage was full before decompress from it? then push it to irrgular
         //free list after decompression
 	if(p_state==FETCH_IWAY_PTR) begin
- 		nxt_pkt=pkt;
-        	nxt_pkt.pp_ifl = &pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+        	pkt.pp_ifl = &pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
 	end else begin
- 		nxt_pkt=pkt_in;
-        	nxt_pkt.pp_ifl = pkt_in.pp_ifl;
+        	pkt.pp_ifl = pkt_in.pp_ifl;
 		//cpage byte start
-		if 	(pkt_in.zsPgMd.pg_vld[0] && (pkt_in.zsPgMd.page0  == attEntryId)) begin
-			nxt_pkt.zsPgMd.pg_vld[0]=1'b0;
+		if 	(pkt.zsPgMd.page0 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[0]=1'b0;
 		end 
-		else if (pkt_in.zsPgMd.pg_vld[1] && (pkt_in.zsPgMd.page1  == attEntryId)) begin
-			nxt_pkt.zsPgMd.pg_vld[1]=1'b0;
+		else if (pkt.zsPgMd.page1 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[1]=1'b0;
 		end
-		else if (pkt_in.zsPgMd.pg_vld[2] && (pkt_in.zsPgMd.page2  == attEntryId)) begin
-			nxt_pkt.zsPgMd.pg_vld[2]=1'b0;
+		else if (pkt.zsPgMd.page2 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[2]=1'b0;
 		end
-		else if (pkt_in.zsPgMd.pg_vld[3] && (pkt_in.zsPgMd.page3  == attEntryId)) begin
-			nxt_pkt.zsPgMd.pg_vld[3]=1'b0;
+		else if (pkt.zsPgMd.page3 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[3]=1'b0;
 		end
-		else if (pkt_in.zsPgMd.pg_vld[4] && (pkt_in.zsPgMd.page4  == attEntryId)) begin
-			nxt_pkt.zsPgMd.pg_vld[4]=1'b0;
+		else if (pkt.zsPgMd.page4 == cPage_byteStart) begin
+			pkt.zsPgMd.pg_vld[4]=1'b0;
 		end
 	end	
 		//[TODO] invalidate way valid based on if all page valid goes invalid later
-		setCpageFree_ZsPageiWay=nxt_pkt;
+		setCpageFree_ZsPageiWay=pkt;
 
 		`ifndef SYNTH
-			//$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
+			$display ("RAGHAV SETCPAGE DEBUG rdata- %0h",rdata );
 
-			$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",nxt_pkt.zsPgMd.size );
-			$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", nxt_pkt.zsPgMd.way_vld );
-			$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",nxt_pkt.zsPgMd.pg_vld );
-			$display ("RAGHAV SETCPAGE DEBUG way0- %0h",nxt_pkt.zsPgMd.way0 );
-			$display ("RAGHAV SETCPAGE DEBUG page0- %0h",nxt_pkt.zsPgMd.page0 );
-			$display ("RAGHAV SETCPAGE DEBUG page1- %0h",nxt_pkt.zsPgMd.page1 );
-			$display ("RAGHAV SETCPAGE DEBUG page2- %0h",nxt_pkt.zsPgMd.page2 );
+			$display ("RAGHAV SETCPAGE DEBUG ZSpage Size- %0h",pkt.zsPgMd.size );
+			$display ("RAGHAV SETCPAGE DEBUG way_vld- %0h", pkt.zsPgMd.way_vld );
+			$display ("RAGHAV SETCPAGE DEBUG pg_vld- %0h",pkt.zsPgMd.pg_vld );
+			$display ("RAGHAV SETCPAGE DEBUG way0- %0h",pkt.zsPgMd.way0 );
+			$display ("RAGHAV SETCPAGE DEBUG page0- %0h",pkt.zsPgMd.page0 );
+			$display ("RAGHAV SETCPAGE DEBUG page1- %0h",pkt.zsPgMd.page1 );
+			$display ("RAGHAV SETCPAGE DEBUG page2- %0h",pkt.zsPgMd.page2 );
 
-			$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",nxt_pkt.cPage_byteStart );
-			$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",nxt_pkt.cpage_size );
-			$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",nxt_pkt.iWay_ptr );
-			$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",nxt_pkt.nxtWay_ptr );
+			$display ("RAGHAV SETCPAGE DEBUG cpagebyteStart- %0h",pkt.cPage_byteStart );
+			$display ("RAGHAV SETCPAGE DEBUG cpage_size - %0h",pkt.cpage_size );
+			$display ("RAGHAV SETCPAGE DEBUG iWay_ptr - %0h",pkt.iWay_ptr );
+			$display ("RAGHAV SETCPAGE DEBUG nxtWay_ptr - %0h",pkt.nxtWay_ptr );
 		`endif
 	
 
@@ -175,11 +170,11 @@ always@* begin
 	n_state=p_state;	       //be in same state unless fsm decides to jump
 	n_decomp_axireq.addr= p_axireq.addr;
 	n_decomp_axireq.arlen = 8'd0; //by default, one beat
-	n_decomp_req_arvalid = !arready && arvalid; //1'b0; 	       //fsm decides when to send packet
+	n_decomp_req_arvalid = 1'b0; 	       //fsm decides when to send packet
         n_decomp_rready=1'b1;     
 	n_decomp_rdata=p_rdata;
 	n_decomp_tol_updpkt.tbl_update=1'b0;
-	n_decomp_tol_updpkt.TOL_UPDATE_ONLY='d0;
+	n_decomp_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_decomp_start=decomp_start; //1'b0;
 	n_decomp_mngr_done=1'b0;
 	n_iWayORcPagePkt=dc_iWayORcPagePkt;
@@ -207,8 +202,7 @@ always@* begin
 			      if(rresp =='d0) begin
 			           n_decomp_rdata= rdata; 
 				   if(n_decomp_rdata[47:0] == p_axireq.addr[47:0]) begin //If Iam  the iWay, pick the csize
-				      //n_iWayORcPagePkt=setCpageFree_ZsPageiWay(n_decomp_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
-				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(n_decomp_rdata, p_attEntryId,p_state,dc_iWayORcPagePkt);
+				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(n_decomp_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
 				      //n_burst_cnt=(get_cpage_size(n_decomp_rdata[7+2*48:2*48]) >> 6) + 1;
 				      n_burst_cnt=(n_iWayORcPagePkt.cpage_size >> 6) ; //+ 1;
 			              n_state = SET_CPAGEFREE;
@@ -228,8 +222,7 @@ always@* begin
 		 `endif
 		end
 		SET_CPAGEFREE:begin
-				      //n_iWayORcPagePkt=setCpageFree_ZsPageiWay(p_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
-				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(p_rdata,p_attEntryId,p_state,dc_iWayORcPagePkt);
+				      n_iWayORcPagePkt=setCpageFree_ZsPageiWay(p_rdata,decomp_cPage_byteStart,p_state,dc_iWayORcPagePkt);
 			              n_state = RESET_FIFO_PTRS;
 		`ifndef SYNTH
 				$display("RAGHAV_DEBUG:In SET_CPAGEFREE");
@@ -286,14 +279,11 @@ always@* begin
 		end
 
 		FETCH_IFL_LST_ENTRY : begin
-				if(/*arready && */ !arvalid) begin
+				if(arready && !arvalid) begin
 				           n_decomp_axireq = get_axi_rd_pkt(lst_entry_id,'d0,AXI_RD_TOL); 
 				           n_decomp_req_arvalid = 1'b1;
-				           //n_state = WAIT_IFL_LST_ENTRY;
-				end 
-				if(arready && arvalid) begin
 				           n_state = WAIT_IFL_LST_ENTRY;
-				end
+				end 
 		end
 		WAIT_IFL_LST_ENTRY: begin //we can have multiple beats, but for simplicity I maintin only one beat transaction per INCR type of burst on entire datapath of hawk
 			  if(rvalid && rlast) begin //rlast is expected as we have only one beat//added assertion for this
@@ -315,7 +305,7 @@ always@* begin
 				  	n_decomp_tol_updpkt.lstEntry=p_listEntry;
 				  	n_decomp_tol_updpkt.lstEntry.attEntryId='d0; 
 					//n_decomp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;
-					n_decomp_tol_updpkt.TOL_UPDATE_ONLY='d2; //2 is for dst list update only
+					n_decomp_tol_updpkt.TOL_UPDATE_ONLY=1'b1;
 					n_decomp_tol_updpkt.src_list=IFL_DETACH; //it was detached before from ifl
 					n_decomp_tol_updpkt.dst_list=IFL_SIZE1; 
 					n_decomp_tol_updpkt.ifl_idx=get_idx(dc_iWayORcPagePkt.cpage_size);
