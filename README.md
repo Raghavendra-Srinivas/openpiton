@@ -19,7 +19,8 @@ Setup the workspace.
 3. For the fist time, source the script that step 2 suggests  
 ### Step 3:  
 Compile, Implement and Generate Bit file for FPGA.  
-cd build.  
+cd build/  
+source /opt/Xilinx/Vivado/2018.2/settings64.sh (here path to settings64.sh depends on where you have installed Vivado, so source it accordingly)  
 Run "protosyn -b genesys2 -d system --core=ariane --axi4_mem --uart-dmw ddr --hawk_fpga --hawk_naive_comp"  
 
 Wait for 45mins-1 hour to get FPGA bitstream file.  
