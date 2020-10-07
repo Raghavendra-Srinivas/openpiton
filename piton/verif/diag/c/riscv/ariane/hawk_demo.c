@@ -82,7 +82,7 @@ int main(int argc, char ** argv) {
 			array2[k]=(uint64_t) (k+1);
 	}
 	else {
-			array2[k]=(uint64_t) (k);
+			array2[k]=(uint64_t) (0);
 	}
   }
   count=0;
