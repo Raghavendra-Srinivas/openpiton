@@ -69,10 +69,11 @@ module hacd_core (
 
 
    wire rdm_reset;
-   wire [3:0] prm_state;
+   wire [4:0] prm_state;
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
    hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
-	
+
+   wire migrate_start,migrate_done;	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    //
@@ -95,15 +96,20 @@ module hacd_core (
 
 logic [`HACD_AXI4_ADDR_WIDTH   -1:0] cpu_araddr;
 logic [`HACD_AXI4_ADDR_WIDTH   -1:0] cpu_awaddr;
-always @* begin
-     	if(uart_boot_en) begin
-     		cpu_araddr = cpu_axi_rd_bus.axi_araddr;
-     		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
-     	end else begin
-     		cpu_araddr = cpu_axi_rd_bus.axi_araddr-64'h80000000;
-     		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr-64'h80000000;
-     	end
-end
+`ifdef HAWK_SIMS
+ assign cpu_araddr = cpu_axi_rd_bus.axi_araddr;
+ assign cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
+`else
+ always @* begin
+      	if(uart_boot_en) begin
+      		cpu_araddr = cpu_axi_rd_bus.axi_araddr;
+      		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr;
+      	end else begin
+      		cpu_araddr = cpu_axi_rd_bus.axi_araddr-64'h80000000;
+      		cpu_awaddr = cpu_axi_wr_bus.axi_awaddr-64'h80000000;
+      	end
+ end
+`endif
 
 //hawk cpu rd stall
 hawk_cpu_stall_rd u_hawk_cpu_stall_rd (
@@ -250,7 +256,7 @@ wire comdecomp_ld_rdfifo_rdptr;
 logic axird_master_rready,axird_master_rvalid;
 logic comp_decomp_rd_valid;
 always@* begin
- if(comp_start || decomp_start) begin //rready from comp_decmp unit and rdata goes to it
+ if(comp_start | decomp_start | migrate_start) begin //rready from comp_decmp unit and rdata goes to it
 	axird_master_rready  = compdecomp_rready;	
         comp_decomp_rd_valid = axird_master_rvalid; 
         rd_resppkt.rvalid = 1'b0;
@@ -269,7 +275,7 @@ logic  [`HACD_AXI4_DATA_WIDTH-1:0] compdecomp_wr_data,axiwr_master_wdata;
 //Mux between compdecomp unit and hawk to access write FIFO
 `ifdef HAWK_NAIVE_COMPRESSION
 always@* begin
- if(comp_start || decomp_start) begin //rready from comp_decmp unit and rdata goes to it
+ if(comp_start | decomp_start | migrate_start) begin //rready from comp_decmp unit and rdata goes to it
         axiwr_master_wvalid = compdecomp_wr_valid;
 	axiwr_master_wstrb  = compdecomp_wr_strb;
 	axiwr_master_wdata =  compdecomp_wr_data;
@@ -288,6 +294,7 @@ end
 
 hacd_pkg::debug_compressor debug_comp;
 hacd_pkg::debug_decompressor debug_decomp;
+hacd_pkg::debug_migrator debug_migrate;
 
 wire incompressible;
 
@@ -300,6 +307,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .incompressible,
      .decomp_start,
      .decomp_done,
+     .migrate_start,
+     .migrate_done,
      //.rdfifo_rdptr_rst,
      .rdfifo_empty,
      .wrfifo_full,
@@ -316,7 +325,8 @@ hawk_comdecomp u_hawk_comdecomp(
      .compdecomp_wr_data(compdecomp_wr_data),
 
      .debug_comp,
-     .debug_decomp
+     .debug_decomp,
+     .debug_migrate
 );
 
 
@@ -726,7 +736,7 @@ ila_4 ila_hawk_ain1_debug (
    .probe54('d0),//({'d0,mc_axi_wr_bus.axi_bresp,mc_axi_rd_bus.axi_rresp,mc_axi_wr_bus.axi_bid,mc_axi_rd_bus.axi_rid,mc_axi_rd_bus.axi_arid,mc_axi_wr_bus.axi_awid,mc_axi_wr_bus.axi_wvalid,mc_axi_rd_bus.axi_rlast}), //[63:0]probe54;
    .probe55('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
     
-   .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access,hawk_sw_ctrl[1]}), //[511:0]probe56; //for all states
+   .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access}), //[511:0]probe56; //for all states
    .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec,debug_decmp_mngr.addr1}),//[511:0]probe63; //for compressor
    .probe58({'d0,debug_decmp_mngr.decomp_mngr_done,debug_decmp_mngr.decomp_freeWay,debug_decmp_mngr.DeCompPgCnt,debug_decmp_mngr.decmp_mngr_state,tol_HT.incompListHead,tol_HT.incompListTail,debug_decmp_mngr.addr2}),//[511:0]probe61;
 //tol_HT.IfLstTail[0],tol_HT.IfLstHead[0]

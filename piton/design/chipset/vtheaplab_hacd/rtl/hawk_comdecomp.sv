@@ -8,6 +8,8 @@ module hawk_comdecomp (
     output wire comp_done,
     input logic decomp_start,
     output wire decomp_done,
+    input logic migrate_start,
+    output wire migrate_done,
 
     output wire incompressible,
     //output wire rdfifo_rdptr_rst, //this would reset read pointer to zero
@@ -28,7 +30,8 @@ module hawk_comdecomp (
 
     //Debug
     output hacd_pkg::debug_compressor debug_comp,
-    output hacd_pkg::debug_decompressor debug_decomp
+    output hacd_pkg::debug_decompressor debug_decomp,
+    output hacd_pkg::debug_migrator debug_migrate
 
 );
 
@@ -48,14 +51,14 @@ module hawk_comdecomp (
 	
 
 `else
-logic [`FIFO_PTR_WIDTH-1:0] comp_rdfifo_rdptr,decomp_rdfifo_rdptr;
-logic comp_ld_rdfifo_rdptr,decomp_ld_rdfifo_rdptr;
-logic comp_rd_req,decomp_rd_req;
-logic comp_wr_req,decomp_wr_req;
-logic [`HACD_AXI4_DATA_WIDTH-1:0] comp_wr_data,decomp_wr_data;
-logic [`HACD_AXI4_STRB_WIDTH -1:0] comp_wr_strb,decomp_wr_strb;
+logic [`FIFO_PTR_WIDTH-1:0] comp_rdfifo_rdptr,decomp_rdfifo_rdptr,migrate_rdfifo_rdptr;
+logic comp_ld_rdfifo_rdptr,decomp_ld_rdfifo_rdptr,migrate_ld_rdfifo_rdptr;
+logic comp_rd_req,decomp_rd_req,migrate_rd_req;
+logic comp_wr_req,decomp_wr_req,migrate_wr_req;
+logic [`HACD_AXI4_DATA_WIDTH-1:0] comp_wr_data,decomp_wr_data,migrate_wr_data;
+logic [`HACD_AXI4_STRB_WIDTH -1:0] comp_wr_strb,decomp_wr_strb,migrate_wr_strb;
 
-
+/*
 assign compdecomp_rready = decomp_start ? decomp_rd_req : comp_rd_req;
 assign compdecomp_ld_rdfifo_rdptr = decomp_start ? decomp_ld_rdfifo_rdptr : comp_ld_rdfifo_rdptr;
 assign compdecomp_rdfifo_rdptr = decomp_start ? decomp_rdfifo_rdptr : comp_rdfifo_rdptr;
@@ -63,8 +66,20 @@ assign compdecomp_rdfifo_rdptr = decomp_start ? decomp_rdfifo_rdptr : comp_rdfif
 assign compdecomp_wr_req = decomp_start ? decomp_wr_req : comp_wr_req;
 assign compdecomp_wr_strb = decomp_start ? decomp_wr_strb : comp_wr_strb;
 assign compdecomp_wr_data = decomp_start ? decomp_wr_data : comp_wr_data;
+*/
+
+assign compdecomp_rready =  decomp_rd_req | comp_rd_req | migrate_rd_req;
+assign compdecomp_ld_rdfifo_rdptr =  decomp_ld_rdfifo_rdptr | comp_ld_rdfifo_rdptr | migrate_ld_rdfifo_rdptr ;
+assign compdecomp_rdfifo_rdptr =  decomp_start ? decomp_rdfifo_rdptr :
+				    comp_start ?   comp_rdfifo_rdptr : migrate_rdfifo_rdptr;
+
+assign compdecomp_wr_req =  decomp_wr_req | comp_wr_req | migrate_wr_req;
+assign compdecomp_wr_strb =  decomp_wr_strb; // | comp_wr_strb ;
+assign compdecomp_wr_data =  decomp_start ? decomp_wr_data :
+			       comp_start ? comp_wr_data : migrate_wr_data;
 
 assign comp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity
+
  	//Naive Compression Unit
  	compressor u_compressor (
  	   .clk_i,
@@ -118,6 +133,34 @@ assign decomp_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tigh
 
 	   .debug_decomp
  	);
+
+assign migrate_wr_strb = {`HACD_AXI4_STRB_WIDTH{1'b1}}; //not supporting air tight packign righ tnow..so, packign is at cacheline granularity
+ 	//Naive Decompression Unit
+ 	migrator u_migrator (
+ 	   .clk_i,
+ 	   .rst_ni,
+
+ 	   .migrate_start,
+ 	   .comp_size,
+
+ 	   .rdfifo_rdptr(migrate_rdfifo_rdptr),
+	   .ld_rdfifo_rdptr(migrate_ld_rdfifo_rdptr),
+ 	   .rdfifo_empty,
+
+ 	   .rd_req(migrate_rd_req),
+ 	   .rd_data,
+	   .rd_rresp,
+ 	   .rd_valid,
+
+ 	   .wrfifo_full,
+ 	   .wr_req(migrate_wr_req),
+ 	   .wr_data(migrate_wr_data),
+	
+ 	   .migrate_done,
+
+	   .debug_migrate
+ 	);
+
 
 `endif
  

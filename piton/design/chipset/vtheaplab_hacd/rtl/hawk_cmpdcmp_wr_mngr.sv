@@ -69,6 +69,7 @@ always@* begin
 			else if (zspg_migrate) begin
 				    if(zspg_mig_pkt.migrate) begin
 					n_state=ZSPG_MIGRATE;
+					n_burst_cnt = 'd0;
 				    end
 				    else if(zspg_mig_pkt.zspg_update) begin
 					n_state=ZSPG_MIGRATE_MD_UPDATE_ADDR;
@@ -149,14 +150,39 @@ always@* begin
 					n_state=DONE;
 			  end
 		end
-	   	ZSPG_MIGRATE:begin //placeholder
-				n_state=IDLE;
+		ZSPG_MIGRATE:begin
+			 	if(/*awready &&*/ !wr_reqpkt.awvalid) begin
+			 	   if(p_burst_cnt<'d17/*!wrfifo_empty*/) begin
+			 	    	if(p_burst_cnt == 'd0) begin					
+			 	    		int_wr_reqpkt.addr=zspg_mig_pkt.dst_cpage_ptr; 
+			 	    	end else begin
+			 	    		int_wr_reqpkt.addr=wr_reqpkt.addr+'d64;
+			 	    	end
+			 	    	n_burst_cnt = p_burst_cnt + 'd1;
+			 	     	int_wr_reqpkt.awvalid=1'b1;
+			 	   end
+			 	   else begin
+			 	               n_state=DONE;
+			 	   end 
+			 	end
 		end
 	   	ZSPG_MIGRATE_MD_UPDATE_ADDR:begin //placeholder
-				n_state=IDLE;
+			 	if(/*awready &&*/ !wr_reqpkt.awvalid) begin
+					int_wr_reqpkt.addr={{16{1'b0}},zspg_mig_pkt.dst_cpage_ptr};
+			 	       	int_wr_reqpkt.awvalid=1'b1;
+				end
+				if (wr_reqpkt.awvalid && wr_rdypkt.awready) begin
+					n_state=ZSPG_MIGRATE_MD_UPDATE_DATA;
+				end
 		end
 	   	ZSPG_MIGRATE_MD_UPDATE_DATA:begin //placeholder
-				n_state=IDLE;
+			  if(wr_rdypkt.wready && !wr_reqpkt.wvalid) begin 
+					int_wr_reqpkt.data={{16{1'b0}},zspg_mig_pkt.md,zspg_mig_pkt.src_cpage_ptr,zspg_mig_pkt.dst_cpage_ptr};
+					//MD is 50 bytes=50*8=400bit + 2 ptr = 12 bytes = 96 bits -> 496 bits fits in same cacheline
+					int_wr_reqpkt.strb={{2{1'b0}},{62{1'b1}}};
+			 	       	int_wr_reqpkt.wvalid=1'b1;
+					n_state=DONE;
+			  end
 		end
 		DONE:begin
 				n_state=IDLE;
@@ -176,6 +202,7 @@ begin
 	end
 end
 assign cmpdcmp_done = p_state == DONE;
+assign compact_done = p_state == DONE;
 
 assign debug_cmpdcmp_mngr.cPage_byteStart=iWayORcPagePkt.cPage_byteStart;
 assign debug_cmpdcmp_mngr.cmpdcmp_mngr_state=p_state;

@@ -27,7 +27,7 @@ package hacd_pkg;
     parameter int BYTE=8;
 
     parameter int COMPRESSION_RATIO=2; //4;
-    parameter int DRAM_SIZE=1<<30; ////1GB
+    parameter int DRAM_SIZE=1<<30; //1<<30; ////1GB
     parameter int PAGE_SIZE=1<<12; //4KB 
     parameter int LST_ENTRY_MAX=(DRAM_SIZE/PAGE_SIZE);
     parameter int ATT_ENTRY_MAX=COMPRESSION_RATIO*LST_ENTRY_MAX;
@@ -43,7 +43,7 @@ package hacd_pkg;
         parameter bit [63:0] HAWK_PPA_START = HAWK_LIST_START + (LST_ENTRY_MAX/4)*64'd64;//4 LIST entries can fit in one cache line //64'h1000; //0x2000
 	parameter bit [63:0] HPPA_BASE_ADDR = DDR_START_ADDR; // + 64'h00200000; //200000
    `else
-    	parameter int LIST_ENTRY_CNT= 8; //8; //512; //8;
+    	parameter int LIST_ENTRY_CNT= 12; //8; //512; //8;
 	parameter int ATT_ENTRY_CNT= COMPRESSION_RATIO*LIST_ENTRY_CNT;  
     	parameter bit [63:0] DDR_START_ADDR=  64'hFFF6100000; //64'hC0000000; //64'hFFF6100000;
     	parameter bit [63:0] HAWK_ATT_START=  DDR_START_ADDR;  
@@ -180,7 +180,7 @@ package hacd_pkg;
 	//logic [47:0] ppa;
 	logic [7:0] ifl_idx; //this is needed for irregular free list
 	logic ATT_UPDATE_ONLY;
-	logic TOL_UPDATE_ONLY;
+	logic [1:0] TOL_UPDATE_ONLY;
 	logic [1:0] ATT_STS;
 	logic [7:0] zpd_cnt;
 	logic tbl_update;
@@ -198,13 +198,6 @@ package hacd_pkg;
 	logic [`HACD_AXI4_ADDR_WIDTH-1:12] ppa;
 	logic allow_access;
  } hawk_cpu_ovrd_pkt_t;
-
-  
-
-
-
-
-
 
 //helper fucntins
 function automatic logic [511:0] get_8byte_byteswap;
@@ -283,11 +276,16 @@ localparam [2:0] MAX_WAY_ZSPAGE=1; //to support naive compression //3;
 //Zspage
 //ZSpage Identity Way
 typedef struct packed {
-	logic [47:0] page4;//6 byte
-	logic [47:0] page3;//6 byte
-	logic [47:0] page2;//6 byte
-	logic [47:0] page1;//6 byte
-	logic [47:0] page0;//6 byte
+	//logic [47:0] page4;//6 byte
+	//logic [47:0] page3;//6 byte
+	//logic [47:0] page2;//6 byte
+	//logic [47:0] page1;//6 byte
+	//logic [47:0] page0;//6 byte
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] page4;
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] page3;
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] page2;
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] page1;
+	logic [clogb2(ATT_ENTRY_MAX)-1:0] page0;
 	logic [47:0] way2;//6 byte
 	logic [47:0] way1;//6 byte
 	logic [47:0] way0;//6 byte
@@ -296,8 +294,8 @@ typedef struct packed {
 	logic [7:0] size; //1byte
 } ZsPg_Md_t;
 typedef struct packed {
-	logic [47:0] src_cpage_ptr; //this shoudl indicate iWayptr while doing zspage_update atlast
-	logic [47:0] dst_cpage_ptr;
+	logic [47:0] src_cpage_ptr; //this shoudl indicate nxtWay_ptr while doing zspage_update at end of compaction 
+	logic [47:0] dst_cpage_ptr; //this shoudl indicate iWayptr while doing zspage_update at end of compaction
 	logic migrate;
 	ZsPg_Md_t md;
 	logic zspg_update;	
@@ -390,6 +388,13 @@ typedef struct packed{
         logic [2:0] decomp_state;
 	logic ila_trigger;
    } debug_decompressor;
+
+   typedef struct packed {
+	logic [6:0] cacheline_cnt;
+    	logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data;
+	logic wr_req;
+        logic [2:0] migrate_state;
+   } debug_migrator;
 
 endpackage
 
