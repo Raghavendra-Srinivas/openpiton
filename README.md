@@ -50,7 +50,7 @@ Steps to create new driver or driver updates remains the same as one handles to 
 
 
 # Demo Result (Reproducible):
- openpitonHawk/hawk_results/HAWK Demo Result 1p36GB.pdf
+ openpitonHawk/hawk_results/HAWK_1p72GB_Demo_Results.pdf
 # Benchmark:
  openpitonHawk/piton/verif/diag/c/riscv/ariane/hawk_demo.c  
    
