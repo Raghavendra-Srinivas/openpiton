@@ -42,19 +42,15 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     output hacd_pkg::debug_compressor debug_comp
 );
 
-// Zero chunk metadata
-// 4 chunks , each of 16 cache lines
-logic [3:0] zero_chunk_vec;
+topLevel huffmanCompressor(
+    .clock(clk_i),
+    .reset(rst_ni),
+    .io_start(comp_start),
+    .io_characterFrequencyInputs_currentByteOut(characterFrequencyInputs) // This accesses tells the 
+)
 
-logic [6:0] n_zero_cline_cntr_curr,zero_cline_cntr_curr;
-logic [6:0] zero_cline_cntr_prev;
-
-logic [2:0] zero_chunk_cnt;
-wire compress;
-assign zero_chunk_cnt = zero_chunk_vec[0] + zero_chunk_vec[1] + zero_chunk_vec[2] + zero_chunk_vec[3];
-//assign compress = zero_cline_cntr_curr =='h3F;  
-assign compress = zero_chunk_cnt >= 3;
-//assign compress = zero_chunk_cnt == 3;  //This needs exactly any 3 chunks to be zero, so all 4 chunks as zero would go as in-compressible page
+// This needs to be changed to actually represent the compressed size of the input data.
+assign comp_size = 0;
 
 localparam [2:0] IDLE=0,
 		 COMP_CHECK1=1,
@@ -69,7 +65,6 @@ logic [2:0] n_state,p_state;
 logic [6:0] n_cacheline_cnt,cacheline_cnt;
 logic n_rd_req;
 logic n_incompressible; 
-logic n_comp_done;
 logic n_ld_rdfifo_rdptr;
 logic [FIFO_PTR_WIDTH-1:0] n_rdfifo_rdptr;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_wr_data;
@@ -95,7 +90,6 @@ always@(*) begin
 	n_cacheline_cnt=cacheline_cnt; //'d0; //cacheline_cnt;
 	n_zero_cline_cntr_curr=zero_cline_cntr_curr;
 	n_incompressible=1'b0;
-	n_comp_done = 1'b0;
 	n_ld_rdfifo_rdptr = 1'b0;
 	n_wr_req = 1'b0;
 
@@ -185,8 +179,7 @@ always@(*) begin
 		   end		
 	 end
 	 DONE: begin
-		   if(comp_start) begin //keep comp_done asserted till start goes low
-		   	n_comp_done = 1'b1;
+		   if(comp_start) begin //keep 
 		   end
 		   else begin
 	   	   	n_state = IDLE;
@@ -216,7 +209,6 @@ begin
 		wr_data<='d0;
 		wr_req<=1'b0;
 	
-		comp_done<=1'b0;
 	end
 	else begin
 		p_state<=n_state;
@@ -232,7 +224,6 @@ begin
 		wr_data<=n_wr_data;
 		wr_req<=n_wr_req;
 
-		comp_done <= n_comp_done;
 	end
 end
 
