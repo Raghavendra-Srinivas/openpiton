@@ -391,5 +391,9 @@ typedef struct packed{
 	logic ila_trigger;
    } debug_decompressor;
 
+   
+   typedef struct packed {
+	logic alert_oom; 
+   } debug_pgrd_mngr;
 endpackage
 

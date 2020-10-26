@@ -99,8 +99,15 @@ module hawk_mc_top (
 `endif // PITONSYS_DDR4
     output [`DDR3_ODT_WIDTH-1:0]    ddr_odt,
 
+
+`ifdef HAWK_FPGA
+    output alert_oom,
+`endif
+
     output                          init_calib_complete_out,
     input                           sys_rst_n
+
+
 );
 reg     [31:0]                      delay_cnt;
 reg                                 ui_clk_syn_rst_delayed;
@@ -1406,7 +1413,8 @@ u_hacd_top (
 
         .mc_axi_wr_bus(mc_axi_wr_bus.mstr),
         .mc_axi_rd_bus(mc_axi_rd_bus.mstr),
-	.dump_mem(dump_mem)
+	.dump_mem(dump_mem),
+	.alert_oom(alert_oom)
 	
 ); 
 

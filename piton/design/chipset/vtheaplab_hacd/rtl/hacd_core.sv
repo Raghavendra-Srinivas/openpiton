@@ -29,7 +29,8 @@ module hacd_core (
     HACD_MC_AXI_WR_BUS.mstr mc_axi_wr_bus,  
     HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus,
 
-    output wire dump_mem 
+    output wire dump_mem, 
+    output wire alert_oom 
     );
 
    //TOL Head tail broadcasted
@@ -72,6 +73,7 @@ module hacd_core (
    wire [3:0] prm_state;
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
    hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
+   hacd_pkg::debug_pgrd_mngr debug_hkpgrd_mngr;
 	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
@@ -724,7 +726,7 @@ ila_4 ila_hawk_ain1_debug (
    .probe52(init_att_done),//(mc_axi_wr_bus.axi_awaddr), //[63:0]probe52;
    .probe53('d0), //({mc_axi_wr_bus.axi_bvalid,mc_axi_rd_bus.axi_rvalid,mc_axi_wr_bus.axi_wready,mc_axi_rd_bus.axi_rready,mc_axi_rd_bus.axi_arready,mc_axi_wr_bus.axi_awready,mc_axi_rd_bus.axi_arvalid,mc_axi_wr_bus.axi_awvalid}), //[7:0]probe53;
    .probe54('d0),//({'d0,mc_axi_wr_bus.axi_bresp,mc_axi_rd_bus.axi_rresp,mc_axi_wr_bus.axi_bid,mc_axi_rd_bus.axi_rid,mc_axi_rd_bus.axi_arid,mc_axi_wr_bus.axi_awid,mc_axi_wr_bus.axi_wvalid,mc_axi_rd_bus.axi_rlast}), //[63:0]probe54;
-   .probe55('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
+   .probe55(debug_hkpgrd_mngr.alert_oom), //('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
     
    .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access,hawk_sw_ctrl[1]}), //[511:0]probe56; //for all states
    .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec,debug_decmp_mngr.addr1}),//[511:0]probe63; //for compressor
@@ -743,7 +745,7 @@ ila_4 ila_hawk_ain1_debug (
 `endif
 
 
-
+ assign alert_oom=debug_hkpgrd_mngr.alert_oom;
 
 endmodule
 

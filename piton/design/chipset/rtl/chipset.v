@@ -814,7 +814,7 @@ end
     assign leds[2] = init_calib_complete;
     assign leds[3] = processor_offchip_noc2_valid;
     assign leds[4] = offchip_processor_noc3_valid;
-    assign leds[5] = 1'b0;
+    assign leds[5] = alert_oom; //hawk specific //1'b0;
     assign leds[6] = invalid_access;
     `ifdef PITONSYS_IOCTRL
         `ifdef PITONSYS_UART
@@ -1221,6 +1221,7 @@ credit_to_valrdy processor_offchip_noc3_c2v(
     );
 `endif  // PITON_BOARD
 
+wire alert_oom;
 // Intantiate the actual chipset implementation
 `ifndef PITON_NOC_POWER_CHIPSET_TEST
 chipset_impl    chipset_impl    (
@@ -1432,6 +1433,7 @@ chipset_impl_noc_power_test  chipset_impl (
         .timer_irq_o            ( timer_irq_o   ),
         .ipi_o                  ( ipi_o         ),
         .irq_o                  ( irq_o         ),
+	.alert_oom		(alert_oom),
 	.hawk_sw_ctrl({sw[5],sw[4]})
     `endif
 
