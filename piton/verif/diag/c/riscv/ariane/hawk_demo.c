@@ -9,9 +9,9 @@
 //	#define ARRAY1_SIZE 260000 //120000
 //	#define ARRAY2_SIZE 130000 //120000
 //Test2
-	#define ARRAY1_SIZE         240094 //260094
-	#define ARRAY1_COMPUTE_SIZE 240094 //260094
-	#define ARRAY2_SIZE         100000
+	#define ARRAY1_SIZE         260080 //260094
+	#define ARRAY1_COMPUTE_SIZE 260080 //260094
+	#define ARRAY2_SIZE         170000
 
 //ARRAY1
 #define ARRAY1_NUM_PAGES ARRAY1_SIZE  
@@ -82,7 +82,7 @@ int main(int argc, char ** argv) {
 			array2[k]=(uint64_t) (k+1);
 	}
 	else {
-			array2[k]=(uint64_t) (k);
+			array2[k]=(uint64_t) (0);
 	}
   }
   count=0;
