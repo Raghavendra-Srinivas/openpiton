@@ -389,12 +389,9 @@ typedef struct packed{
 	logic ila_trigger;
    } debug_decompressor;
 
+   
    typedef struct packed {
-	logic [6:0] cacheline_cnt;
-    	logic [`HACD_AXI4_DATA_WIDTH-1:0] wr_data;
-	logic wr_req;
-        logic [2:0] migrate_state;
-   } debug_migrator;
-
+	logic alert_oom; 
+   } debug_pgrd_mngr;
 endpackage
 

@@ -291,7 +291,12 @@ module chipset_impl(
     output [`NUM_TILES-1:0]                     ipi_o,         // software interrupt (a.k.a inter-process-interrupt)
     // PLIC
     output [`NUM_TILES*2-1:0]                   irq_o,          // level sensitive IR lines, mip & sip (async)
+
+`ifdef HAWK_FPGA
+    output alert_oom,
+`endif
     input [1:0] hawk_sw_ctrl
+
 `endif
 );
 
@@ -797,6 +802,9 @@ credit_to_valrdy noc3_xbar_to_%s(
 
     		        .hacd_infl_interrupt(hacd_infl_interrupt),
     		        .hacd_defl_interrupt(hacd_defl_interrupt),
+			
+			.alert_oom(alert_oom),
+
 
     		        .mc_ui_clk_sync_rst(mc_ui_clk_sync_rst),
 

@@ -38,7 +38,8 @@ module hacd #
         HACD_MC_AXI_WR_BUS.mstr mc_axi_wr_bus, 
         HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus,
 
-	output wire dump_mem
+	output wire dump_mem,
+    	output wire alert_oom 
 );
 
   //Local wires
@@ -74,7 +75,8 @@ hacd_core u_hacd_core (
   .mc_axi_wr_bus,
   .mc_axi_rd_bus,
 
-  .dump_mem
+  .dump_mem,
+  .alert_oom
 );
 
 `ifdef HAWK_FPGA_DBG

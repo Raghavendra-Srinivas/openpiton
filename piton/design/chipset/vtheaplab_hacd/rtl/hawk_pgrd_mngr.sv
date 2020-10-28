@@ -55,7 +55,9 @@ module hawk_pgrd_mngr (
   //DEBUG
   output [`FSM_WID_PGRD-1:0] prm_state,
   output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr,	
-  output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr	
+  output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr,
+ 
+  output hacd_pkg::debug_pgrd_mngr debug_hkpgrd_mngr
 );
 
   //in waves, not able to obseves struct ports, so mapping for easier debug
@@ -147,6 +149,8 @@ axi_rd_pld_t n_cmpt_axireq;
 logic n_cmpt_req_arvalid,n_cmpt_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_cmpt_rdata;
 
+logic n_alert_out_of_memory,alert_out_of_memory;
+
 //logic to handle different modes
 always@* begin
 //default
@@ -162,6 +166,7 @@ always@* begin
 	n_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
 	n_decomp_freeWay=decomp_freeWay;
 	n_decomp_cPage_byteStart=decomp_cPage_byteStart;
+	n_alert_out_of_memory=alert_out_of_memory;		
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -230,7 +235,9 @@ always@* begin
 				    if(uncompLstTail!==uncompLstHead) begin //it means I have at-least 2 entries in uncomp list
 				    n_state = COMPRESS;
 				    end else begin  //handle other cases later, moving to IDLE for now
-				    n_state = UNCOMPRESS_LIST_EMPTY; //IDLE;
+				    //assert LED
+				    n_alert_out_of_memory=1'b1;		
+				    n_state = IDLE;
 				    end 
 			  end
 		end
@@ -347,10 +354,14 @@ begin
 		p_req_arvalid <= 1'b0;
 		p_rready <= 1'b0;
 		p_rdata <='d0;
+
+	        alert_out_of_memory <= 1'b0;
 	end
 	else begin
  		p_state <= n_state;	
-		p_attEntryId <= n_attEntryId;		
+		p_attEntryId <= n_attEntryId;
+		
+	        alert_out_of_memory <= n_alert_out_of_memory;
 
 		//Axi signals
 		p_axireq.addr <= (p_state==COMPRESS) ? n_comp_axireq.addr : 
@@ -479,6 +490,8 @@ assign iWayORcPagePkt = (p_state==COMPRESS)   ? c_iWayORcPagePkt :
 
 //DEBUG
 assign prm_state = p_state;
+
+assign debug_hkpgrd_mngr.alert_oom=alert_out_of_memory;
 
 //`ifdef HAWK_FPGA
 //	ila_3 ila_3_hawk_prm (

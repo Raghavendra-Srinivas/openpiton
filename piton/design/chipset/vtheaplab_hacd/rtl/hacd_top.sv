@@ -38,7 +38,8 @@ module hacd_top #(parameter int NOC_DWIDTH=32, parameter logic [63:0] HacdBase=6
         HACD_MC_AXI_WR_BUS.mstr mc_axi_wr_bus, 
         HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus,
 
-        output wire dump_mem 
+        output wire dump_mem, 
+    	output wire alert_oom 
 
 );
 
@@ -274,7 +275,8 @@ hacd u_hacd(
   .mc_axi_wr_bus(mc_axi_wr_bus),
   .mc_axi_rd_bus(mc_axi_rd_bus),
   
-  .dump_mem
+  .dump_mem,
+  .alert_oom
 );
 
 
