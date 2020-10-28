@@ -112,3 +112,7 @@ ucli.key
 cscope.*
 tags
 *.bak
+
+# ignore VSCode extensions
+.metals*
+.vscode*
