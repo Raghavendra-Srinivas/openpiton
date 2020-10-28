@@ -74,7 +74,8 @@ module hacd_core (
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
    hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
    hacd_pkg::debug_pgrd_mngr debug_hkpgrd_mngr;
-	
+
+   wire migrate_start,migrate_done;	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    //
