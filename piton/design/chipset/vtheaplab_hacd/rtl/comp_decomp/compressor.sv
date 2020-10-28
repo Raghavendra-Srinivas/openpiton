@@ -57,7 +57,7 @@ huffmanCompressorCacheLineWrapper comp(
 	.io_readValid(rd_valid),
 	.io_writeFifoFull(wrfifo_full),
 	.io_writeRequest(wr_req),
-	.io_writedata(wr_data),
+	.io_writeData(wr_data),
 	.io_incompressible(incompressible),
 	.io_done(comp_done)
 );
