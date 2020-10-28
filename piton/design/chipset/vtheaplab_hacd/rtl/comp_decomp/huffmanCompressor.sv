@@ -26,6 +26,7 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
 	// This is set to True when the fifo read data is 
     input rd_valid,
 
+	// It appears that the write fifo doesn't take addresses, it just automatically increments the address where the data should be stored.
 	// This lets the hardware know whether the write fifo can take any write data
     input wrfifo_full,
 	// Tell the write fifo to write data
@@ -46,7 +47,8 @@ topLevel huffmanCompressor(
     .clock(clk_i),
     .reset(rst_ni),
     .io_start(comp_start),
-    .io_characterFrequencyInputs_currentByteOut(characterFrequencyInputs) // This accesses tells the 
+    .io_characterFrequencyInputs_currentByteOut(characterFrequencyInputsCurrentByte),
+    .io_
 )
 
 // This needs to be changed to actually represent the compressed size of the input data.
