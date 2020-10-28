@@ -650,7 +650,9 @@ set CHIPSET_RTL_IMPL_FILES [list \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/axi/axi_size_conv_DOWNSIZE.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hacd_interfaces.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/compressor.sv" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/huffmanCompressorCacheLineWrapper.v" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/decompressor.sv" \
+    "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/huffmanDecompressorCacheLineWrapper.v" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/comp_decomp/migrator.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_axiwr.sv" \
     "${DV_ROOT}/design/chipset/vtheaplab_hacd/rtl/hawk_cmpdcmp_wr_mngr.sv" \

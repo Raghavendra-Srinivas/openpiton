@@ -20,7 +20,9 @@ hacd_core.sv
 hacd.sv
 hacd_top.sv
 comp_decomp/compressor.sv
+comp_decomp/huffmanCompressorCacheLineWrapper.v
 comp_decomp/decompressor.sv
+comp_decomp/huffmanDecompressorCacheLineWrapper.v
 axi/priority_encoder.v
 axi/arbiter.v
 axi/axi_crossbar.v
