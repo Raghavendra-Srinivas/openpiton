@@ -66722,7 +66722,7 @@ module compressorBytesToCacheLine(
   reg [538:0] buffer; // @[compressorBytesToCacheLine.scala 43:19]
   reg [543:0] _RAND_1;
   wire [538:0] _GEN_1 = io_outputData_ready ? 539'h0 : buffer; // @[compressorBytesToCacheLine.scala 48:31]
-  wire  _T = currentBufferBits > 10'h200; // @[compressorBytesToCacheLine.scala 54:28]
+  wire  _T = currentBufferBits >= 10'h200; // @[compressorBytesToCacheLine.scala 54:28]
   wire [9:0] _T_2 = currentBufferBits - 10'h200; // @[compressorBytesToCacheLine.scala 60:48]
   wire  _T_3 = currentBufferBits == 10'h200; // @[compressorBytesToCacheLine.scala 61:32]
   wire [1050:0] _T_4 = {buffer, 512'h0}; // @[compressorBytesToCacheLine.scala 64:28]
@@ -66741,8 +66741,8 @@ module compressorBytesToCacheLine(
   wire [1081:0] _GEN_19 = {{543'd0}, buffer}; // @[compressorBytesToCacheLine.scala 73:26]
   wire [1081:0] _T_16 = _GEN_19 | _T_15; // @[compressorBytesToCacheLine.scala 73:26]
   wire [1081:0] _GEN_6 = io_inputData_valid ? _T_16 : {{543'd0}, buffer}; // @[compressorBytesToCacheLine.scala 70:32]
-  wire  _GEN_7 = _T ? 1'h0 : 1'h1; // @[compressorBytesToCacheLine.scala 54:48]
-  wire [1081:0] _GEN_10 = _T ? {{31'd0}, _GEN_4} : _GEN_6; // @[compressorBytesToCacheLine.scala 54:48]
+  wire  _GEN_7 = _T ? 1'h0 : 1'h1; // @[compressorBytesToCacheLine.scala 54:49]
+  wire [1081:0] _GEN_10 = _T ? {{31'd0}, _GEN_4} : _GEN_6; // @[compressorBytesToCacheLine.scala 54:49]
   wire [1081:0] _GEN_14 = io_dumpBuffer ? {{543'd0}, _GEN_1} : _GEN_10; // @[compressorBytesToCacheLine.scala 45:23]
   assign io_inputData_ready = io_dumpBuffer ? 1'h0 : _GEN_7; // @[compressorBytesToCacheLine.scala 47:24 compressorBytesToCacheLine.scala 56:26 compressorBytesToCacheLine.scala 69:26]
   assign io_currentBufferBits = currentBufferBits; // @[compressorBytesToCacheLine.scala 42:24]
@@ -66826,15 +66826,15 @@ module huffmanCompressorCacheLineWrapper(
 );
   reg [7:0] inputDataCache [0:4095]; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
   reg [31:0] _RAND_0;
-  wire [7:0] inputDataCache__T_262612_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  wire [11:0] inputDataCache__T_262612_addr; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  wire [7:0] inputDataCache__T_262607_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  wire [11:0] inputDataCache__T_262607_addr; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  wire  inputDataCache__T_262607_mask; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  wire  inputDataCache__T_262607_en; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  reg  inputDataCache__T_262612_en_pipe_0;
+  wire [7:0] inputDataCache__T_262613_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  wire [11:0] inputDataCache__T_262613_addr; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  wire [7:0] inputDataCache__T_262608_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  wire [11:0] inputDataCache__T_262608_addr; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  wire  inputDataCache__T_262608_mask; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  wire  inputDataCache__T_262608_en; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  reg  inputDataCache__T_262613_en_pipe_0;
   reg [31:0] _RAND_1;
-  reg [11:0] inputDataCache__T_262612_addr_pipe_0;
+  reg [11:0] inputDataCache__T_262613_addr_pipe_0;
   reg [31:0] _RAND_2;
   wire  compressor_clock; // @[huffmanCompressorCacheLineWrapper.scala 122:26]
   wire  compressor_reset; // @[huffmanCompressorCacheLineWrapper.scala 122:26]
@@ -66939,139 +66939,134 @@ module huffmanCompressorCacheLineWrapper(
   wire  _T_262592 = state == 3'h5; // @[huffmanCompressorCacheLineWrapper.scala 139:20]
   wire  _T_262593 = 3'h0 == state; // @[Conditional.scala 37:30]
   wire  _T_262594 = 3'h1 == state; // @[Conditional.scala 37:30]
-  wire [11:0] _T_262595 = compressor_io_characterFrequencyInputs_currentByteOut / 12'h40; // @[huffmanCompressorCacheLineWrapper.scala 172:83]
-  wire [11:0] _GEN_2 = io_readFifoEmpty ? _T_262595 : 12'h0; // @[huffmanCompressorCacheLineWrapper.scala 169:32]
-  wire  _GEN_4 = compressor_io_characterFrequencyInputs_ready & io_readFifoEmpty; // @[huffmanCompressorCacheLineWrapper.scala 168:58]
-  wire [11:0] _GEN_5 = compressor_io_characterFrequencyInputs_ready ? _GEN_2 : 12'h0; // @[huffmanCompressorCacheLineWrapper.scala 168:58]
-  wire  _T_262596 = 3'h2 == state; // @[Conditional.scala 37:30]
-  wire  _T_262597 = iterations >= 7'h40; // @[huffmanCompressorCacheLineWrapper.scala 183:25]
-  wire [6:0] _T_262599 = iterations + 7'h1; // @[huffmanCompressorCacheLineWrapper.scala 192:38]
-  wire [7:0] _T_262600 = iterations * 7'h1; // @[huffmanCompressorCacheLineWrapper.scala 194:56]
-  wire [8:0] _T_262601 = {{1'd0}, _T_262600}; // @[huffmanCompressorCacheLineWrapper.scala 194:43]
-  wire [12:0] _T_262603 = {{1'd0}, compressor_io_characterFrequencyInputs_currentByteOut}; // @[huffmanCompressorCacheLineWrapper.scala 195:95]
-  wire [7:0] _GEN_8 = 6'h1 == _T_262601[5:0] ? readDataAsVec_1 : readDataAsVec_0; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_9 = 6'h2 == _T_262601[5:0] ? readDataAsVec_2 : _GEN_8; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_10 = 6'h3 == _T_262601[5:0] ? readDataAsVec_3 : _GEN_9; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_11 = 6'h4 == _T_262601[5:0] ? readDataAsVec_4 : _GEN_10; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_12 = 6'h5 == _T_262601[5:0] ? readDataAsVec_5 : _GEN_11; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_13 = 6'h6 == _T_262601[5:0] ? readDataAsVec_6 : _GEN_12; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_14 = 6'h7 == _T_262601[5:0] ? readDataAsVec_7 : _GEN_13; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_15 = 6'h8 == _T_262601[5:0] ? readDataAsVec_8 : _GEN_14; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_16 = 6'h9 == _T_262601[5:0] ? readDataAsVec_9 : _GEN_15; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_17 = 6'ha == _T_262601[5:0] ? readDataAsVec_10 : _GEN_16; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_18 = 6'hb == _T_262601[5:0] ? readDataAsVec_11 : _GEN_17; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_19 = 6'hc == _T_262601[5:0] ? readDataAsVec_12 : _GEN_18; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_20 = 6'hd == _T_262601[5:0] ? readDataAsVec_13 : _GEN_19; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_21 = 6'he == _T_262601[5:0] ? readDataAsVec_14 : _GEN_20; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_22 = 6'hf == _T_262601[5:0] ? readDataAsVec_15 : _GEN_21; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_23 = 6'h10 == _T_262601[5:0] ? readDataAsVec_16 : _GEN_22; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_24 = 6'h11 == _T_262601[5:0] ? readDataAsVec_17 : _GEN_23; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_25 = 6'h12 == _T_262601[5:0] ? readDataAsVec_18 : _GEN_24; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_26 = 6'h13 == _T_262601[5:0] ? readDataAsVec_19 : _GEN_25; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_27 = 6'h14 == _T_262601[5:0] ? readDataAsVec_20 : _GEN_26; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_28 = 6'h15 == _T_262601[5:0] ? readDataAsVec_21 : _GEN_27; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_29 = 6'h16 == _T_262601[5:0] ? readDataAsVec_22 : _GEN_28; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_30 = 6'h17 == _T_262601[5:0] ? readDataAsVec_23 : _GEN_29; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_31 = 6'h18 == _T_262601[5:0] ? readDataAsVec_24 : _GEN_30; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_32 = 6'h19 == _T_262601[5:0] ? readDataAsVec_25 : _GEN_31; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_33 = 6'h1a == _T_262601[5:0] ? readDataAsVec_26 : _GEN_32; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_34 = 6'h1b == _T_262601[5:0] ? readDataAsVec_27 : _GEN_33; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_35 = 6'h1c == _T_262601[5:0] ? readDataAsVec_28 : _GEN_34; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_36 = 6'h1d == _T_262601[5:0] ? readDataAsVec_29 : _GEN_35; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_37 = 6'h1e == _T_262601[5:0] ? readDataAsVec_30 : _GEN_36; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_38 = 6'h1f == _T_262601[5:0] ? readDataAsVec_31 : _GEN_37; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_39 = 6'h20 == _T_262601[5:0] ? readDataAsVec_32 : _GEN_38; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_40 = 6'h21 == _T_262601[5:0] ? readDataAsVec_33 : _GEN_39; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_41 = 6'h22 == _T_262601[5:0] ? readDataAsVec_34 : _GEN_40; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_42 = 6'h23 == _T_262601[5:0] ? readDataAsVec_35 : _GEN_41; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_43 = 6'h24 == _T_262601[5:0] ? readDataAsVec_36 : _GEN_42; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_44 = 6'h25 == _T_262601[5:0] ? readDataAsVec_37 : _GEN_43; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_45 = 6'h26 == _T_262601[5:0] ? readDataAsVec_38 : _GEN_44; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_46 = 6'h27 == _T_262601[5:0] ? readDataAsVec_39 : _GEN_45; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_47 = 6'h28 == _T_262601[5:0] ? readDataAsVec_40 : _GEN_46; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_48 = 6'h29 == _T_262601[5:0] ? readDataAsVec_41 : _GEN_47; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_49 = 6'h2a == _T_262601[5:0] ? readDataAsVec_42 : _GEN_48; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_50 = 6'h2b == _T_262601[5:0] ? readDataAsVec_43 : _GEN_49; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_51 = 6'h2c == _T_262601[5:0] ? readDataAsVec_44 : _GEN_50; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_52 = 6'h2d == _T_262601[5:0] ? readDataAsVec_45 : _GEN_51; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_53 = 6'h2e == _T_262601[5:0] ? readDataAsVec_46 : _GEN_52; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_54 = 6'h2f == _T_262601[5:0] ? readDataAsVec_47 : _GEN_53; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_55 = 6'h30 == _T_262601[5:0] ? readDataAsVec_48 : _GEN_54; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_56 = 6'h31 == _T_262601[5:0] ? readDataAsVec_49 : _GEN_55; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_57 = 6'h32 == _T_262601[5:0] ? readDataAsVec_50 : _GEN_56; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_58 = 6'h33 == _T_262601[5:0] ? readDataAsVec_51 : _GEN_57; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_59 = 6'h34 == _T_262601[5:0] ? readDataAsVec_52 : _GEN_58; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_60 = 6'h35 == _T_262601[5:0] ? readDataAsVec_53 : _GEN_59; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_61 = 6'h36 == _T_262601[5:0] ? readDataAsVec_54 : _GEN_60; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_62 = 6'h37 == _T_262601[5:0] ? readDataAsVec_55 : _GEN_61; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_63 = 6'h38 == _T_262601[5:0] ? readDataAsVec_56 : _GEN_62; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_64 = 6'h39 == _T_262601[5:0] ? readDataAsVec_57 : _GEN_63; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_65 = 6'h3a == _T_262601[5:0] ? readDataAsVec_58 : _GEN_64; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_66 = 6'h3b == _T_262601[5:0] ? readDataAsVec_59 : _GEN_65; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_67 = 6'h3c == _T_262601[5:0] ? readDataAsVec_60 : _GEN_66; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_68 = 6'h3d == _T_262601[5:0] ? readDataAsVec_61 : _GEN_67; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_69 = 6'h3e == _T_262601[5:0] ? readDataAsVec_62 : _GEN_68; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_70 = 6'h3f == _T_262601[5:0] ? readDataAsVec_63 : _GEN_69; // @[huffmanCompressorCacheLineWrapper.scala 196:68]
-  wire [7:0] _GEN_136 = compressor_io_characterFrequencyInputs_ready ? _GEN_70 : 8'h0; // @[huffmanCompressorCacheLineWrapper.scala 189:62]
-  wire  _GEN_139 = compressor_io_characterFrequencyInputs_ready; // @[huffmanCompressorCacheLineWrapper.scala 189:62]
-  wire  _GEN_144 = _T_262597 ? 1'h0 : 1'h1; // @[huffmanCompressorCacheLineWrapper.scala 183:56]
-  wire [7:0] _GEN_146 = _T_262597 ? 8'h0 : _GEN_136; // @[huffmanCompressorCacheLineWrapper.scala 183:56]
-  wire  _GEN_149 = _T_262597 ? 1'h0 : _GEN_139; // @[huffmanCompressorCacheLineWrapper.scala 183:56]
-  wire  _GEN_153 = io_readValid & _T_262597; // @[huffmanCompressorCacheLineWrapper.scala 181:26]
-  wire  _GEN_154 = io_readValid & _GEN_144; // @[huffmanCompressorCacheLineWrapper.scala 181:26]
-  wire [7:0] _GEN_156 = io_readValid ? _GEN_146 : 8'h0; // @[huffmanCompressorCacheLineWrapper.scala 181:26]
-  wire  _GEN_159 = io_readValid & _GEN_149; // @[huffmanCompressorCacheLineWrapper.scala 181:26]
-  wire  _T_262608 = 3'h3 == state; // @[Conditional.scala 37:30]
-  wire  _T_262609 = writeCacheLineConverter_io_currentBufferBits > 10'h0; // @[huffmanCompressorCacheLineWrapper.scala 207:59]
-  wire  _T_262610 = ~io_writeFifoFull; // @[huffmanCompressorCacheLineWrapper.scala 212:18]
-  wire  _GEN_163 = writeCacheLineConverter_io_outputData_valid & _T_262610; // @[huffmanCompressorCacheLineWrapper.scala 211:61]
-  wire  _GEN_165 = _T_262609 & _GEN_163; // @[huffmanCompressorCacheLineWrapper.scala 207:66]
-  wire  _GEN_170 = compressor_io_compressionInputs_0_ready; // @[huffmanCompressorCacheLineWrapper.scala 228:58]
-  wire  _GEN_176 = writeCacheLineConverter_io_outputData_valid ? 1'h0 : _GEN_170; // @[huffmanCompressorCacheLineWrapper.scala 221:59]
-  wire  _GEN_179 = compressor_io_finished & _T_262609; // @[huffmanCompressorCacheLineWrapper.scala 205:36]
-  wire  _GEN_180 = compressor_io_finished ? _T_262609 : _GEN_163; // @[huffmanCompressorCacheLineWrapper.scala 205:36]
-  wire  _GEN_181 = compressor_io_finished ? _GEN_165 : _GEN_163; // @[huffmanCompressorCacheLineWrapper.scala 205:36]
-  wire  _GEN_185 = compressor_io_finished ? 1'h0 : _GEN_176; // @[huffmanCompressorCacheLineWrapper.scala 205:36]
-  wire  _T_262613 = 3'h4 == state; // @[Conditional.scala 37:30]
-  wire [7:0] _GEN_187 = compressor_io_compressionInputs_0_ready ? inputDataCacheByte : 8'h0; // @[huffmanCompressorCacheLineWrapper.scala 238:54]
-  wire  _T_262614 = 3'h5 == state; // @[Conditional.scala 37:30]
-  wire  _T_262615 = ~io_start; // @[huffmanCompressorCacheLineWrapper.scala 245:12]
-  wire  _GEN_190 = _T_262614 | _T_262592; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_193 = _T_262613 ? _GEN_187 : 8'h0; // @[Conditional.scala 39:67]
-  wire  _GEN_195 = _T_262613 ? _T_262592 : _GEN_190; // @[Conditional.scala 39:67]
-  wire  _GEN_196 = _T_262608 & _GEN_179; // @[Conditional.scala 39:67]
-  wire  _GEN_197 = _T_262608 & _GEN_180; // @[Conditional.scala 39:67]
-  wire  _GEN_198 = _T_262608 & _GEN_181; // @[Conditional.scala 39:67]
-  wire  _GEN_202 = _T_262608 & _GEN_185; // @[Conditional.scala 39:67]
-  wire  _GEN_204 = _T_262608 ? 1'h0 : _T_262613; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_205 = _T_262608 ? 8'h0 : _GEN_193; // @[Conditional.scala 39:67]
-  wire  _GEN_206 = _T_262608 ? _T_262592 : _GEN_195; // @[Conditional.scala 39:67]
-  wire  _GEN_208 = _T_262596 & _GEN_153; // @[Conditional.scala 39:67]
-  wire  _GEN_209 = _T_262596 & _GEN_154; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_211 = _T_262596 ? _GEN_156 : 8'h0; // @[Conditional.scala 39:67]
-  wire  _GEN_214 = _T_262596 & _GEN_159; // @[Conditional.scala 39:67]
-  wire  _GEN_217 = _T_262596 ? 1'h0 : _GEN_196; // @[Conditional.scala 39:67]
-  wire  _GEN_218 = _T_262596 ? 1'h0 : _GEN_197; // @[Conditional.scala 39:67]
-  wire  _GEN_219 = _T_262596 ? 1'h0 : _GEN_198; // @[Conditional.scala 39:67]
-  wire  _GEN_222 = _T_262596 ? 1'h0 : _GEN_202; // @[Conditional.scala 39:67]
-  wire  _GEN_224 = _T_262596 ? 1'h0 : _GEN_204; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_225 = _T_262596 ? 8'h0 : _GEN_205; // @[Conditional.scala 39:67]
-  wire  _GEN_226 = _T_262596 ? _T_262592 : _GEN_206; // @[Conditional.scala 39:67]
-  wire  _GEN_228 = _T_262594 & _GEN_4; // @[Conditional.scala 39:67]
-  wire [11:0] _GEN_229 = _T_262594 ? _GEN_5 : 12'h0; // @[Conditional.scala 39:67]
-  wire  _GEN_231 = _T_262594 ? 1'h0 : _GEN_208; // @[Conditional.scala 39:67]
-  wire  _GEN_232 = _T_262594 ? 1'h0 : _GEN_209; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_233 = _T_262594 ? 8'h0 : _GEN_211; // @[Conditional.scala 39:67]
-  wire  _GEN_236 = _T_262594 ? 1'h0 : _GEN_214; // @[Conditional.scala 39:67]
-  wire  _GEN_239 = _T_262594 ? 1'h0 : _GEN_217; // @[Conditional.scala 39:67]
-  wire  _GEN_240 = _T_262594 ? 1'h0 : _GEN_218; // @[Conditional.scala 39:67]
-  wire  _GEN_241 = _T_262594 ? 1'h0 : _GEN_219; // @[Conditional.scala 39:67]
-  wire  _GEN_244 = _T_262594 ? 1'h0 : _GEN_222; // @[Conditional.scala 39:67]
-  wire  _GEN_246 = _T_262594 ? 1'h0 : _GEN_224; // @[Conditional.scala 39:67]
-  wire [7:0] _GEN_247 = _T_262594 ? 8'h0 : _GEN_225; // @[Conditional.scala 39:67]
-  wire  _GEN_248 = _T_262594 ? _T_262592 : _GEN_226; // @[Conditional.scala 39:67]
-  wire [11:0] _GEN_253 = _T_262593 ? 12'h0 : _GEN_229; // @[Conditional.scala 40:58]
-  wire [13:0] _T_262617 = compressedSize + 14'h40; // @[huffmanCompressorCacheLineWrapper.scala 252:38]
+  wire [11:0] _T_262595 = compressor_io_characterFrequencyInputs_currentByteOut / 12'h40; // @[huffmanCompressorCacheLineWrapper.scala 168:79]
+  wire  _T_262596 = ~compressor_io_compressionInputs_0_ready; // @[huffmanCompressorCacheLineWrapper.scala 169:12]
+  wire  _GEN_3 = compressor_io_characterFrequencyInputs_ready & io_readFifoEmpty; // @[huffmanCompressorCacheLineWrapper.scala 170:60]
+  wire  _GEN_5 = _T_262596 & _GEN_3; // @[huffmanCompressorCacheLineWrapper.scala 169:55]
+  wire  _T_262597 = 3'h2 == state; // @[Conditional.scala 37:30]
+  wire  _T_262598 = iterations >= 7'h40; // @[huffmanCompressorCacheLineWrapper.scala 185:25]
+  wire [6:0] _T_262600 = iterations + 7'h1; // @[huffmanCompressorCacheLineWrapper.scala 194:38]
+  wire [7:0] _T_262601 = iterations * 7'h1; // @[huffmanCompressorCacheLineWrapper.scala 196:56]
+  wire [8:0] _T_262602 = {{1'd0}, _T_262601}; // @[huffmanCompressorCacheLineWrapper.scala 196:43]
+  wire [12:0] _T_262604 = {{1'd0}, compressor_io_characterFrequencyInputs_currentByteOut}; // @[huffmanCompressorCacheLineWrapper.scala 197:95]
+  wire [7:0] _GEN_8 = 6'h1 == _T_262602[5:0] ? readDataAsVec_1 : readDataAsVec_0; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_9 = 6'h2 == _T_262602[5:0] ? readDataAsVec_2 : _GEN_8; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_10 = 6'h3 == _T_262602[5:0] ? readDataAsVec_3 : _GEN_9; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_11 = 6'h4 == _T_262602[5:0] ? readDataAsVec_4 : _GEN_10; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_12 = 6'h5 == _T_262602[5:0] ? readDataAsVec_5 : _GEN_11; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_13 = 6'h6 == _T_262602[5:0] ? readDataAsVec_6 : _GEN_12; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_14 = 6'h7 == _T_262602[5:0] ? readDataAsVec_7 : _GEN_13; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_15 = 6'h8 == _T_262602[5:0] ? readDataAsVec_8 : _GEN_14; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_16 = 6'h9 == _T_262602[5:0] ? readDataAsVec_9 : _GEN_15; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_17 = 6'ha == _T_262602[5:0] ? readDataAsVec_10 : _GEN_16; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_18 = 6'hb == _T_262602[5:0] ? readDataAsVec_11 : _GEN_17; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_19 = 6'hc == _T_262602[5:0] ? readDataAsVec_12 : _GEN_18; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_20 = 6'hd == _T_262602[5:0] ? readDataAsVec_13 : _GEN_19; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_21 = 6'he == _T_262602[5:0] ? readDataAsVec_14 : _GEN_20; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_22 = 6'hf == _T_262602[5:0] ? readDataAsVec_15 : _GEN_21; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_23 = 6'h10 == _T_262602[5:0] ? readDataAsVec_16 : _GEN_22; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_24 = 6'h11 == _T_262602[5:0] ? readDataAsVec_17 : _GEN_23; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_25 = 6'h12 == _T_262602[5:0] ? readDataAsVec_18 : _GEN_24; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_26 = 6'h13 == _T_262602[5:0] ? readDataAsVec_19 : _GEN_25; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_27 = 6'h14 == _T_262602[5:0] ? readDataAsVec_20 : _GEN_26; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_28 = 6'h15 == _T_262602[5:0] ? readDataAsVec_21 : _GEN_27; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_29 = 6'h16 == _T_262602[5:0] ? readDataAsVec_22 : _GEN_28; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_30 = 6'h17 == _T_262602[5:0] ? readDataAsVec_23 : _GEN_29; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_31 = 6'h18 == _T_262602[5:0] ? readDataAsVec_24 : _GEN_30; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_32 = 6'h19 == _T_262602[5:0] ? readDataAsVec_25 : _GEN_31; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_33 = 6'h1a == _T_262602[5:0] ? readDataAsVec_26 : _GEN_32; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_34 = 6'h1b == _T_262602[5:0] ? readDataAsVec_27 : _GEN_33; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_35 = 6'h1c == _T_262602[5:0] ? readDataAsVec_28 : _GEN_34; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_36 = 6'h1d == _T_262602[5:0] ? readDataAsVec_29 : _GEN_35; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_37 = 6'h1e == _T_262602[5:0] ? readDataAsVec_30 : _GEN_36; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_38 = 6'h1f == _T_262602[5:0] ? readDataAsVec_31 : _GEN_37; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_39 = 6'h20 == _T_262602[5:0] ? readDataAsVec_32 : _GEN_38; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_40 = 6'h21 == _T_262602[5:0] ? readDataAsVec_33 : _GEN_39; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_41 = 6'h22 == _T_262602[5:0] ? readDataAsVec_34 : _GEN_40; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_42 = 6'h23 == _T_262602[5:0] ? readDataAsVec_35 : _GEN_41; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_43 = 6'h24 == _T_262602[5:0] ? readDataAsVec_36 : _GEN_42; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_44 = 6'h25 == _T_262602[5:0] ? readDataAsVec_37 : _GEN_43; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_45 = 6'h26 == _T_262602[5:0] ? readDataAsVec_38 : _GEN_44; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_46 = 6'h27 == _T_262602[5:0] ? readDataAsVec_39 : _GEN_45; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_47 = 6'h28 == _T_262602[5:0] ? readDataAsVec_40 : _GEN_46; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_48 = 6'h29 == _T_262602[5:0] ? readDataAsVec_41 : _GEN_47; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_49 = 6'h2a == _T_262602[5:0] ? readDataAsVec_42 : _GEN_48; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_50 = 6'h2b == _T_262602[5:0] ? readDataAsVec_43 : _GEN_49; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_51 = 6'h2c == _T_262602[5:0] ? readDataAsVec_44 : _GEN_50; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_52 = 6'h2d == _T_262602[5:0] ? readDataAsVec_45 : _GEN_51; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_53 = 6'h2e == _T_262602[5:0] ? readDataAsVec_46 : _GEN_52; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_54 = 6'h2f == _T_262602[5:0] ? readDataAsVec_47 : _GEN_53; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_55 = 6'h30 == _T_262602[5:0] ? readDataAsVec_48 : _GEN_54; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_56 = 6'h31 == _T_262602[5:0] ? readDataAsVec_49 : _GEN_55; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_57 = 6'h32 == _T_262602[5:0] ? readDataAsVec_50 : _GEN_56; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_58 = 6'h33 == _T_262602[5:0] ? readDataAsVec_51 : _GEN_57; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_59 = 6'h34 == _T_262602[5:0] ? readDataAsVec_52 : _GEN_58; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_60 = 6'h35 == _T_262602[5:0] ? readDataAsVec_53 : _GEN_59; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_61 = 6'h36 == _T_262602[5:0] ? readDataAsVec_54 : _GEN_60; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_62 = 6'h37 == _T_262602[5:0] ? readDataAsVec_55 : _GEN_61; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_63 = 6'h38 == _T_262602[5:0] ? readDataAsVec_56 : _GEN_62; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_64 = 6'h39 == _T_262602[5:0] ? readDataAsVec_57 : _GEN_63; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_65 = 6'h3a == _T_262602[5:0] ? readDataAsVec_58 : _GEN_64; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_66 = 6'h3b == _T_262602[5:0] ? readDataAsVec_59 : _GEN_65; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_67 = 6'h3c == _T_262602[5:0] ? readDataAsVec_60 : _GEN_66; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_68 = 6'h3d == _T_262602[5:0] ? readDataAsVec_61 : _GEN_67; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_69 = 6'h3e == _T_262602[5:0] ? readDataAsVec_62 : _GEN_68; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_70 = 6'h3f == _T_262602[5:0] ? readDataAsVec_63 : _GEN_69; // @[huffmanCompressorCacheLineWrapper.scala 198:68]
+  wire [7:0] _GEN_136 = compressor_io_characterFrequencyInputs_ready ? _GEN_70 : 8'h0; // @[huffmanCompressorCacheLineWrapper.scala 191:62]
+  wire  _GEN_139 = compressor_io_characterFrequencyInputs_ready; // @[huffmanCompressorCacheLineWrapper.scala 191:62]
+  wire  _GEN_144 = _T_262598 ? 1'h0 : 1'h1; // @[huffmanCompressorCacheLineWrapper.scala 185:56]
+  wire [7:0] _GEN_146 = _T_262598 ? 8'h0 : _GEN_136; // @[huffmanCompressorCacheLineWrapper.scala 185:56]
+  wire  _GEN_149 = _T_262598 ? 1'h0 : _GEN_139; // @[huffmanCompressorCacheLineWrapper.scala 185:56]
+  wire  _GEN_153 = io_readValid & _T_262598; // @[huffmanCompressorCacheLineWrapper.scala 183:26]
+  wire  _GEN_154 = io_readValid & _GEN_144; // @[huffmanCompressorCacheLineWrapper.scala 183:26]
+  wire [7:0] _GEN_156 = io_readValid ? _GEN_146 : 8'h0; // @[huffmanCompressorCacheLineWrapper.scala 183:26]
+  wire  _GEN_159 = io_readValid & _GEN_149; // @[huffmanCompressorCacheLineWrapper.scala 183:26]
+  wire  _T_262609 = 3'h3 == state; // @[Conditional.scala 37:30]
+  wire  _T_262610 = writeCacheLineConverter_io_currentBufferBits > 10'h0; // @[huffmanCompressorCacheLineWrapper.scala 209:59]
+  wire  _T_262611 = ~io_writeFifoFull; // @[huffmanCompressorCacheLineWrapper.scala 213:18]
+  wire  _GEN_163 = writeCacheLineConverter_io_outputData_valid & _T_262611; // @[huffmanCompressorCacheLineWrapper.scala 212:61]
+  wire  _GEN_165 = _T_262610 & _GEN_163; // @[huffmanCompressorCacheLineWrapper.scala 209:66]
+  wire  _GEN_170 = compressor_io_compressionInputs_0_ready; // @[huffmanCompressorCacheLineWrapper.scala 230:58]
+  wire  _GEN_176 = writeCacheLineConverter_io_outputData_valid ? 1'h0 : _GEN_170; // @[huffmanCompressorCacheLineWrapper.scala 223:59]
+  wire  _GEN_179 = compressor_io_finished & _T_262610; // @[huffmanCompressorCacheLineWrapper.scala 207:36]
+  wire  _GEN_180 = compressor_io_finished ? _GEN_165 : _GEN_163; // @[huffmanCompressorCacheLineWrapper.scala 207:36]
+  wire  _GEN_184 = compressor_io_finished ? 1'h0 : _GEN_176; // @[huffmanCompressorCacheLineWrapper.scala 207:36]
+  wire  _T_262614 = 3'h4 == state; // @[Conditional.scala 37:30]
+  wire  _T_262615 = 3'h5 == state; // @[Conditional.scala 37:30]
+  wire  _T_262616 = ~io_start; // @[huffmanCompressorCacheLineWrapper.scala 247:12]
+  wire  _GEN_188 = _T_262615 | _T_262592; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_191 = _T_262614 ? inputDataCacheByte : 8'h0; // @[Conditional.scala 39:67]
+  wire  _GEN_193 = _T_262614 ? _T_262592 : _GEN_188; // @[Conditional.scala 39:67]
+  wire  _GEN_194 = _T_262609 & _GEN_179; // @[Conditional.scala 39:67]
+  wire  _GEN_195 = _T_262609 & _GEN_180; // @[Conditional.scala 39:67]
+  wire  _GEN_199 = _T_262609 & _GEN_184; // @[Conditional.scala 39:67]
+  wire  _GEN_201 = _T_262609 ? 1'h0 : _T_262614; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_202 = _T_262609 ? 8'h0 : _GEN_191; // @[Conditional.scala 39:67]
+  wire  _GEN_203 = _T_262609 ? _T_262592 : _GEN_193; // @[Conditional.scala 39:67]
+  wire  _GEN_205 = _T_262597 & _GEN_153; // @[Conditional.scala 39:67]
+  wire  _GEN_206 = _T_262597 & _GEN_154; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_208 = _T_262597 ? _GEN_156 : 8'h0; // @[Conditional.scala 39:67]
+  wire  _GEN_211 = _T_262597 & _GEN_159; // @[Conditional.scala 39:67]
+  wire  _GEN_214 = _T_262597 ? 1'h0 : _GEN_194; // @[Conditional.scala 39:67]
+  wire  _GEN_215 = _T_262597 ? 1'h0 : _GEN_195; // @[Conditional.scala 39:67]
+  wire  _GEN_218 = _T_262597 ? 1'h0 : _GEN_199; // @[Conditional.scala 39:67]
+  wire  _GEN_220 = _T_262597 ? 1'h0 : _GEN_201; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_221 = _T_262597 ? 8'h0 : _GEN_202; // @[Conditional.scala 39:67]
+  wire  _GEN_222 = _T_262597 ? _T_262592 : _GEN_203; // @[Conditional.scala 39:67]
+  wire [11:0] _GEN_224 = _T_262594 ? _T_262595 : 12'h0; // @[Conditional.scala 39:67]
+  wire  _GEN_225 = _T_262594 & _GEN_5; // @[Conditional.scala 39:67]
+  wire  _GEN_227 = _T_262594 ? 1'h0 : _GEN_205; // @[Conditional.scala 39:67]
+  wire  _GEN_228 = _T_262594 ? 1'h0 : _GEN_206; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_229 = _T_262594 ? 8'h0 : _GEN_208; // @[Conditional.scala 39:67]
+  wire  _GEN_232 = _T_262594 ? 1'h0 : _GEN_211; // @[Conditional.scala 39:67]
+  wire  _GEN_235 = _T_262594 ? 1'h0 : _GEN_214; // @[Conditional.scala 39:67]
+  wire  _GEN_236 = _T_262594 ? 1'h0 : _GEN_215; // @[Conditional.scala 39:67]
+  wire  _GEN_239 = _T_262594 ? 1'h0 : _GEN_218; // @[Conditional.scala 39:67]
+  wire  _GEN_241 = _T_262594 ? 1'h0 : _GEN_220; // @[Conditional.scala 39:67]
+  wire [7:0] _GEN_242 = _T_262594 ? 8'h0 : _GEN_221; // @[Conditional.scala 39:67]
+  wire  _GEN_243 = _T_262594 ? _T_262592 : _GEN_222; // @[Conditional.scala 39:67]
+  wire [11:0] _GEN_247 = _T_262593 ? 12'h0 : _GEN_224; // @[Conditional.scala 40:58]
+  wire [13:0] _T_262618 = compressedSize + 14'h40; // @[huffmanCompressorCacheLineWrapper.scala 254:38]
   topLevel compressor ( // @[huffmanCompressorCacheLineWrapper.scala 122:26]
     .clock(compressor_clock),
     .reset(compressor_reset),
@@ -67103,35 +67098,35 @@ module huffmanCompressorCacheLineWrapper(
     .io_outputData_valid(writeCacheLineConverter_io_outputData_valid),
     .io_outputData_bits(writeCacheLineConverter_io_outputData_bits)
   );
-  assign inputDataCache__T_262612_addr = inputDataCache__T_262612_addr_pipe_0;
-  assign inputDataCache__T_262612_data = inputDataCache[inputDataCache__T_262612_addr]; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
-  assign inputDataCache__T_262607_data = 6'h3f == _T_262601[5:0] ? readDataAsVec_63 : _GEN_69;
-  assign inputDataCache__T_262607_addr = _T_262603[11:0];
-  assign inputDataCache__T_262607_mask = 1'h1;
-  assign inputDataCache__T_262607_en = _T_262593 ? 1'h0 : _GEN_236;
-  assign io_readPointer = _GEN_253[5:0]; // @[huffmanCompressorCacheLineWrapper.scala 147:18 huffmanCompressorCacheLineWrapper.scala 172:26]
-  assign io_loadReadPointer = _T_262593 ? 1'h0 : _GEN_228; // @[huffmanCompressorCacheLineWrapper.scala 148:22 huffmanCompressorCacheLineWrapper.scala 171:30]
-  assign io_readReady = _T_262593 ? 1'h0 : _GEN_231; // @[huffmanCompressorCacheLineWrapper.scala 146:16 huffmanCompressorCacheLineWrapper.scala 186:24]
-  assign io_writeRequest = _T_262593 ? 1'h0 : _GEN_241; // @[huffmanCompressorCacheLineWrapper.scala 151:19 huffmanCompressorCacheLineWrapper.scala 213:31 huffmanCompressorCacheLineWrapper.scala 224:29]
+  assign inputDataCache__T_262613_addr = inputDataCache__T_262613_addr_pipe_0;
+  assign inputDataCache__T_262613_data = inputDataCache[inputDataCache__T_262613_addr]; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+  assign inputDataCache__T_262608_data = 6'h3f == _T_262602[5:0] ? readDataAsVec_63 : _GEN_69;
+  assign inputDataCache__T_262608_addr = _T_262604[11:0];
+  assign inputDataCache__T_262608_mask = 1'h1;
+  assign inputDataCache__T_262608_en = _T_262593 ? 1'h0 : _GEN_232;
+  assign io_readPointer = _GEN_247[5:0]; // @[huffmanCompressorCacheLineWrapper.scala 147:18 huffmanCompressorCacheLineWrapper.scala 168:22]
+  assign io_loadReadPointer = _T_262593 ? 1'h0 : _GEN_225; // @[huffmanCompressorCacheLineWrapper.scala 148:22 huffmanCompressorCacheLineWrapper.scala 173:32]
+  assign io_readReady = _T_262593 ? 1'h0 : _GEN_227; // @[huffmanCompressorCacheLineWrapper.scala 146:16 huffmanCompressorCacheLineWrapper.scala 188:24]
+  assign io_writeRequest = _T_262593 ? 1'h0 : _GEN_236; // @[huffmanCompressorCacheLineWrapper.scala 151:19 huffmanCompressorCacheLineWrapper.scala 215:31 huffmanCompressorCacheLineWrapper.scala 227:29]
   assign io_writeData = writeCacheLineConverter_io_outputData_bits; // @[huffmanCompressorCacheLineWrapper.scala 133:46]
   assign io_compressedSize = compressedSize; // @[huffmanCompressorCacheLineWrapper.scala 140:21]
   assign io_incompressible = 1'h0; // @[huffmanCompressorCacheLineWrapper.scala 143:21]
-  assign io_done = _T_262593 ? _T_262592 : _GEN_248; // @[huffmanCompressorCacheLineWrapper.scala 139:11 huffmanCompressorCacheLineWrapper.scala 244:15]
+  assign io_done = _T_262593 ? _T_262592 : _GEN_243; // @[huffmanCompressorCacheLineWrapper.scala 139:11 huffmanCompressorCacheLineWrapper.scala 246:15]
   assign compressor_clock = clock;
   assign compressor_reset = reset;
   assign compressor_io_start = io_start; // @[huffmanCompressorCacheLineWrapper.scala 123:23]
-  assign compressor_io_characterFrequencyInputs_dataIn_0 = _T_262593 ? 8'h0 : _GEN_233; // @[huffmanCompressorCacheLineWrapper.scala 156:58 huffmanCompressorCacheLineWrapper.scala 196:68]
-  assign compressor_io_characterFrequencyInputs_valid = _T_262593 ? 1'h0 : _GEN_232; // @[huffmanCompressorCacheLineWrapper.scala 152:48 huffmanCompressorCacheLineWrapper.scala 188:56]
-  assign compressor_io_compressionInputs_0_dataIn_0 = _T_262593 ? 8'h0 : _GEN_247; // @[huffmanCompressorCacheLineWrapper.scala 153:48 huffmanCompressorCacheLineWrapper.scala 239:54]
-  assign compressor_io_compressionInputs_0_valid = _T_262593 ? 1'h0 : _GEN_246; // @[huffmanCompressorCacheLineWrapper.scala 154:44 huffmanCompressorCacheLineWrapper.scala 237:48]
+  assign compressor_io_characterFrequencyInputs_dataIn_0 = _T_262593 ? 8'h0 : _GEN_229; // @[huffmanCompressorCacheLineWrapper.scala 156:58 huffmanCompressorCacheLineWrapper.scala 198:68]
+  assign compressor_io_characterFrequencyInputs_valid = _T_262593 ? 1'h0 : _GEN_228; // @[huffmanCompressorCacheLineWrapper.scala 152:48 huffmanCompressorCacheLineWrapper.scala 190:56]
+  assign compressor_io_compressionInputs_0_dataIn_0 = _T_262593 ? 8'h0 : _GEN_242; // @[huffmanCompressorCacheLineWrapper.scala 153:48 huffmanCompressorCacheLineWrapper.scala 240:52]
+  assign compressor_io_compressionInputs_0_valid = _T_262593 ? 1'h0 : _GEN_241; // @[huffmanCompressorCacheLineWrapper.scala 154:44 huffmanCompressorCacheLineWrapper.scala 239:48]
   assign compressor_io_outputs_0_ready = writeCacheLineConverter_io_inputData_ready; // @[huffmanCompressorCacheLineWrapper.scala 135:46]
   assign writeCacheLineConverter_clock = clock;
   assign writeCacheLineConverter_reset = reset;
   assign writeCacheLineConverter_io_inputData_valid = compressor_io_outputs_0_valid; // @[huffmanCompressorCacheLineWrapper.scala 136:46]
   assign writeCacheLineConverter_io_inputData_bits = compressor_io_outputs_0_dataOut; // @[huffmanCompressorCacheLineWrapper.scala 134:45]
   assign writeCacheLineConverter_io_inputDataLength = compressor_io_outputs_0_dataLength; // @[huffmanCompressorCacheLineWrapper.scala 137:46]
-  assign writeCacheLineConverter_io_dumpBuffer = _T_262593 ? 1'h0 : _GEN_239; // @[huffmanCompressorCacheLineWrapper.scala 150:41 huffmanCompressorCacheLineWrapper.scala 209:49]
-  assign writeCacheLineConverter_io_outputData_ready = _T_262593 ? 1'h0 : _GEN_240; // @[huffmanCompressorCacheLineWrapper.scala 149:47 huffmanCompressorCacheLineWrapper.scala 210:55 huffmanCompressorCacheLineWrapper.scala 225:57]
+  assign writeCacheLineConverter_io_dumpBuffer = _T_262593 ? 1'h0 : _GEN_235; // @[huffmanCompressorCacheLineWrapper.scala 150:41 huffmanCompressorCacheLineWrapper.scala 211:49]
+  assign writeCacheLineConverter_io_outputData_ready = _T_262593 ? 1'h0 : _GEN_236; // @[huffmanCompressorCacheLineWrapper.scala 149:47 huffmanCompressorCacheLineWrapper.scala 214:59 huffmanCompressorCacheLineWrapper.scala 226:57]
 `ifdef RANDOMIZE_GARBAGE_ASSIGN
 `define RANDOMIZE
 `endif
@@ -67170,11 +67165,11 @@ initial begin
   `endif // RANDOMIZE_MEM_INIT
   `ifdef RANDOMIZE_REG_INIT
   _RAND_1 = {1{`RANDOM}};
-  inputDataCache__T_262612_en_pipe_0 = _RAND_1[0:0];
+  inputDataCache__T_262613_en_pipe_0 = _RAND_1[0:0];
   `endif // RANDOMIZE_REG_INIT
   `ifdef RANDOMIZE_REG_INIT
   _RAND_2 = {1{`RANDOM}};
-  inputDataCache__T_262612_addr_pipe_0 = _RAND_2[11:0];
+  inputDataCache__T_262613_addr_pipe_0 = _RAND_2[11:0];
   `endif // RANDOMIZE_REG_INIT
   `ifdef RANDOMIZE_REG_INIT
   _RAND_3 = {1{`RANDOM}};
@@ -67196,29 +67191,29 @@ initial begin
 end // initial
 `endif // SYNTHESIS
   always @(posedge clock) begin
-    if(inputDataCache__T_262607_en & inputDataCache__T_262607_mask) begin
-      inputDataCache[inputDataCache__T_262607_addr] <= inputDataCache__T_262607_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
+    if(inputDataCache__T_262608_en & inputDataCache__T_262608_mask) begin
+      inputDataCache[inputDataCache__T_262608_addr] <= inputDataCache__T_262608_data; // @[huffmanCompressorCacheLineWrapper.scala 105:16]
     end
     if (_T_262593) begin
-      inputDataCache__T_262612_en_pipe_0 <= 1'h0;
+      inputDataCache__T_262613_en_pipe_0 <= 1'h0;
     end else if (_T_262594) begin
-      inputDataCache__T_262612_en_pipe_0 <= 1'h0;
-    end else if (_T_262596) begin
-      inputDataCache__T_262612_en_pipe_0 <= 1'h0;
+      inputDataCache__T_262613_en_pipe_0 <= 1'h0;
+    end else if (_T_262597) begin
+      inputDataCache__T_262613_en_pipe_0 <= 1'h0;
     end else begin
-      inputDataCache__T_262612_en_pipe_0 <= _GEN_202;
+      inputDataCache__T_262613_en_pipe_0 <= _GEN_199;
     end
-    if (_T_262593 ? 1'h0 : _GEN_244) begin
-      inputDataCache__T_262612_addr_pipe_0 <= compressor_io_compressionInputs_0_currentByteOut;
+    if (_T_262593 ? 1'h0 : _GEN_239) begin
+      inputDataCache__T_262613_addr_pipe_0 <= compressor_io_compressionInputs_0_currentByteOut;
     end
     if (!(_T_262593)) begin
       if (!(_T_262594)) begin
-        if (!(_T_262596)) begin
-          if (_T_262608) begin
+        if (!(_T_262597)) begin
+          if (_T_262609) begin
             if (!(compressor_io_finished)) begin
               if (!(writeCacheLineConverter_io_outputData_valid)) begin
                 if (compressor_io_compressionInputs_0_ready) begin
-                  inputDataCacheByte <= inputDataCache__T_262612_data;
+                  inputDataCacheByte <= inputDataCache__T_262613_data;
                 end
               end
             end
@@ -67233,22 +67228,24 @@ end // initial
         state <= 3'h1;
       end
     end else if (_T_262594) begin
-      if (compressor_io_characterFrequencyInputs_ready) begin
-        if (io_readFifoEmpty) begin
-          state <= 3'h2;
+      if (_T_262596) begin
+        if (compressor_io_characterFrequencyInputs_ready) begin
+          if (io_readFifoEmpty) begin
+            state <= 3'h2;
+          end
         end
       end else begin
         state <= 3'h3;
       end
-    end else if (_T_262596) begin
+    end else if (_T_262597) begin
       if (io_readValid) begin
-        if (_T_262597) begin
+        if (_T_262598) begin
           state <= 3'h1;
         end
       end
-    end else if (_T_262608) begin
+    end else if (_T_262609) begin
       if (compressor_io_finished) begin
-        if (!(_T_262609)) begin
+        if (!(_T_262610)) begin
           state <= 3'h5;
         end
       end else if (!(writeCacheLineConverter_io_outputData_valid)) begin
@@ -67256,12 +67253,12 @@ end // initial
           state <= 3'h4;
         end
       end
-    end else if (_T_262613) begin
+    end else if (_T_262614) begin
       if (compressor_io_compressionInputs_0_ready) begin
         state <= 3'h3;
       end
-    end else if (_T_262614) begin
-      if (_T_262615) begin
+    end else if (_T_262615) begin
+      if (_T_262616) begin
         state <= 3'h0;
       end
     end
@@ -67270,11 +67267,11 @@ end // initial
     end else if (!(_T_262593)) begin
       if (_T_262594) begin
         iterations <= 7'h0;
-      end else if (_T_262596) begin
+      end else if (_T_262597) begin
         if (io_readValid) begin
-          if (!(_T_262597)) begin
+          if (!(_T_262598)) begin
             if (compressor_io_characterFrequencyInputs_ready) begin
-              iterations <= _T_262599;
+              iterations <= _T_262600;
             end
           end
         end
@@ -67283,7 +67280,7 @@ end // initial
     if (reset) begin
       compressedSize <= 14'h0;
     end else if (io_writeRequest) begin
-      compressedSize <= _T_262617;
+      compressedSize <= _T_262618;
     end else if (_T_262593) begin
       compressedSize <= 14'h0;
     end
