@@ -23,9 +23,9 @@ module compressor #(parameter FIFO_PTR_WIDTH=6)  (
     output logic rd_req,
 	// This data in cacheline is 64 bytes.
     input [`HACD_AXI4_DATA_WIDTH-1:0] rd_data,
-	// When this is 0 and rd_valid is True, the rd_data cacheline is valid. Otherwise, 
+	// When this is 0 and rd_valid is True, the rd_data cacheline is valid. Otherwise, there was an invalid bus transaction.
     input [1:0] rd_rresp,
-	// This is set to True when the fifo read data is 
+	// This is set to True when the fifo read data is valid and has been returned
     input rd_valid,
 
 	// This lets the hardware know whether the write fifo can take any write data
