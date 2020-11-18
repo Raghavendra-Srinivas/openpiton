@@ -11,7 +11,7 @@ Demo successfully executes the bare metal microbechmarks that demonstrates "XXXX
 Install Vivado 2018.2(Licensed version) to generate FPGA bistream file.  
 ### Step 1:  
 Clone the Database:  
-git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-dev  
+git clone https://github.com/Raghavendra-Srinivas/openpitonHawk.git -b openpiton-hawk-stable  
 ### Step 2:   
 Setup the workspace.  
 1. cd openpitonHawk  
