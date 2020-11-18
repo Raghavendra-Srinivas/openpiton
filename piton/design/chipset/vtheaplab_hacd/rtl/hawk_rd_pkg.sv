@@ -188,6 +188,7 @@ function automatic iWayORcPagePkt_t getFreeCpage_ZsPageiWay;
 	pkt.nxtWay_ptr=nxtway_ptr;
 	pkt.zsPgMd=md;
 	pkt.pp_ifl=&pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+	pkt.push_fl=~(|pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0]);
 
 	getFreeCpage_ZsPageiWay=pkt;
 	`ifndef SYNTH

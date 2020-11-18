@@ -308,6 +308,7 @@ typedef struct packed{
 	logic update;
 	logic comp_decomp;
 	logic pp_ifl;
+	logic push_fl;
 	logic zspage_full;
 	//CTYPE iWayORcPage; //packet type iWay type serves either while creating new ZsPage or Updating existing zsPage 
 	logic [47:0] cPage_byteStart;//page start-where to write compressed page if (iWayORcPage==0) = > iWay_start+ Byte address(62bytes) = $size(zsPgMd)=50bytes+ iwayptr(6bytes) + nxtwayptr(6bytes) else 

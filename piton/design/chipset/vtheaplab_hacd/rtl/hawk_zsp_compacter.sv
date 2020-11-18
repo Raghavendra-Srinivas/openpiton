@@ -3,7 +3,7 @@ import hacd_pkg::*;
 import hawk_rd_pkg::*;
 `define FSM_WID_COMPCTR 5
 
-module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=3)(
+module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=512)(
     input clk_i,
     input rst_ni,
     

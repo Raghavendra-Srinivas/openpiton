@@ -2,7 +2,7 @@
 `include "hacd_define.vh"
 import hacd_pkg::*;
 import hawk_rd_pkg::*;
-`define FSM_WID_DCMP_MNGR 4
+`define FSM_WID_DCMP_MNGR 5
 module hawk_decomp_mngr (
     input clk_i,
     input rst_ni,
@@ -68,9 +68,10 @@ localparam IDLE			     ='d0,
 	   WAIT_IFL_LST_ENTRY	     ='d10,
 	   DECODE_LST_ENTRY    	     ='d11,
 	   PUSH_IFL		     ='d12,
-	   DONE			     ='d13,
-	   DECOMP_MNGR_ERROR	     ='d14,
-	   BUS_ERROR		     ='d15;
+	   PUSH_FREE		     ='d13, 	
+	   DONE			     ='d14,
+	   DECOMP_MNGR_ERROR	     ='d15,
+	   BUS_ERROR		     ='d16;
 
 
 
@@ -95,10 +96,12 @@ function automatic iWayORcPagePkt_t setCpageFree_ZsPageiWay;
         //free list after decompression
 	if(p_state==FETCH_IWAY_PTR) begin
  		nxt_pkt=pkt;
-        	nxt_pkt.pp_ifl = &pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+        	nxt_pkt.pp_ifl  = &pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+        	nxt_pkt.push_fl = ~(|pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0]); //this will not occur
 	end else begin
  		nxt_pkt=pkt_in;
-        	nxt_pkt.pp_ifl = pkt_in.pp_ifl;
+        	nxt_pkt.pp_ifl  = pkt_in.pp_ifl;
+        	nxt_pkt.push_fl = pkt_in.push_fl;
 		//cpage byte start
 		if 	(pkt_in.zsPgMd.pg_vld[0] && (pkt_in.zsPgMd.page0  == attEntryId)) begin
 			nxt_pkt.zsPgMd.pg_vld[0]=1'b0;
@@ -115,6 +118,8 @@ function automatic iWayORcPagePkt_t setCpageFree_ZsPageiWay;
 		else if (pkt_in.zsPgMd.pg_vld[4] && (pkt_in.zsPgMd.page4  == attEntryId)) begin
 			nxt_pkt.zsPgMd.pg_vld[4]=1'b0;
 		end
+        	nxt_pkt.push_fl = ~(|nxt_pkt.zsPgMd.pg_vld[MAX_PAGE_ZSPAGE-1:0]);
+		
 	end	
 		//[TODO] invalidate way valid based on if all page valid goes invalid later
 		setCpageFree_ZsPageiWay=nxt_pkt;
@@ -276,7 +281,7 @@ always@* begin
 			        if (zspg_updated) begin //this also makes sure, decomprssed page has been written 	
 				   	n_iWayORcPagePkt.update=1'b0;
 					//Do we need IFL push
-					if(dc_iWayORcPagePkt.pp_ifl) begin
+					if(dc_iWayORcPagePkt.pp_ifl || dc_iWayORcPagePkt.push_fl) begin
 			           		n_state= FETCH_IFL_LST_ENTRY;
 					end
 					else begin
@@ -284,7 +289,6 @@ always@* begin
 					end
 				end
 		end
-
 		FETCH_IFL_LST_ENTRY : begin
 				if(/*arready && */ !arvalid) begin
 				           n_decomp_axireq = get_axi_rd_pkt(lst_entry_id,'d0,AXI_RD_TOL); 
@@ -306,7 +310,15 @@ always@* begin
 		end
 		DECODE_LST_ENTRY: begin
 			   n_listEntry=decode_LstEntry(lst_entry_id,p_rdata);
-			   n_state=PUSH_IFL;
+			   //Do we need IFL push
+			   if(dc_iWayORcPagePkt.pp_ifl) begin
+			   	n_state=PUSH_IFL;
+			   end
+			   //Do we need push to Free list
+			   else if (dc_iWayORcPagePkt.push_fl) begin
+			   	n_state= PUSH_FREE;
+			   end
+			   //else should never occur
 		end		
 		PUSH_IFL: begin
 			   	if(pgwr_mngr_ready) begin 
@@ -325,6 +337,24 @@ always@* begin
 					n_state = DONE; 
 				end
 				$display("RAGHAV_DEBUG:In PUSH_IFL");
+		end
+		PUSH_FREE: begin
+			   	if(pgwr_mngr_ready) begin 
+					//n_decomp_tol_updpkt.attEntryId=p_listEntry.attEntryId; 
+					n_decomp_tol_updpkt.tolEntryId=lst_entry_id;
+				  	n_decomp_tol_updpkt.lstEntry=p_listEntry;
+				  	n_decomp_tol_updpkt.lstEntry.attEntryId='d0; 
+					//n_decomp_tol_updpkt.lstEntry.way=c_iWayORcPagePkt.cPage_byteStart;
+					n_decomp_tol_updpkt.TOL_UPDATE_ONLY='d1; //1 is used for both src and dst list updates
+					n_decomp_tol_updpkt.src_list=IFL_SIZE1; //it was detached before from ifl
+					n_decomp_tol_updpkt.dst_list=FREE; 
+					n_decomp_tol_updpkt.ifl_idx=get_idx(dc_iWayORcPagePkt.cpage_size);
+					n_decomp_tol_updpkt.tbl_update=1'b1;		
+				end
+				if(tbl_update_done) begin
+					n_state = DONE; 
+				end
+				$display("RAGHAV_DEBUG:In PUSH_FREE LIST");
 		end
 		DONE: begin
 					n_decomp_mngr_done=1'b1;

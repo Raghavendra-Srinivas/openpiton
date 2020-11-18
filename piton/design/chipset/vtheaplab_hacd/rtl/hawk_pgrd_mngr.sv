@@ -160,6 +160,7 @@ always@* begin
 	n_tol_updpkt = p_tol_updpkt;
 	n_tol_updpkt.tbl_update=1'b0;
 	n_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
+	n_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_decomp_freeWay=decomp_freeWay;
 	n_decomp_cPage_byteStart=decomp_cPage_byteStart;
 	case(p_state)
