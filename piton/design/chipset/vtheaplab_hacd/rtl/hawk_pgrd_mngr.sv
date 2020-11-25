@@ -146,6 +146,7 @@ logic compact_done;
 axi_rd_pld_t n_cmpt_axireq;
 logic n_cmpt_req_arvalid,n_cmpt_rready;
 logic [`HACD_AXI4_DATA_WIDTH-1:0] n_cmpt_rdata;
+logic n_free_entry_avail,free_entry_avail;
 
 //logic to handle different modes
 always@* begin
@@ -163,6 +164,7 @@ always@* begin
 	n_tol_updpkt.TOL_UPDATE_ONLY=1'b0;
 	n_decomp_freeWay=decomp_freeWay;
 	n_decomp_cPage_byteStart=decomp_cPage_byteStart;
+	n_free_entry_avail=free_entry_avail;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -303,13 +305,16 @@ always@* begin
 		end
 		WAIT_STATE: begin //workaround patch: Need better fix later
 			    n_state=DECOMPRESS;
+			    n_free_entry_avail=1;
 		end
 		DECOMPRESS: begin
 				if(decomp_mngr_done) begin 
 					n_trnsl_reqpkt.ppa=decomp_freeWay; //dcomp done, so this way is expanded with needed page, send it over trnls packet
 					n_trnsl_reqpkt.sts=UNCOMP;
-				        if(freeLstHead!=NULL) begin //If i just uncompressed compressed page to popped way from free list, i need tol update
+				        //if(freeLstHead!=NULL) begin //If i just uncompressed compressed page to popped way from free list, i need tol update
+					if(free_entry_avail==1) begin
 					  n_state = WAIT_STATE2;
+					  n_free_entry_avail=0;
 					end else begin //it must be called from COMPRESS, so it internally updated necessary tol
 					  n_state = IDLE;
 					  n_trnsl_reqpkt.allow_access=1'b1;
@@ -377,15 +382,17 @@ begin
 	end
 end
 
-//inputs for decompressor
+//inputs for decompressor + other related controls
 always@(posedge clk_i or negedge rst_ni) 
 begin
  if(!rst_ni) begin
  	decomp_cPage_byteStart <= 'd0;
  	decomp_freeWay <= 'd0;
+	free_entry_avail <= 1'b0;
  end else begin
  	decomp_cPage_byteStart <= n_decomp_cPage_byteStart;
  	decomp_freeWay <= n_decomp_freeWay;
+	free_entry_avail <= n_free_entry_avail;
  end
 end
 
