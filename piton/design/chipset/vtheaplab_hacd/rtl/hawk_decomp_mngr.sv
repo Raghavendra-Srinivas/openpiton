@@ -315,10 +315,14 @@ always@* begin
 			   	n_state=PUSH_IFL;
 			   end
 			   //Do we need push to Free list
-			   else if (dc_iWayORcPagePkt.push_fl) begin
-			   	n_state= PUSH_FREE;
-			   end
+			   //05/08/2021-6PM->Effort to Remove Optimization of pushing a way to Freelist upon all pages invalid in a way of Zspage
+			   //else if (dc_iWayORcPagePkt.push_fl) begin
+			   //	n_state= PUSH_FREE;
+			   //end
 			   //else should never occur
+			   else begin
+			   	n_state=DONE;
+			   end
 		end		
 		PUSH_IFL: begin
 			   	if(pgwr_mngr_ready) begin 
