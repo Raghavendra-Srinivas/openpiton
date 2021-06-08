@@ -298,6 +298,8 @@ set_property "steps.synth_design.args.max_dsp" "-1" $fileset_obj
 set_property "steps.synth_design.args.cascade_dsp" "auto" $fileset_obj
 set_property -name {steps.synth_design.args.more options} -value {} -objects $fileset_obj
 
+set_property incremental_checkpoint ${PROJECT_DIR}/genesys2_system.runs_bkup/synth_1/system.dcp [get_runs synth_1]
+
 # set the current synth run
 current_run -synthesis $fileset_obj
 
@@ -395,6 +397,8 @@ set_property "steps.write_bitstream.args.readback_file" "0" $fileset_obj
 set_property "steps.write_bitstream.args.logic_location_file" "0" $fileset_obj
 set_property "steps.write_bitstream.args.verbose" "0" $fileset_obj
 set_property -name {steps.write_bitstream.args.more options} -value {} -objects $fileset_obj
+
+set_property incremental_checkpoint ${PROJECT_DIR}/genesys2_system.runs_bkup/impl_1/system_routed.dcp [get_runs impl_1]
 
 # set the current impl run
 current_run -implementation $fileset_obj

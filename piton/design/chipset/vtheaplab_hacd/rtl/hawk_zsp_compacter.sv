@@ -3,7 +3,7 @@ import hacd_pkg::*;
 import hawk_rd_pkg::*;
 `define FSM_WID_COMPCTR 5
 
-module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=512)(
+module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=1728)(
     input clk_i,
     input rst_ni,
     
@@ -43,7 +43,12 @@ module hawk_zsp_compacter #(parameter [15:0] FREE_CPAGE_COMPACT_THRSHLD=512)(
     output hacd_pkg::tol_updpkt_t n_cmpt_tol_updpkt,
  
     input hacd_pkg::hawk_tol_ht_t tol_HT,
-    output hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt
+    output hacd_pkg::zsPageMigratePkt_t zspg_mig_pkt,
+
+    input hacd_pkg::hawk_regs_intf hawk_regs_if,
+    
+    output hacd_pkg::debug_compacter_t debug_compacter
+
 );
 typedef logic [`FSM_WID_COMPCTR-1:0] state_t;
 state_t n_state,p_state;
@@ -113,7 +118,7 @@ function automatic  zsPageCompactPkt_t getMigratePkt;
 				getMigratePkt.src_md.pg_vld[2]=1'b0; //reset
 			end
 		end
-		getMigratePkt.src_empty=~|pkt.src_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+		getMigratePkt.src_empty=~|getMigratePkt.src_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
 		`ifndef SYNTH
 			$display("RAGHAV_DEBUG FECTH_SRC_PAGE = %0h, src empty=%0d",getMigratePkt.mig_pkt.src_cpage_ptr,getMigratePkt.src_empty);
 		`endif
@@ -145,7 +150,7 @@ function automatic  zsPageCompactPkt_t getMigratePkt;
 		end
 		//else begin end //prototype supports only one way for now
 
-		getMigratePkt.dst_full=&pkt.dst_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
+		getMigratePkt.dst_full=&getMigratePkt.dst_md.pg_vld[MAX_PAGE_ZSPAGE-1:0];
 		`ifndef SYNTH
 			$display("RAGHAV_DEBUG IFL HEAD/DST = %0h, dst full=%0d",getMigratePkt.mig_pkt.dst_cpage_ptr,getMigratePkt.dst_full);
 		`endif
@@ -169,12 +174,14 @@ ListEntry p_src_listEntry,n_src_listEntry;
 ListEntry p_dst_listEntry,n_dst_listEntry;
 logic n_migrate_start;
 
+logic [15:0] n_pagefreed,pagefreed;
+
 always@* begin
 //default
-	n_state=p_state;	       //be in same state unless fsm decides to jump
+	n_state=p_state;	       
 	n_cmpt_axireq.addr= p_axireq.addr;
-	n_cmpt_axireq.arlen = 8'd0; //by default, one beat
-	n_cmpt_req_arvalid = 1'b0; 	       //fsm decides when to send packet
+	n_cmpt_axireq.arlen = 8'd0; 
+	n_cmpt_req_arvalid = 1'b0; 	       
         n_cmpt_rready=1'b1;     
 	n_cmpt_rdata=p_rdata;
 	n_cmpt_tol_updpkt.tbl_update=1'b0;
@@ -184,24 +191,32 @@ always@* begin
 	n_migrate_start=migrate_start;
 	n_zscpt_pkt=p_zscpt_pkt;
 
+	n_pagefreed=pagefreed;
 	//lookup IF list for corresponding size
 	case(p_state)
 		IDLE: begin
-			if(compact_trig && (tol_HT.IfLstHead[0] != tol_HT.IfLstTail[0])) begin //We need 256 different triggers here
-				n_state=PEEK_IFL_TAIL;
-				//Initialize src and dst : empty and full conditions
-				n_zscpt_pkt.src_empty=1'b1;
-				n_zscpt_pkt.dst_full=1'b1;
-				$display("RAGHAV_DEBUG: ZsPage Compact Operation is Active");				   
+			if(compact_trig) begin
+				if (tol_HT.IfLstHead[0] === tol_HT.IfLstTail[0]) begin 
+					n_state=DONE;
+				end else begin //We need 256 different triggers here later on
+					n_state=PEEK_IFL_TAIL;
+					//Initialize src and dst : empty and full conditions
+					n_zscpt_pkt.src_empty=1'b1;
+					n_zscpt_pkt.dst_full=1'b1;
+					$display("RAGHAV_DEBUG: ZsPage Compact Operation is Active");				   
+				end
 			end
 		end
 		PEEK_IFL_TAIL: begin
-			if(p_zscpt_pkt.src_empty) begin
-				if(arready && !arvalid) begin
+			if (tol_HT.IfLstHead[0] === tol_HT.IfLstTail[0]) begin 
+				//this should hit only when we have consecutive/all empty source pages. With optimization in decm'ion manager to free-up pages, this case should not happen
+				n_state=DONE;
+			end else if(p_zscpt_pkt.src_empty) begin
+				 if(arready && !arvalid) begin
 				           n_cmpt_axireq = get_axi_rd_pkt(tol_HT.IfLstTail[0],'d0,AXI_RD_TOL); 
 				           n_cmpt_req_arvalid = 1'b1;
 				           n_state = WAIT_IFL_TAIL;;
-				end 
+				 end 
 			end
 			else begin
 				     	   n_zscpt_pkt= getMigratePkt(p_zscpt_pkt,p_state);  
@@ -241,28 +256,25 @@ always@* begin
 		end
 		//Check if Source ZsPage, If it is empty then directly put the way as free way
 		CHK_SRC_PAGE: begin
-			if (tol_HT.IfLstHead[0] != tol_HT.IfLstTail[0]) begin //This is check if we have not hit case only one entry without compaction 
-				if(p_zscpt_pkt.src_empty) begin
-				   	if(pgwr_mngr_ready) begin 
-						//n_cmpt_tol_updpkt.attEntryId=
-						n_cmpt_tol_updpkt.tolEntryId=tol_HT.IfLstTail[0] ; //((p_zscpt_pkt.src_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
-					  	n_cmpt_tol_updpkt.lstEntry=p_src_listEntry;
-					  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; 
-						n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d1; 
-						n_cmpt_tol_updpkt.src_list=IFL_SIZE1;
-						n_cmpt_tol_updpkt.dst_list=FREE; 
-						n_cmpt_tol_updpkt.ifl_idx=p_zscpt_pkt.src_md.size;
-						n_cmpt_tol_updpkt.tbl_update=1'b1;		
-					end
-					if(tbl_update_done) begin
-						n_state = PEEK_IFL_TAIL; 
-					end
-				end else begin
-					    n_state = PEEK_IFL_HEAD;
-				end
-			end else begin
-					    n_state = ZSPAGE_UPDATE;
-			end
+			  if(p_zscpt_pkt.src_empty) begin
+			     	if(pgwr_mngr_ready) begin 
+			  		//n_cmpt_tol_updpkt.attEntryId=
+			  		n_cmpt_tol_updpkt.tolEntryId=tol_HT.IfLstTail[0] ; //((p_zscpt_pkt.src_iWay_ptr-HAWK_PPA_START[47:0])>>12)+1;
+			  	  	n_cmpt_tol_updpkt.lstEntry=p_src_listEntry;
+			  	  	n_cmpt_tol_updpkt.lstEntry.attEntryId='d0; 
+			  		n_cmpt_tol_updpkt.TOL_UPDATE_ONLY='d1; 
+			  		n_cmpt_tol_updpkt.src_list=IFL_SIZE1;
+			  		n_cmpt_tol_updpkt.dst_list=FREE; 
+			  		n_cmpt_tol_updpkt.ifl_idx=p_zscpt_pkt.src_md.size;
+			  		n_cmpt_tol_updpkt.tbl_update=1'b1;		
+			  	end
+			  	if(tbl_update_done) begin
+					n_pagefreed=pagefreed+'d1;
+			  		n_state = PEEK_IFL_TAIL; 
+			  	end
+			  end else begin
+			  	    n_state = PEEK_IFL_HEAD;
+			  end
 		end 
 		PEEK_IFL_HEAD: begin
 			if(p_zscpt_pkt.dst_full) begin
@@ -389,6 +401,7 @@ always@* begin
 					n_cmpt_tol_updpkt.tbl_update=1'b1;		
 				end
 				if(tbl_update_done) begin
+					n_pagefreed=pagefreed+'d1;
 					if (p_zscpt_pkt.dst_full) begin
 						n_state = DETACH_IFL_HEAD; 
 					end else begin
@@ -427,7 +440,7 @@ always@* begin
 						end
 		end
 		ZSPAGE_UPDATE:begin
-				if (tol_HT.IfLstHead[0] == tol_HT.IfLstTail[0]) begin //full compaction done? then send zspage update for final entry that is src entry that remained
+				if (tol_HT.IfLstHead[0] === tol_HT.IfLstTail[0]) begin //full compaction done? then send zspage update for final entry that is src entry that remained
 					if (tol_HT.IfLstTail[0]!=hacd_pkg::NULL) begin //one entry in IFL 
 			   			if(pgwr_mngr_ready) begin 
 							n_zscpt_pkt.mig_pkt.dst_cpage_ptr=p_zscpt_pkt.src_iWay_ptr;
@@ -476,6 +489,7 @@ begin
 		p_dst_listEntry <='d0;
 		migrate_start<=1'b0;
 
+		pagefreed<='d0;
 	end
 	else begin
  		p_state <= n_state;	
@@ -486,28 +500,45 @@ begin
 		p_src_listEntry <= n_src_listEntry;
 		p_dst_listEntry <= n_dst_listEntry;
 		migrate_start<=n_migrate_start;
+		
+		pagefreed<=n_pagefreed;
 	end
 end
 
-
-
-
 logic [15:0] freepage_count; //[IFLST_COUNT];
+logic [9:0] cmpct_cnt;
 always @(posedge clk_i or negedge rst_ni)
 begin
 	if(!rst_ni) begin
 		freepage_count<='d0;
+		cmpct_cnt<='d0;
 	end
+	
 	else if (compact_done) begin
 		freepage_count<='d0;
+		cmpct_cnt<=cmpct_cnt+1;
 	end
-	else if (decomp_mngr_done) begin
+	
+	//else if (decomp_mngr_done && freepage_count<= (FREE_CPAGE_COMPACT_THRSHLD + 1) ) begin
+	else if (decomp_mngr_done && freepage_count<= (hawk_regs_if.cmpct_th[15:0] + 16'd1) ) begin
 		freepage_count<= freepage_count + 'd1;
+		cmpct_cnt<=cmpct_cnt;
 	end
 end
 
 //Compact if there are enough compressed pages got decompressed
-assign compact_req = (freepage_count >= FREE_CPAGE_COMPACT_THRSHLD)  && !compact_done;
-assign compact_done= (p_state==DONE); // && (tol_HT.IfLstHead[0] == tol_HT.IfLstTail[0]);
+//assign compact_req = (freepage_count >= FREE_CPAGE_COMPACT_THRSHLD)  && !compact_done;
+assign compact_req = (freepage_count >= hawk_regs_if.cmpct_th[15:0])  && !compact_done && (cmpct_cnt=='d0); 
+assign compact_done= (p_state==DONE); 
 assign zspg_cmpact_pkt=p_zscpt_pkt;
+
+//Debug
+assign debug_compacter.fsm_state = p_state;
+assign debug_compacter.freepage_count = pagefreed; //freepage_count;
+assign debug_compacter.src_iWay_ptr = p_zscpt_pkt.src_iWay_ptr;
+assign debug_compacter.dst_iWay_ptr = p_zscpt_pkt.dst_iWay_ptr;
+assign debug_compacter.src_empty = p_zscpt_pkt.src_empty;
+assign debug_compacter.dst_full = p_zscpt_pkt.dst_full;
+assign debug_compacter.cmpct_cnt = cmpct_cnt;
+
 endmodule

@@ -1,10 +1,8 @@
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
-#define HAWK_REG_BASE  0xfff5100000ULL
-#define CMPT_TH_OFFSET  0x8
 
 //1GB=260094 Availabel pages for Program Data
 
@@ -35,17 +33,8 @@ int main(int argc, char ** argv) {
   uint64_t count=0; 
   uint64_t final_check=0; 
   uint64_t *track_addr=NULL;
-  uint64_t *addr;
 
   printf("Performing HAWK Test ..\n");
-
-  //Assert Interrupt
-  addr = (uint64_t*)(HAWK_REG_BASE+CMPT_TH_OFFSET);
-  printf("HAWK CMPT_TH : Default Value = 0x%016x\n",*addr);
-  printf("HAWK CMPT_TH : Writing Value=0x63\n");
-  *addr = (uint32_t) 0x63;
-  printf("HAWK CMPT_TH: Read back Value = 0x%016x\n",*addr);
-
   printf("---------------------------\n");
   printf("Start of Array1=%p\n",array1); 
   printf("End of Array1=%p\n",&array1[ARRAY1_NUM_WORDS]); 
@@ -56,8 +45,6 @@ int main(int argc, char ** argv) {
 
   //Step (1)
   //Initialization and Computation on Array1
-  printf("Initializing Array1...!\n");
-  printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_WORDS); k++) {
 	//track_addr=&array1[k];
 	//if((uintptr_t)track_addr % 4096==0) {
@@ -73,7 +60,6 @@ int main(int argc, char ** argv) {
   count=0;
   final_check=0;
   printf("Computing on Array1...!\n");
-  printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {
         final_check+=array1[k];
 	if(k%512==0) {
@@ -105,7 +91,6 @@ int main(int argc, char ** argv) {
   count=0;
   final_check=0;
   printf("Computing on Array2...!\n");
-  printf("---------------------------\n");
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
         final_check+=array2[k];
 	if(k%512==0) {
@@ -120,11 +105,10 @@ int main(int argc, char ** argv) {
   printf("---------------------------\n");
 
   //Step(3)
-  //Recompute on Array1
+  //Recompute on Array1 
   count=0; 
   final_check=0;
   printf("Re-Computing on Array1...!\n");
-  printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {
         final_check+=array1[k];
 	if(k%512==0) {
@@ -138,8 +122,6 @@ int main(int argc, char ** argv) {
   printf("Re-Computed Value On Array1=%ld\n",final_check);
   printf("---------------------------\n");
   printf("Completed HAWK Test!\n");
-  printf("---------------------------\n");
-  printf("Press Ctlr+C to exit\n");
   return 0;
 }
 

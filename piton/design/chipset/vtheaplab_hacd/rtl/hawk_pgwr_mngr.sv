@@ -303,7 +303,7 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 				my_lst_entry.prev= tol_HT.uncompListTail;
 			end else if(tbl_updat_pkt.dst_list==FREE) begin
 				my_lst_entry.prev= tol_HT.freeListTail;
-			end	
+			end	//FIXME: else, error for sims
 			my_lst_entry.next= NULL; //I am pointing to null/tail now, update UNCOMP_TAIL in next cycle	
 			//i=(tbl_updat_pkt.tolEntryId[1:0]==2'b00)? 3 : (tbl_updat_pkt.tolEntryId[1:0]-1);
 			//data[(128*i+48)+:24]=tbl_updat_pkt.lstEntry.attEntryId;
@@ -331,12 +331,19 @@ function axi_wr_pld_t get_tbl_axi_wrpkt;
 		end 
 			wstrb[16*i+:9]={9{1'b1}};
 	end
-	else if (p_state==TOL_DLST_UPDATE2) begin //PUSH BACK on tail of UNCOMPRESSED LIST
+	else if (p_state==TOL_DLST_UPDATE2) begin 
 		
 			
 		if	(OPCODE == PUSH_TAIL) begin
-		 get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.uncompListTail-1) >> 2) << 6);
-		 i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
+		 //push_tail : uncompressed and free lits
+ 
+		 if(tbl_updat_pkt.dst_list==UNCOMP) begin
+		   get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.uncompListTail-1) >> 2) << 6);
+		   i=(tol_HT.uncompListTail[1:0]==2'b00)? 3 : (tol_HT.uncompListTail[1:0]-1);
+		 end else if(tbl_updat_pkt.dst_list==FREE) begin
+		   get_tbl_axi_wrpkt.addr=HAWK_LIST_START + (((tol_HT.freeListTail-1) >> 2) << 6);
+		   i=(tol_HT.freeListTail[1:0]==2'b00)? 3 : (tol_HT.freeListTail[1:0]-1);
+		 end
 		 data[128*i+:24]=tbl_updat_pkt.tolEntryId; //we update next of previous entry to me for push back
 		 wstrb[16*i+:3]={3{1'b1}};
 		end
@@ -427,7 +434,7 @@ always@* begin
 			  	     	if (p_tol_updpkt.src_list==IFL_SIZE1) begin
 						if (IfLstTail[0] != IfLstHead[0]) begin //FIXME 
 							n_state=TOL_SLST_UPDATE;
-						end else begin
+						end else begin //only one element left in src list.
 				     	  		n_IfLstHead[0] = NULL;
 				     	  		n_IfLstTail[0] = NULL;
 				     	  		n_state = TOL_DLST_UPDATE1;
@@ -598,7 +605,7 @@ always@* begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
 						k=p_tol_updpkt.ifl_idx;
 				     //Update DLST HEAD/TAIL
-					if (p_tol_updpkt.dst_list==FREE && (freeListTail==NULL)) begin //for uncomp list as destination, it is push back
+					if (p_tol_updpkt.dst_list==FREE && (freeListTail==NULL)) begin 
 					   	n_freeListTail=p_tol_updpkt.tolEntryId; //I will become the tail	
 					   	n_freeListHead=p_tol_updpkt.tolEntryId; //I will become the head	
 				                n_state = WAIT_BRESP;

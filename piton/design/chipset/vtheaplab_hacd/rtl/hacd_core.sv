@@ -28,6 +28,8 @@ module hacd_core (
     //hacd will act as request master on request singslas to mc 
     HACD_MC_AXI_WR_BUS.mstr mc_axi_wr_bus,  
     HACD_MC_AXI_RD_BUS.mstr mc_axi_rd_bus,
+  
+    input hacd_pkg::hawk_regs_intf hawk_regs_if,
 
     output wire dump_mem 
     );
@@ -72,6 +74,7 @@ module hacd_core (
    wire [4:0] prm_state;
    hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr;	
    hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr;
+   hacd_pkg::debug_compacter_t debug_compacter;
 
    wire migrate_start,migrate_done;	
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
@@ -743,7 +746,8 @@ ila_4 ila_hawk_ain1_debug (
    .probe59({'d0,debug_decomp.cacheline_cnt,debug_decomp.wr_req,debug_decomp.zero_chunk_vec,debug_decomp.chunk_exp_done,debug_decomp.decomp_state}),//[511:0]probe63; //for compressor
 
     //.probe60(debug_comp.rd_data),//[511:0]probe57; 
-   .probe60(debug_decomp.wr_data),//[511:0]probe57; 
+   //.probe60(debug_decomp.wr_data),//[511:0]probe57; 
+   .probe60({debug_compacter.cmpct_cnt,tol_HT.IfLstHead[0],tol_HT.IfLstTail[0],debug_migrate.cacheline_cnt,debug_migrate.wr_req,debug_migrate.migrate_state,debug_compacter.dst_full,debug_compacter.src_empty,debug_compacter.dst_iWay_ptr,debug_compacter.src_iWay_ptr,debug_compacter.freepage_count,debug_compacter.fsm_state}),//[511:0]probe57; 
    .probe61({'d0,iWayORcPagePkt.zsPgMd.page2,iWayORcPagePkt.zsPgMd.page1,iWayORcPagePkt.zsPgMd.page0,iWayORcPagePkt.zsPgMd.way_vld,iWayORcPagePkt.zsPgMd.pg_vld,iWayORcPagePkt.iWay_ptr,iWayORcPagePkt.cpage_size,iWayORcPagePkt.cPage_byteStart,iWayORcPagePkt.update,iWayORcPagePkt.comp_decomp,iWayORcPagePkt.pp_ifl,debug_cmp_mngr.zsPgCnt}),//[511:0]probe58; 
    .probe62(debug_decomp.ila_trigger),//[0]probe58; 
    .probe63('d0)//[0]probe62;

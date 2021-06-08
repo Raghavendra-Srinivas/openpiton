@@ -42,13 +42,12 @@ module hacd #
 );
 
   //Local wires
-  wire [31:0] w_hacd_ctrl;
-  wire [31:0] w_l_wm;
+  hawk_regs_intf hawk_regs_if;
   wire hawk_reg_inactive_ctrl;
  //Generate Memory write trigger interrupt for now
- assign infl_interrupt = w_hacd_ctrl[0];
- assign defl_interrupt = w_hacd_ctrl[1];
- assign hawk_reg_inactive_ctrl =  w_hacd_ctrl[2];
+ assign infl_interrupt = hawk_regs_if.ctrl[0];
+ assign defl_interrupt = hawk_regs_if.ctrl[1];
+ assign hawk_reg_inactive_ctrl =  hawk_regs_if.ctrl[2];
 
 hacd_regs hacd_regs (
   .rst_ni(cfg_rst_ni),
@@ -57,9 +56,9 @@ hacd_regs hacd_regs (
   .resp_o,
 
   //Reg Outputs
-  .low_watermark_q(w_l_wm),
-  .hacd_ctrl_q(w_hacd_ctrl)
+ .hawk_regs_if(hawk_regs_if) 
 );
+
 
 hacd_core u_hacd_core (
   .rst_ni,
@@ -74,6 +73,9 @@ hacd_core u_hacd_core (
   .mc_axi_wr_bus,
   .mc_axi_rd_bus,
 
+  //reg ctrl
+  .hawk_regs_if(hawk_regs_if), 
+
   .dump_mem
 );
 
@@ -81,7 +83,7 @@ hacd_core u_hacd_core (
 	ila_3 ila_3_hawk_reg (
 		.clk(clk_i),
 		.probe0({req_i.addr,resp_o.rdata}),
-		.probe1({req_i.valid,req_i.write,req_i.wstrb,resp_o.error,resp_o.ready,w_l_wm})
+		.probe1({req_i.valid,req_i.write,req_i.wstrb,resp_o.error,resp_o.ready,hawk_regs_if.low_wm})
 	);
 `endif
 

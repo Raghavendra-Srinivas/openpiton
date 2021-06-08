@@ -52,10 +52,12 @@ module hawk_pgrd_mngr (
   output hacd_pkg::tol_updpkt_t tol_updpkt,
   output pgrd_mngr_ready,
 
+  input hacd_pkg::hawk_regs_intf hawk_regs_if,
   //DEBUG
   output [`FSM_WID_PGRD-1:0] prm_state,
   output hacd_pkg::debug_pgrd_cmp_mngr debug_cmp_mngr,	
-  output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr	
+  output hacd_pkg::debug_pgrd_decmp_mngr debug_decmp_mngr,	
+  output hacd_pkg::debug_compacter_t debug_compacter
 );
 
   //in waves, not able to obseves struct ports, so mapping for easier debug
@@ -472,7 +474,7 @@ assign decomp_trigger=(p_state==DECOMPRESS);
 hawk_decomp_mngr u_decomp_mngr (.*);
 
 wire cmpt_rdm_reset;
-assign compact_trig = p_state==COMPACT;
+assign compact_trig = (p_state==COMPACT) && compact_req;
 hawk_zsp_compacter u_zsp_compacter(.*);
 
 //muxing for FIFO

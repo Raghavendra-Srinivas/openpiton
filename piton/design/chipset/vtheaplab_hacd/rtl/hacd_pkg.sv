@@ -319,6 +319,13 @@ typedef struct packed{
 	logic [47:0] iWay_ptr;  //6B  
 } iWayORcPagePkt_t;
 
+//register interface ot hacd core
+
+   typedef struct packed  {
+	logic [31:0] ctrl;
+	logic [31:0] low_wm;
+	logic [31:0] cmpct_th;
+   } hawk_regs_intf;
 
 //debug probes
    typedef struct packed  {
@@ -396,6 +403,16 @@ typedef struct packed{
 	logic wr_req;
         logic [2:0] migrate_state;
    } debug_migrator;
+
+   typedef struct packed {
+	logic [4:0] fsm_state;
+	logic [15:0] freepage_count;
+	logic [47:0] src_iWay_ptr;
+	logic [47:0] dst_iWay_ptr;
+	logic src_empty;
+	logic dst_full;
+	logic [9:0] cmpct_cnt;
+   } debug_compacter_t;
 
 endpackage
 
