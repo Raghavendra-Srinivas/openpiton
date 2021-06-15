@@ -4,7 +4,7 @@
 //
 `include "hacd_define.vh"
 import hacd_pkg::*;
-`define FSM_WID 4
+`define FSM_WID 5
 module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
 
   input clk_i,
@@ -39,8 +39,8 @@ module hawk_pgwr_mngr #(parameter int PWRUP_UNCOMP=0) (
   output wire tbl_update_done,
 
   //DEBUG
-  output hacd_pkg::debug_pgwr_cmpdcmp_mngr debug_cmpdcmp_mngr, 
-  output [`FSM_WID-1:0] pwm_state,
+  output hacd_pkg::debug_pgwr_cmpdcmp_mngr debug_cmpdcmp_mngr,
+  output hacd_pkg::debug_pgwr_mngr_t debug_pgwr_mngr, 
   output wire dump_mem  //this is used to help in  DV sims to dump mem when desired during different phase during same sims
 );
 
@@ -102,7 +102,8 @@ localparam IDLE			     ='d0,
 	   WAIT_TOL_DLST_UPDATE2     ='d12,
 	   CMPDCMP		     ='d13,
 	   ZSPG_COMPACT		     ='d14,
-	   WAIT_BRESP      	     ='d15;
+	   WAIT_BRESP      	     ='d15,
+	   ERROR		     ='d16;
 
 
 //helper functions
@@ -388,6 +389,7 @@ assign wvalid = wr_reqpkt.wvalid; // & vldpkt.wvalid;
 axi_wr_pld_t p_axireq,n_axireq;
 tol_updpkt_t n_tol_updpkt,p_tol_updpkt;
 logic [`OPC_WID-1:0] OPC;
+logic error;
 integer k;
 //logic to handle different modes
 always@* begin
@@ -412,7 +414,7 @@ always@* begin
 	n_incompListTail=incompListTail;
 	n_IfLstHead=IfLstHead;
 	n_IfLstTail=IfLstTail;
-
+	error=1'b0;
 	case(p_state)
 		IDLE: begin
 			//Put into target operating mode, along with
@@ -551,17 +553,20 @@ always@* begin
 					case(p_tol_updpkt.src_list)
 					 FREE  : OPC=POP_HEAD;
 					 UNCOMP: OPC=POP_HEAD;
-					 IFL_SIZE1  : OPC=POP_TAIL; //HEAD;
-					 IFL_DETACH :  OPC=PUSH_HEAD;
+					 IFL_SIZE1  : OPC=POP_TAIL;
+					 default : error=1'b1; 
 					endcase
-			  		if(/*awready &&*/ !awvalid) begin
-			  	           n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
-			  	           n_req_awvalid = 1'b1;
-			  	           //n_state = WAIT_TOL_SLST_UPDATE;
-			  		end
-			  if(awready && awvalid) begin
-			  	           n_state = WAIT_TOL_SLST_UPDATE;
-			  end 
+			  if(error) n_state = ERROR;
+			  else begin
+			  	if(/*awready &&*/ !awvalid) begin
+			  	   n_axireq = get_tbl_axi_wrpkt(p_tol_updpkt,p_state,tol_HT,OPC); //prepare next packet
+			  	   n_req_awvalid = 1'b1;
+			  	   //n_state = WAIT_TOL_SLST_UPDATE;
+			  	end
+			  	if (awready && awvalid) 
+			  	    n_state = WAIT_TOL_SLST_UPDATE;
+			  end
+			  
 		end
 		WAIT_TOL_SLST_UPDATE: begin
 			  if(wready && !wvalid) begin //data has been already set, in prev state, just assert wvalid
@@ -680,14 +685,20 @@ always@* begin
 			end
 		end
 		WAIT_BRESP: begin
-			  if(bresp_cmplt) begin //data has been already set, in prev state, just assert wvalid
+			  if(bresp_cmplt) begin 
 				     n_state = IDLE;
 			  end
+		end
+		ERROR: begin
+			n_state=ERROR;
+		end
+		default: begin
+			n_state=ERROR;
 		end
 	endcase
 end
 
-assign tbl_update_done = (p_state == WAIT_BRESP) && bresp_cmplt;
+assign tbl_update_done = p_tol_updpkt.tbl_update && (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_updated = iWayORcPagePkt.update && (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_migrated = (zspg_mig_pkt.migrate || zspg_mig_pkt.zspg_update)  && (p_state == WAIT_BRESP) && bresp_cmplt;
 
@@ -869,7 +880,6 @@ hawk_cmpdcmp_wr_mngr u_hawk_cmpdcmp_wr_mngr(.*);
 
 
 //DEBUG
-assign pwm_state = p_state;
 /*
 `ifdef HAWK_FPGA
 	ila_3 ila_3_hawk_pwm (
@@ -879,5 +889,48 @@ assign pwm_state = p_state;
 	);
 `endif
 */
+
+//current depth of each linked list
+logic [clogb2(ATT_ENTRY_MAX):0] freeLstDpth,ucompLstDpth,ifSz1LstDpth,incompLstDpth; 
+always @(posedge clk_i or negedge rst_ni) begin
+	if(!rst_ni) begin
+		freeLstDpth<='d0;
+		ucompLstDpth<='d0;
+		ifSz1LstDpth<='d0;
+		incompLstDpth<='d0;
+	
+	end
+	else if (init_att_done && !init_list_done) begin
+		freeLstDpth<=p_etry_cnt-1; 
+		ucompLstDpth<='d0;
+		ifSz1LstDpth<='d0;
+		incompLstDpth<='d0;
+	end
+	else if(tbl_update_done && !p_tol_updpkt.ATT_UPDATE_ONLY && |(p_tol_updpkt.src_list^p_tol_updpkt.dst_list)) begin
+
+		if(p_tol_updpkt.src_list==FREE && tol_updpkt.TOL_UPDATE_ONLY!=2)
+			freeLstDpth<=freeLstDpth-{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		else if (p_tol_updpkt.dst_list==FREE)
+			freeLstDpth<=freeLstDpth+{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		if(p_tol_updpkt.src_list==UNCOMP && tol_updpkt.TOL_UPDATE_ONLY!=2)
+			ucompLstDpth<=ucompLstDpth-{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		else if(p_tol_updpkt.dst_list==UNCOMP)
+			ucompLstDpth<=ucompLstDpth+{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		if(p_tol_updpkt.src_list==IFL_SIZE1 && tol_updpkt.TOL_UPDATE_ONLY!=2)
+			ifSz1LstDpth<=ifSz1LstDpth-{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		else if(p_tol_updpkt.dst_list==IFL_SIZE1)
+			ifSz1LstDpth<=ifSz1LstDpth+{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		if(p_tol_updpkt.src_list==INCOMP && tol_updpkt.TOL_UPDATE_ONLY!=2)
+			incompLstDpth<=incompLstDpth-{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+		else if(p_tol_updpkt.dst_list==INCOMP)
+			incompLstDpth<=incompLstDpth+{{clogb2(ATT_ENTRY_MAX){1'b0}},1};
+	end
+end
+
+assign debug_pgwr_mngr.freeLstDpth=freeLstDpth;
+assign debug_pgwr_mngr.ucompLstDpth=ucompLstDpth;
+assign debug_pgwr_mngr.ifSz1LstDpth=ifSz1LstDpth;
+assign debug_pgwr_mngr.incompLstDpth=incompLstDpth;
+assign debug_pgwr_mngr.pwm_state = p_state;
 
 endmodule

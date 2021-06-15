@@ -184,6 +184,7 @@ always@* begin
         n_decomp_rready=1'b1;     
 	n_decomp_rdata=p_rdata;
 	n_decomp_tol_updpkt.tbl_update=1'b0;
+	n_decomp_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
 	n_decomp_tol_updpkt.TOL_UPDATE_ONLY='d0;
 	n_decomp_start=decomp_start; //1'b0;
 	n_decomp_mngr_done=1'b0;

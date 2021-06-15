@@ -414,5 +414,14 @@ typedef struct packed{
 	logic [9:0] cmpct_cnt;
    } debug_compacter_t;
 
+   typedef struct packed {
+	logic [clogb2(ATT_ENTRY_MAX):0] freeLstDpth;
+	logic [clogb2(ATT_ENTRY_MAX):0] ucompLstDpth;
+	logic [clogb2(ATT_ENTRY_MAX):0] ifSz1LstDpth;
+	logic [clogb2(ATT_ENTRY_MAX):0] incompLstDpth;
+	logic [4:0] pwm_state;
+   } debug_pgwr_mngr_t;
+
+
 endpackage
 

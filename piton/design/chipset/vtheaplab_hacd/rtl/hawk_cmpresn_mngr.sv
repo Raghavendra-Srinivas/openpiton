@@ -116,6 +116,7 @@ always@* begin
         n_comp_rready=1'b1;     
 	n_comp_rdata=p_rdata;
 	n_comp_tol_updpkt='d0; //.tbl_update=1'b0;
+	n_comp_tol_updpkt.ATT_UPDATE_ONLY=1'b0;
 	n_comp_tol_updpkt.TOL_UPDATE_ONLY='d0;
 	n_comp_start=comp_start; //1'b0;
 	n_cmpresn_done=1'b0;
@@ -238,9 +239,10 @@ always@* begin
 					//get underconstruction iWay from
 					//memory
 			    		n_comp_axireq.addr = UC_ifLst_iWay[size_idx]; 
-					n_state=FETCH_ZSPAGE; 
-				end else if(tol_HT.IfLstHead[size_idx]!=NULL) begin
-					n_state= IDLE;//Not handling for now :->Here, first we need fetch head of Ilist to get ptr to Zspage, then fetch Zspage. MIGRATE_TO_ZSPAGE; 
+					n_state=FETCH_ZSPAGE;
+				// 
+				//end else if(tol_HT.IfLstHead[size_idx]!=NULL) begin
+				//	n_state= IDLE;//Not handling for now :->Here, first we need fetch head of Ilist to get ptr to Zspage, then fetch Zspage. MIGRATE_TO_ZSPAGE; 
 				end else begin
 					n_state=PREP_ZSPAGE_MD;
 					//record this IWay in Under Construction table
@@ -371,9 +373,9 @@ always@* begin
 						      //compressed page, then pull
 						      //zspage Iway from IFL
 						      //so as to create new Zspage in next iteration
-						      //Chaging approach: While compression we						      //will have//underconstution page,
+						      //Chaging approach: While compression we will have//underconstution page,
 						      //if not, we check IFL
-						      //to pick which sohuld
+						      //to pick which should
 						      //have been decompress
 						      //manager
 						      //if(c_iWayORcPagePkt.pp_ifl) begin
@@ -406,6 +408,10 @@ always@* begin
 				end			
 		end
 		FREEWAY_OR_CONTINUE: begin
+
+				  	      n_state = TOL_UPDATE_FREEWAY_ENTRY; //we are done
+					      //Jun-14th,2021: We can get rid of this state?
+					      /*
 			          	      if((c_iWayORcPagePkt.cPage_byteStart+comp_size)< ({c_iWayORcPagePkt.cPage_byteStart[47:12],12'd0}+4096) ) begin
 					      	      //n_comp_tol_updpkt.dst_list=UNCOMP;  
 			        	      	      //n_state=UPDATE_ATT_POP_UCMP_HEAD;
@@ -414,7 +420,7 @@ always@* begin
 				  	      	      	//Update ATT and TOL
 					      	      	n_comp_tol_updpkt.dst_list=NULLIFY; //for nullify ATT still get compression status but entry in list will be dangled 
 			        	      	      	n_state=UPDATE_ATT_POP_UCMP_HEAD;
-					      end
+					      end */
 		end
 		TOL_UPDATE_FREEWAY_ENTRY:begin
 			   	if(pgwr_mngr_ready) begin //we can make zspg_updated is level signal till next reqeust, but pgwr*ready is good enough

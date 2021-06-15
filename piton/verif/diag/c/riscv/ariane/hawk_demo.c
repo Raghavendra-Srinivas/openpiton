@@ -56,6 +56,7 @@ int main(int argc, char ** argv) {
 
   //Step (1)
   //Initialization and Computation on Array1
+  printf("---------------------------\n");
   printf("Initializing Array1...!\n");
   printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_WORDS); k++) {
@@ -68,10 +69,14 @@ int main(int argc, char ** argv) {
 	else {
 			array1[k]=(uint64_t) (0);
 	}
+	if(k% (50000*512)==0){
+		printf("Working on Page %ld to Page %ld..\n",count,count+50000);
+	}
   }
 
   count=0;
   final_check=0;
+  printf("---------------------------\n");
   printf("Computing on Array1...!\n");
   printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {
@@ -90,6 +95,9 @@ int main(int argc, char ** argv) {
 
   //Ste(2)
   //Initilization and Computation on Array2
+  printf("---------------------------\n");
+  printf("Initializing Array2...!\n");
+  printf("---------------------------\n");
   count=0;
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
 	//track_addr=&array2[k];
@@ -101,9 +109,13 @@ int main(int argc, char ** argv) {
 	else {
 			array2[k]=(uint64_t) (0);
 	}
+	if(k% (50000*512)==0){
+		printf("Working on Page %ld to Page %ld..\n",count,count+50000);
+	}
   }
   count=0;
   final_check=0;
+  printf("---------------------------\n");
   printf("Computing on Array2...!\n");
   printf("---------------------------\n");
   for (unsigned long int k = 0; k < (ARRAY2_NUM_WORDS); k++) {
@@ -123,6 +135,7 @@ int main(int argc, char ** argv) {
   //Recompute on Array1
   count=0; 
   final_check=0;
+  printf("---------------------------\n");
   printf("Re-Computing on Array1...!\n");
   printf("---------------------------\n");
   for (int k = 0; k < (ARRAY1_NUM_COMPUTE_WORDS); k++) {

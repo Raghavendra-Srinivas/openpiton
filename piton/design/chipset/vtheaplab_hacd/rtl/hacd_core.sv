@@ -80,8 +80,9 @@ module hacd_core (
    hawk_pgrd_mngr u_hawk_pgrd_mngr (.*);  
 
    //
-   wire [3:0] pwm_state;
    hacd_pkg::debug_pgwr_cmpdcmp_mngr debug_cmpdcmp_mngr;
+   hacd_pkg::debug_pgwr_mngr_t	debug_pgwr_mngr;
+
    hawk_pgwr_mngr u_hawk_pgwr_mngr (.*);  
    //
 
@@ -739,7 +740,8 @@ ila_4 ila_hawk_ain1_debug (
    .probe54('d0),//({'d0,mc_axi_wr_bus.axi_bresp,mc_axi_rd_bus.axi_rresp,mc_axi_wr_bus.axi_bid,mc_axi_rd_bus.axi_rid,mc_axi_rd_bus.axi_arid,mc_axi_wr_bus.axi_awid,mc_axi_wr_bus.axi_wvalid,mc_axi_rd_bus.axi_rlast}), //[63:0]probe54;
    .probe55('d0), //{'d0,tol_updpkt,debug_cmp_mngr.zsPgCnt}), //[63:0]probe55;
     
-   .probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access}), //[511:0]probe56; //for all states
+   //.probe56({'d0,wrfifo_full,wrfifo_empty,debug_wrfifo.wrfifo_wrptr,debug_wrfifo.wrfifo_rdptr,rdfifo_rdptr_rst,rdfifo_wrptr_rst,rdfifo_rdptr,ld_rdfifo_rdptr,rdfifo_full,rdfifo_empty,debug_rdfifo.rdfifo_wrptr,debug_rdfifo.rdfifo_rdptr,debug_cmp_mngr.cmpresn_freeWay,debug_cmp_mngr.cmp_mngr_state,debug_cmp_mngr.cmpresn_done,debug_comp.comp_state,cu_state,pwm_state,prm_state,illegal_hawk_table_access}), //[511:0]probe56; //for all states
+   .probe56({'d0,debug_pgwr_mngr.incompLstDpth, debug_pgwr_mngr.freeLstDpth ,debug_pgwr_mngr.ifSz1LstDpth,debug_pgwr_mngr.ucompLstDpth ,debug_pgwr_mngr.pwm_state,debug_comp.comp_state, debug_cmp_mngr.cmp_mngr_state,  cu_state,prm_state,illegal_hawk_table_access}),
    .probe57({'d0,debug_cmpdcmp_mngr.cPage_byteStart,debug_cmpdcmp_mngr.cmpdcmp_mngr_state,debug_comp.rd_valid,debug_comp.cacheline_cnt,debug_comp.zero_cline_cntr_curr,debug_comp.zero_chunk_vec,debug_decmp_mngr.addr1}),//[511:0]probe63; //for compressor
    .probe58({'d0,debug_decmp_mngr.decomp_mngr_done,debug_decmp_mngr.decomp_freeWay,debug_decmp_mngr.DeCompPgCnt,debug_decmp_mngr.decmp_mngr_state,tol_HT.incompListHead,tol_HT.incompListTail,debug_decmp_mngr.addr2}),//[511:0]probe61;
 //tol_HT.IfLstTail[0],tol_HT.IfLstHead[0]
