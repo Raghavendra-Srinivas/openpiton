@@ -125,9 +125,9 @@ if  {[info exists ::env(PITON_ARIANE)]} {
   exec make clean 2> /dev/null
   exec make all MAX_HARTS=$::env(PTON_NUM_TILES) UART_FREQ=$::env(CONFIG_SYS_FREQ) 2> /dev/null
   puts "INFO: done"
-  # two targets per hart (M,S) and two interrupt sources (UART, Ethernet)
+  # two targets per hart (M,S) and 3 interrupt sources (UART, Ethernet and VTHEAPLAB's HAWK)
   set NUM_TARGETS [expr 2*$::env(PTON_NUM_TILES)]
-  set NUM_SOURCES 2
+  set NUM_SOURCES 3
   puts "INFO: generating PLIC for Ariane ($NUM_TARGETS targets, $NUM_SOURCES sources)..."
   cd $::env(ARIANE_ROOT)/src/rv_plic/rtl
   exec ./gen_plic_addrmap.py -t $NUM_TARGETS -s $NUM_SOURCES > plic_regmap.sv

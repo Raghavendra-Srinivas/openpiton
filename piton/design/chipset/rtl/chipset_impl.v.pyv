@@ -526,7 +526,7 @@ for i in range(len(devices)):
 if tmpNum:
     print """
 wire [%d-1:0] invalid_access;
-assign invalid_access_o = |invalid_access ; //|| temp_hawk_irq; //tempoary check for hawk
+assign invalid_access_o = |invalid_access || temp_hawk_irq; //tempoary check for hawk
 """ % (tmpNum)
 else:
     print """
