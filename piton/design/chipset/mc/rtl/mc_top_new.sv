@@ -822,6 +822,8 @@ hacd_top  #(
         .SwapEndianess  (               1 )
 ) 
 u_hacd_top (
+        .cfg_clk_i                    ( core_ref_clk),
+        .cfg_rst_ni                   ( sys_rst_n),
         .clk_i                    ( core_ref_clk), //ui_clk is given by ddr in fpga that should be connecte here
         .rst_ni                   ( sys_rst_n),    // this should be noc_axi_birdge reset in fpga
 	.hawk_sw_ctrl 		  (2'b00) ,        //(hawk_sw_ctrl),

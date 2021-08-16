@@ -698,7 +698,10 @@ always@* begin
 	endcase
 end
 
-assign tbl_update_done = p_tol_updpkt.tbl_update && (p_state == WAIT_BRESP) && bresp_cmplt;
+//FIXME: raghav: I have noticed undesired toggle on tbl_update_done because we
+//retain old tbl_update. Actual fix should be in requestor side. For now, just
+//gating done update below based on if other type of request are not active
+assign tbl_update_done = p_tol_updpkt.tbl_update && (p_state == WAIT_BRESP) && bresp_cmplt && !zspg_updated && !zspg_migrated;
 assign zspg_updated = iWayORcPagePkt.update && (p_state == WAIT_BRESP) && bresp_cmplt;
 assign zspg_migrated = (zspg_mig_pkt.migrate || zspg_mig_pkt.zspg_update)  && (p_state == WAIT_BRESP) && bresp_cmplt;
 

@@ -103,8 +103,6 @@ localparam IDLE			='d0,
 	   WAIT_STATE		='d16,
 	   WAIT_STATE2		='d17;
 
-
-
 wire arready;
 wire arvalid,rvalid,rlast;
 assign arready = rd_rdypkt.arready; 
@@ -172,15 +170,19 @@ always@* begin
 			//Put into target operating mode, along with
 			//initial values on required variables as
 			//needed
-			if      (lkup_reqpkt.lookup /*&& !p_trnsl_reqpkt.allow_access*/) begin 
+
+		`ifdef HAWK_FPGA
+		 	if (compact_req && hawk_sw_ctrl[1]) begin
+		`else
+		 	if (compact_req) begin
+		`endif
+				n_state=COMPACT;
+			end
+			else if      (lkup_reqpkt.lookup /*&& !p_trnsl_reqpkt.allow_access*/) begin 
 				//For ATT lookup, we need to have attEntryId to
 				n_attEntryId=lkup_reqpkt.hppa-(HPPA_BASE_ADDR>>12)+1; //entry id starts from 1
 				n_state=LOOKUP_ATT;
-			end
-		 	else if (compact_req && hawk_sw_ctrl[1]) begin
-				n_state=COMPACT;
-			end
-	
+			end	
 		end
 		LOOKUP_ATT:begin
 			  if(arready && !arvalid) begin

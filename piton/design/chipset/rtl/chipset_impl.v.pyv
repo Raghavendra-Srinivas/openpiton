@@ -525,6 +525,7 @@ for i in range(len(devices)):
 
 if tmpNum:
     print """
+wire temp_hawk_irq; 
 wire [%d-1:0] invalid_access;
 assign invalid_access_o = |invalid_access || temp_hawk_irq; //tempoary check for hawk
 """ % (tmpNum)
@@ -1243,7 +1244,6 @@ fake_uart fake_uart (
     wire hacd_infl_interrupt,hacd_defl_interrupt;
     reg [23:0] count_mc_clk;
     
-    wire temp_hawk_irq; 
     always@(posedge chipset_clk or negedge chipset_rst_n ) begin
   	if(!chipset_rst_n) begin
 		count_mc_clk <= 16'd0;
